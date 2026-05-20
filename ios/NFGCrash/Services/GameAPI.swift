@@ -90,6 +90,7 @@ struct GameAPI {
             req.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
         }
         req.setValue(AuthStore.deviceId, forHTTPHeaderField: "X-Device-Id")
+        req.setValue("nfg-crash", forHTTPHeaderField: "X-Client-App")
         return req
     }
 

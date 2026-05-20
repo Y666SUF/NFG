@@ -38,6 +38,14 @@ cd "$HM_APP"
 npm install
 npm run build
 npx cap sync ios
+PATCH_DIR="$HM_APP/native-ios-patches"
+IOS_APP="$HM_APP/ios/App/App"
+if [[ -f "$PATCH_DIR/AppDelegate.swift" ]]; then
+  cp "$PATCH_DIR/AppDelegate.swift" "$IOS_APP/AppDelegate.swift"
+fi
+if [[ -f "$PATCH_DIR/Info.plist" ]]; then
+  cp "$PATCH_DIR/Info.plist" "$IOS_APP/Info.plist"
+fi
 HM_ARCHIVE="$HM_APP/ios/archive/App.xcarchive"
 rm -rf "$HM_ARCHIVE" "$HM_APP/ios/export/App.ipa"
 xcodebuild -project "$HM_APP/ios/App/App.xcodeproj" \

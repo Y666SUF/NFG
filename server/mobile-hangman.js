@@ -106,6 +106,44 @@ function mapHangmanGuessResponse(body) {
   };
 }
 
+/** Map Python app/state (or snapshot) → iOS companion poll shape. */
+function mapHangmanStateResponse(body, linkedSession) {
+  if (!body || body.ok === false) {
+    return {
+      ok: false,
+      error: (body && body.error) || "hangman_unreachable",
+      message: body && body.message ? String(body.message) : undefined,
+    };
+  }
+  const snap = body.state && typeof body.state === "object" ? body.state : body;
+  const keyboard = sanitizeKeyboard(body.keyboard || snap.keyboard) || { correct: [], wrong: [] };
+  let wrongGuesses = 0;
+  const maxWrong = 6;
+  if (linkedSession && linkedSession.userId) {
+    const uk = String(linkedSession.userId).toLowerCase();
+    const players = Array.isArray(snap.players) ? snap.players : [];
+    const pl = players.find((p) => String(p.user_key || "").toLowerCase() === uk);
+    if (pl) wrongGuesses = Number(pl.wrong) || 0;
+  }
+  const maskedWord = String(body.maskedWord || body.masked || snap.mask || "");
+  return {
+    ok: true,
+    maskedWord,
+    masked: maskedWord,
+    slots: Array.isArray(body.slots) ? body.slots : snap.slots,
+    keyboard,
+    length: Number(body.length || snap.length) || 0,
+    guessed_letters: body.guessed_letters || snap.guessed_letters || [],
+    word_theme: String(body.word_theme || snap.word_theme || ""),
+    tiktok: String(body.tiktok || ""),
+    tiktok_status: String(body.tiktok_status || ""),
+    wrong: wrongGuesses,
+    wrongGuesses,
+    maxWrong,
+    phase: String(snap.phase || ""),
+  };
+}
+
 function mapLeaderboardRows(top) {
   const rows = Array.isArray(top) ? top : [];
   return rows.map((r) => ({
@@ -138,6 +176,40 @@ function registerHangmanMobileRoutes(app, ctx) {
       top,
       service: "nfg-hangman",
     });
+  });
+
+  app.get("/api/mobile/hangman/state", async (req, res) => {
+    try {
+      const clientApp = String(req.headers["x-client-app"] || "").trim().toLowerCase();
+      if (clientApp && clientApp !== "nfg-hangman") {
+        return res.status(400).json({
+          ok: false,
+          error: "wrong_client_app",
+          message: "Use X-Client-App: nfg-hangman",
+        });
+      }
+
+      const probe = await fetchHangmanJson("/api/hangman/app/state");
+      if (!probe.ok || !probe.body) {
+        return res.status(probe.status || 502).json({
+          ok: false,
+          error: "hangman_unreachable",
+          backend: HANGMAN_BACKEND_URL,
+        });
+      }
+
+      const linked = typeof validateBearer === "function" ? validateBearer(req) : null;
+      return res.json(mapHangmanStateResponse(probe.body, linked));
+    } catch (err) {
+      console.error("[mobile-hangman] state error:", err);
+      if (!res.headersSent) {
+        return res.status(500).json({
+          ok: false,
+          error: "state_failed",
+          message: err && err.message ? String(err.message) : "State failed",
+        });
+      }
+    }
   });
 
   app.post("/api/mobile/hangman/guess", async (req, res) => {
@@ -199,6 +271,7 @@ function registerHangmanMobileRoutes(app, ctx) {
 module.exports = {
   registerHangmanMobileRoutes,
   mapHangmanGuessResponse,
+  mapHangmanStateResponse,
   hangmanGuessRequest,
   NFG_INTERNAL_SECRET,
 };

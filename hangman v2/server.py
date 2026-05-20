@@ -2534,6 +2534,31 @@ async def hangman_public_status() -> dict[str, Any]:
     }
 
 
+@app.get("/api/hangman/app/state")
+async def hangman_app_state() -> dict[str, Any]:
+    """Public snapshot for mobile companion (REST poll + platform proxy)."""
+    try:
+        if session is None:
+            return {"ok": False, "error": "game_not_ready", "message": "Hangman session not started"}
+        snap = _snapshot_with_cosmetics()
+        return {
+            "ok": True,
+            "maskedWord": snap["mask"],
+            "masked": snap["mask"],
+            "slots": snap["slots"],
+            "keyboard": snap["keyboard"],
+            "length": snap["length"],
+            "guessed_letters": snap.get("guessed_letters") or [],
+            "word_theme": snap.get("word_theme") or "",
+            "tiktok": tiktok_username,
+            "tiktok_status": tiktok_status,
+            "state": snap,
+        }
+    except Exception as exc:
+        print(f"[hangman app state] error: {exc!r}")
+        return {"ok": False, "error": "state_failed", "message": str(exc)[:240]}
+
+
 @app.post("/api/hangman/app/guess")
 async def hangman_app_guess(request: Request) -> dict[str, Any]:
     """Trusted guess from NFG platform (mobile app keyboard). Same rules as TikTok chat."""

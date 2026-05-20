@@ -157,6 +157,23 @@ export async function postChat(message) {
   return data;
 }
 
+export async function fetchHangmanState() {
+  const { ok, status, data } = await apiRequest(`${apiBase()}/api/mobile/hangman/state`, {
+    headers: authHeaders(),
+  });
+  if (!data || typeof data !== "object") {
+    return { ok: false, error: "bad_response", message: `Server error (${status})` };
+  }
+  if (!ok && data.ok !== true) {
+    return {
+      ok: false,
+      error: data.error || "state_failed",
+      message: data.message || `HTTP ${status}`,
+    };
+  }
+  return data;
+}
+
 export async function guessLetter(letter) {
   const { ok, status, data } = await apiRequest(`${apiBase()}/api/mobile/hangman/guess`, {
     method: "POST",

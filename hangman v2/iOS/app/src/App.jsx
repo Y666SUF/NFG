@@ -7,6 +7,7 @@ import OnlinePanel from "./components/OnlinePanel";
 import WordDisplay from "./components/WordDisplay";
 import {
   connectPlatformSocket,
+  fetchHangmanState,
   fetchPlatformStatus,
   fetchSession,
   guessLetter,
@@ -39,6 +40,26 @@ export default function App() {
   const [guessResult, setGuessResult] = useState(null);
 
   const appendChatRef = useRef(null);
+
+  const applyHangmanPayload = useCallback((payload) => {
+    if (!payload || typeof payload !== "object") return;
+    if (typeof payload.tiktok === "string" && payload.tiktok.trim()) {
+      setStreamer(payload.tiktok);
+    }
+    if (typeof payload.tiktok_status === "string" && payload.tiktok_status.trim()) {
+      setHmStatus(payload.tiktok_status);
+    }
+    const raw = payload.state && typeof payload.state === "object" ? payload.state : payload;
+    try {
+      const next = normalizeHangmanState(raw);
+      if (next) {
+        setState(next);
+        if (next.wordTheme) setTheme(next.wordTheme);
+      }
+    } catch (err) {
+      console.warn("[hangman] apply payload failed", err);
+    }
+  }, []);
 
   const liveOn = useMemo(() => {
     const tl = platform?.tiktokLive;
@@ -121,17 +142,7 @@ export default function App() {
           setHmStatus(data.tiktok_status);
         }
         if (typeof data.tiktok === "string") setStreamer(data.tiktok);
-        if (data.state) {
-          try {
-            const next = normalizeHangmanState(data.state);
-            if (next) {
-              setState(next);
-              if (next.wordTheme) setTheme(next.wordTheme);
-            }
-          } catch (err) {
-            console.warn("[hangman] WS state update failed", err);
-          }
-        }
+        if (data.state) applyHangmanPayload({ state: data.state });
         if (Array.isArray(data.alltime)) setAllTime(data.alltime.slice(0, 15));
       };
       pingTimer = window.setInterval(() => {
@@ -146,7 +157,27 @@ export default function App() {
       if (reconnectTimer) window.clearInterval(reconnectTimer);
       ws?.close();
     };
-  }, []);
+  }, [applyHangmanPayload]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function pollState() {
+      try {
+        const body = await fetchHangmanState();
+        if (!cancelled && body?.ok) applyHangmanPayload(body);
+      } catch {
+        /* ignore — WS may still be connected */
+      }
+    }
+
+    pollState();
+    const pollTimer = window.setInterval(pollState, 2000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(pollTimer);
+    };
+  }, [applyHangmanPayload]);
 
   const registerChatAppend = useCallback((fn) => {
     appendChatRef.current = fn;

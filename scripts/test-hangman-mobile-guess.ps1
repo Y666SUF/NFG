@@ -61,6 +61,31 @@ Assert-Json $r "platform/status" | Out-Null
 $r = Invoke-NfgJson GET "/api/mobile/chat?limit=5"
 Assert-Json $r "mobile/chat" | Out-Null
 
+$stateHeaders = @{ "X-Client-App" = "nfg-hangman" }
+$r = Invoke-NfgJson GET "/api/mobile/hangman/state" $stateHeaders
+if ($r.Status -eq 404) {
+  Write-Host "[FAIL] GET /api/mobile/hangman/state returned 404 — pull latest server and restart Electron"
+  $fail++
+} elseif (-not (Assert-Json $r "hangman/state")) {
+  $fail++
+} else {
+  try {
+    $st = $r.Text | ConvertFrom-Json
+    if ($st.ok -ne $true) {
+      Write-Host "[FAIL] hangman/state ok not true: $($st.error)"
+      $fail++
+    } elseif (-not $st.maskedWord -and -not $st.slots) {
+      Write-Host "[FAIL] hangman/state missing maskedWord/slots (game may not be ready)"
+      $fail++
+    } else {
+      Write-Host "[OK] hangman/state has word + keyboard fields"
+    }
+  } catch {
+    Write-Host "[FAIL] hangman/state parse"
+    $fail++
+  }
+}
+
 $headers = @{
   "X-Client-App" = "nfg-hangman"
   "X-Device-Id"  = "pc-guess-test"

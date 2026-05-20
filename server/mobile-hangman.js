@@ -10,6 +10,15 @@ const { fetchHangmanJson, HANGMAN_BACKEND_URL } = require("./hangman-proxy");
 const NFG_INTERNAL_SECRET = String(process.env.NFG_INTERNAL_SECRET || "nfg-dev-internal").trim();
 const GUESS_TIMEOUT_MS = Math.max(3000, Number(process.env.NFG_HANGMAN_GUESS_TIMEOUT_MS) || 12000);
 
+/** HTTP headers must be ASCII; TikTok display names may include emoji. */
+function safeInternalHeaderValue(value, fallback = "App player") {
+  const ascii = String(value || "")
+    .replace(/[^\x20-\x7E]/g, "")
+    .trim()
+    .slice(0, 120);
+  return ascii || fallback;
+}
+
 function hangmanGuessRequest(body, headers) {
   const url = `${HANGMAN_BACKEND_URL}/api/hangman/app/guess`;
   const parsed = new URL(url);
@@ -154,7 +163,10 @@ function registerHangmanMobileRoutes(app, ctx) {
       const out = await hangmanGuessRequest(body, {
         "X-NFG-Internal": NFG_INTERNAL_SECRET,
         "X-NFG-User-Id": String(session.userId).toLowerCase(),
-        "X-NFG-Display-Name": String(session.displayName || session.userId),
+        "X-NFG-Display-Name": safeInternalHeaderValue(
+          session.displayName || session.userId,
+          String(session.userId || "App player")
+        ),
       });
 
       const mapped = mapHangmanGuessResponse(out.body);

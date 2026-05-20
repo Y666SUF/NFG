@@ -7,11 +7,13 @@ export default function GuessKeyboard({
   onGuess,
   lastResult,
 }) {
+  const correctList = Array.isArray(keyboardCorrect) ? keyboardCorrect : [];
+  const wrongList = Array.isArray(keyboardWrong) ? keyboardWrong : [];
   const correct = new Set(
-    (keyboardCorrect || []).map((c) => String(c).toUpperCase()).filter((c) => /^[A-Z]$/.test(c))
+    correctList.map((c) => String(c).toUpperCase()).filter((c) => /^[A-Z]$/.test(c))
   );
   const wrong = new Set(
-    (keyboardWrong || []).map((c) => String(c).toUpperCase()).filter((c) => /^[A-Z]$/.test(c))
+    wrongList.map((c) => String(c).toUpperCase()).filter((c) => /^[A-Z]$/.test(c))
   );
 
   return (
@@ -40,7 +42,9 @@ export default function GuessKeyboard({
         </div>
       ))}
       {lastResult ? (
-        <p className={`guess-result ${lastResult.ok ? "ok" : "bad"}`}>{lastResult.text}</p>
+        <p className={`guess-result ${lastResult.ok ? "ok" : "bad"}`}>
+          {String(lastResult.text ?? "")}
+        </p>
       ) : null}
       {!disabled ? (
         <p className="kb-hint">6 wrong guesses eliminates you for this word (same as live chat).</p>

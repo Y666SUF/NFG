@@ -122,9 +122,15 @@ export default function App() {
         }
         if (typeof data.tiktok === "string") setStreamer(data.tiktok);
         if (data.state) {
-          const next = normalizeHangmanState(data.state);
-          setState(next);
-          if (next?.wordTheme) setTheme(next.wordTheme);
+          try {
+            const next = normalizeHangmanState(data.state);
+            if (next) {
+              setState(next);
+              if (next.wordTheme) setTheme(next.wordTheme);
+            }
+          } catch (err) {
+            console.warn("[hangman] WS state update failed", err);
+          }
         }
         if (Array.isArray(data.alltime)) setAllTime(data.alltime.slice(0, 15));
       };
@@ -152,17 +158,27 @@ export default function App() {
     setGuessResult(null);
     try {
       const out = await guessLetter(letter);
-      if (!out.ok) {
-        setGuessResult({ ok: false, text: out.message || out.error || "Guess failed" });
-      } else if (out.eliminated) {
-        setGuessResult({ ok: false, text: `Out for this word (${out.wrongGuesses}/${out.maxWrong} wrong)` });
+      if (!out || out.ok === false) {
+        setGuessResult({
+          ok: false,
+          text: String(out?.message || out?.error || "Guess failed"),
+        });
+        return;
+      }
+      if (out.eliminated) {
+        const wrong = out.wrongGuesses ?? out.wrong ?? 0;
+        const max = out.maxWrong ?? 6;
+        setGuessResult({ ok: false, text: `Out for this word (${wrong}/${max} wrong)` });
       } else {
-        const line = Array.isArray(out.lines) && out.lines.length ? out.lines[out.lines.length - 1] : "";
-        setGuessResult({ ok: true, text: line || `Guessed ${letter}` });
+        const lines = Array.isArray(out.lines) ? out.lines : [];
+        const last = lines.length ? lines[lines.length - 1] : "";
+        const text =
+          typeof last === "string" ? last : last != null ? String(last) : `Guessed ${letter}`;
+        setGuessResult({ ok: true, text });
         setState((prev) => mergeGuessIntoState(prev, out));
       }
     } catch (e) {
-      setGuessResult({ ok: false, text: e.message });
+      setGuessResult({ ok: false, text: String(e?.message || e || "Guess failed") });
     } finally {
       setGuessBusy(false);
     }

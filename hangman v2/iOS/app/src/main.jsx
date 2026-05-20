@@ -1,6 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import App from "./App";
+import ErrorBoundary from "./components/ErrorBoundary";
 import "./styles.css";
 
 /* Prevent pinch/double-tap zoom in Capacitor WKWebView */
@@ -13,6 +14,7 @@ function preventViewportZoom() {
   document.addEventListener(
     "touchend",
     (e) => {
+      if (e.target.closest("button, a, input, textarea, select, .kb-key")) return;
       const now = Date.now();
       if (now - lastTouchEnd < 350) e.preventDefault();
       lastTouchEnd = now;
@@ -24,6 +26,8 @@ preventViewportZoom();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );

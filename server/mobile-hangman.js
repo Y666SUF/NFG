@@ -69,6 +69,13 @@ function hangmanGuessRequest(body, headers) {
   });
 }
 
+function sanitizeKeyboard(kb) {
+  if (!kb || typeof kb !== "object" || Array.isArray(kb)) return undefined;
+  const correct = Array.isArray(kb.correct) ? kb.correct : [];
+  const wrong = Array.isArray(kb.wrong) ? kb.wrong : [];
+  return { correct, wrong };
+}
+
 /** Map Python app/guess payload → iOS companion shape. */
 function mapHangmanGuessResponse(body) {
   if (!body || body.ok === false) {
@@ -76,7 +83,7 @@ function mapHangmanGuessResponse(body) {
       ok: false,
       error: (body && body.error) || "hangman_error",
       message: body && body.message ? String(body.message) : undefined,
-      lines: (body && body.lines) || [],
+      lines: Array.isArray(body?.lines) ? body.lines.map((l) => String(l)) : [],
     };
   }
   const guessed = Array.isArray(body.guessed)
@@ -87,7 +94,7 @@ function mapHangmanGuessResponse(body) {
     masked: body.masked || body.maskedWord || "",
     maskedWord: body.maskedWord || body.masked || "",
     slots: Array.isArray(body.slots) ? body.slots : undefined,
-    keyboard: body.keyboard && typeof body.keyboard === "object" ? body.keyboard : undefined,
+    keyboard: sanitizeKeyboard(body.keyboard),
     length: Number(body.length) || undefined,
     wrong: Number(body.wrong ?? body.wrongGuesses ?? 0),
     maxWrong: Number(body.maxWrong ?? 6),
@@ -95,7 +102,7 @@ function mapHangmanGuessResponse(body) {
     correct: body.correct === true ? true : body.correct === false ? false : undefined,
     eliminated: !!body.eliminated,
     won: !!body.won,
-    lines: body.lines || [],
+    lines: Array.isArray(body.lines) ? body.lines.map((l) => String(l)) : [],
   };
 }
 

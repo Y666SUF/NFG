@@ -158,11 +158,22 @@ export async function postChat(message) {
 }
 
 export async function guessLetter(letter) {
-  const { data } = await apiRequest(`${apiBase()}/api/mobile/hangman/guess`, {
+  const { ok, status, data } = await apiRequest(`${apiBase()}/api/mobile/hangman/guess`, {
     method: "POST",
     headers: authHeaders(),
-    body: { letter },
+    body: { letter: String(letter || "").toLowerCase() },
   });
+  if (!data || typeof data !== "object") {
+    return { ok: false, error: "bad_response", message: `Server error (${status})` };
+  }
+  if (!ok && data.ok !== true) {
+    return {
+      ok: false,
+      error: data.error || "guess_failed",
+      message: data.message || `HTTP ${status}`,
+      lines: Array.isArray(data.lines) ? data.lines : [],
+    };
+  }
   return data;
 }
 

@@ -2,7 +2,7 @@
  * In-app chat between mobile players (separate from TikTok !commands).
  */
 const crypto = require("crypto");
-const { playerBadgesFromStore } = require("./mobile-player-badges");
+const { enrichChatMessage } = require("./mobile-app-labels");
 
 const MAX_MESSAGES = 120;
 const MAX_MESSAGE_LEN = 240;
@@ -11,14 +11,9 @@ const RATE_LIMIT_MS = 1200;
 const messages = [];
 const lastSentAt = new Map();
 
-function enrichChatRow(row, pointStore) {
-  if (!row || !row.userId) return row;
-  return { ...row, ...playerBadgesFromStore(pointStore, row.userId) };
-}
-
 function listMessages(limit = 50, pointStore) {
   const n = Math.min(MAX_MESSAGES, Math.max(1, Math.floor(Number(limit) || 50)));
-  return messages.slice(-n).map((row) => enrichChatRow(row, pointStore));
+  return messages.slice(-n).map((row) => enrichChatMessage(row, pointStore));
 }
 
 function appendMessage(row) {
@@ -70,7 +65,7 @@ function registerMobileChatRoutes(app, ctx) {
     const clientApp = String(req.headers["x-client-app"] || req.body?.clientApp || "nfg")
       .trim()
       .slice(0, 32);
-    const row = enrichChatRow(
+    const row = enrichChatMessage(
       {
         id: crypto.randomBytes(8).toString("hex"),
         userId: session.userId,
@@ -84,7 +79,9 @@ function registerMobileChatRoutes(app, ctx) {
     appendMessage(row);
 
     const badge = row.superFan ? " ★" : "";
-    console.log(`[App chat] ${row.displayName}${badge} (@${row.userId}): ${row.message}`);
+    console.log(
+      `[App chat] [${row.appLabel}] ${row.displayName}${badge} (@${row.userId}): ${row.message}`
+    );
 
     if (typeof broadcast === "function") {
       broadcast({ type: "app_chat", payload: row });

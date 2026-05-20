@@ -70,16 +70,34 @@ const corsOrigins = new Set([
   "https://www.y666suf.com",
 ]);
 
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return false;
+  if (corsOrigins.has("*") || corsOrigins.has(origin)) return true;
+  const lower = origin.toLowerCase();
+  if (lower.startsWith("capacitor://") || lower.startsWith("ionic://")) return true;
+  return false;
+}
+
+const corsAllowHeaders =
+  "Content-Type, Authorization, X-Device-Id, X-Client-App, X-NFG-Internal, X-NFG-User-Id, X-NFG-Display-Name";
+
 app.use((req, res, next) => {
   const origin = String(req.headers.origin || "").trim();
-  if (origin && (corsOrigins.has("*") || corsOrigins.has(origin))) {
+  if (origin && isAllowedCorsOrigin(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader("Access-Control-Allow-Headers", corsAllowHeaders);
   }
   if (req.method === "OPTIONS") return res.status(204).end();
   next();
+});
+
+process.on("uncaughtException", (err) => {
+  console.error("[NFG] uncaughtException (server stays up):", err && err.stack ? err.stack : err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[NFG] unhandledRejection (server stays up):", reason);
 });
 
 const publicDir = path.join(__dirname, "..", "public");

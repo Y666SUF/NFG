@@ -81,7 +81,8 @@
         if (empty) empty.remove();
         const el = document.createElement("div");
         el.className = "msg";
-        el.innerHTML = `<div class="who">${esc(row.displayName || row.userId)} <span class="user">@${esc(row.userId)}</span></div><div class="text">${esc(row.message)}</div><div class="time">${fmtTime(row.at)}</div>`;
+        const appTag = row.appLabel ? ` <span class="user">· ${esc(row.appLabel)}</span>` : "";
+        el.innerHTML = `<div class="who">${esc(row.displayName || row.userId)}${appTag}</div><div class="text">${esc(row.message)}</div><div class="time">${fmtTime(row.at)}</div>`;
         log.appendChild(el);
         log.scrollTop = log.scrollHeight;
       }

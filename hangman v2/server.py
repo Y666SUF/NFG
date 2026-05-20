@@ -2537,105 +2537,111 @@ async def hangman_public_status() -> dict[str, Any]:
 @app.post("/api/hangman/app/guess")
 async def hangman_app_guess(request: Request) -> dict[str, Any]:
     """Trusted guess from NFG platform (mobile app keyboard). Same rules as TikTok chat."""
-    if not _nfg_internal_ok(request):
-        raise HTTPException(status_code=403, detail="Forbidden")
-    if session is None:
-        raise HTTPException(status_code=503, detail="Game not ready")
-
-    uid = (request.headers.get("x-nfg-user-id") or "").strip()
-    nick = (request.headers.get("x-nfg-display-name") or uid).strip() or "App player"
-    if not uid:
-        raise HTTPException(status_code=400, detail="Missing X-NFG-User-Id")
-
     try:
-        body = await request.json()
-    except Exception:
-        body = {}
+        if not _nfg_internal_ok(request):
+            raise HTTPException(status_code=403, detail="Forbidden")
+        if session is None:
+            raise HTTPException(status_code=503, detail="Game not ready")
 
-    word = str(body.get("word") or "").strip()
-    letter = str(body.get("letter") or "").strip().upper()
+        uid = (request.headers.get("x-nfg-user-id") or "").strip()
+        nick = (request.headers.get("x-nfg-display-name") or uid).strip() or "App player"
+        if not uid:
+            raise HTTPException(status_code=400, detail="Missing X-NFG-User-Id")
 
-    if word and len(word) >= 2:
-        guess_text = f"!{word}"
-    elif letter and len(letter) == 1 and letter.isalpha():
-        guess_text = letter
-    else:
-        raise HTTPException(status_code=400, detail="Send letter (A-Z) or word (2+ chars)")
+        try:
+            body = await request.json()
+        except Exception:
+            body = {}
 
-    user_key = _session_user_key(uid, nick)
-    snap_round = session.round_id
-    lines: list[str] = []
-    round_popup = None
-    points_popup = None
-    cmd_pop = None
-    help_pop = None
-    wager_pop = None
-    auto_next_delay_sec = None
-    async with game_lock:
-        (
-            lines,
-            _completed,
-            round_popup,
-            points_popup,
-            auto_next_delay_sec,
-            cmd_pop,
-            help_pop,
-            wager_pop,
-        ) = process_chat_message(
-            session,
-            text=guess_text,
-            uid=uid,
-            user_key=user_key,
-            nick=nick,
-            host_username=host_username,
-            auto_next=auto_next,
-            alltime_path=ALLTIME_PATH,
-        )
+        word = str(body.get("word") or "").strip()
+        letter = str(body.get("letter") or "").strip().upper()
+
+        if word and len(word) >= 2:
+            guess_text = f"!{word}"
+        elif letter and len(letter) == 1 and letter.isalpha():
+            guess_text = letter
+        else:
+            raise HTTPException(status_code=400, detail="Send letter (A-Z) or word (2+ chars)")
+
+        user_key = _session_user_key(uid, nick)
         snap_round = session.round_id
+        lines: list[str] = []
+        round_popup = None
+        points_popup = None
+        cmd_pop = None
+        help_pop = None
+        wager_pop = None
+        auto_next_delay_sec = None
+        async with game_lock:
+            (
+                lines,
+                _completed,
+                round_popup,
+                points_popup,
+                auto_next_delay_sec,
+                cmd_pop,
+                help_pop,
+                wager_pop,
+            ) = process_chat_message(
+                session,
+                text=guess_text,
+                uid=uid,
+                user_key=user_key,
+                nick=nick,
+                host_username=host_username,
+                auto_next=auto_next,
+                alltime_path=ALLTIME_PATH,
+            )
+            snap_round = session.round_id
 
-    if lines or round_popup or points_popup or cmd_pop or help_pop or wager_pop:
-        await push_state(
-            lines,
-            round_popup=round_popup,
-            points_popup=points_popup,
-            command_list_popup=cmd_pop,
-            hangman_help_popup=help_pop,
-            wager_intro_popup=wager_pop,
-        )
-    if auto_next_delay_sec is not None and auto_next_delay_sec > 0:
-        global _auto_next_delay_task
-        _cancel_auto_next_delay_task()
-        _auto_next_delay_task = asyncio.create_task(
-            _run_delayed_auto_next(snap_round, float(auto_next_delay_sec))
-        )
+        if lines or round_popup or points_popup or cmd_pop or help_pop or wager_pop:
+            await push_state(
+                lines,
+                round_popup=round_popup,
+                points_popup=points_popup,
+                command_list_popup=cmd_pop,
+                hangman_help_popup=help_pop,
+                wager_intro_popup=wager_pop,
+            )
+        if auto_next_delay_sec is not None and auto_next_delay_sec > 0:
+            global _auto_next_delay_task
+            _cancel_auto_next_delay_task()
+            _auto_next_delay_task = asyncio.create_task(
+                _run_delayed_auto_next(snap_round, float(auto_next_delay_sec))
+            )
 
-    pl = session.players.get(user_key)
-    eliminated = bool(pl and pl.eliminated_this_word)
-    wrong = int(pl.incorrect_this_word) if pl else 0
-    guessed = sorted(c.lower() for c in session.guessed_letters if c.isalpha())
-    won = bool(session.is_solved())
-    correct: bool | None = None
-    if letter and len(letter) == 1 and letter.isalpha():
-        joined = "\n".join(lines).lower()
-        if "is correct" in joined:
-            correct = True
-        elif "is not in the word" in joined or "you are out" in joined:
-            correct = False
-        elif "already guessed" in joined:
-            correct = None
-    return {
-        "ok": True,
-        "lines": lines,
-        "eliminated": eliminated,
-        "wrongGuesses": wrong,
-        "wrong": wrong,
-        "maxWrong": session.max_wrong_per_player,
-        "maskedWord": session.mask(),
-        "masked": session.mask(),
-        "guessed": guessed,
-        "won": won,
-        "correct": correct,
-    }
+        pl = session.players.get(user_key)
+        eliminated = bool(pl and pl.eliminated_this_word)
+        wrong = int(pl.incorrect_this_word) if pl else 0
+        guessed = sorted(c.lower() for c in session.guessed_letters if c.isalpha())
+        won = bool(session.is_solved())
+        correct: bool | None = None
+        if letter and len(letter) == 1 and letter.isalpha():
+            joined = "\n".join(lines).lower()
+            if "is correct" in joined:
+                correct = True
+            elif "is not in the word" in joined or "you are out" in joined:
+                correct = False
+            elif "already guessed" in joined:
+                correct = None
+        return {
+            "ok": True,
+            "lines": lines,
+            "eliminated": eliminated,
+            "wrongGuesses": wrong,
+            "wrong": wrong,
+            "maxWrong": session.max_wrong_per_player,
+            "maskedWord": session.mask(),
+            "masked": session.mask(),
+            "guessed": guessed,
+            "won": won,
+            "correct": correct,
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        print(f"[hangman app guess] error: {exc!r}")
+        return {"ok": False, "error": "guess_failed", "message": str(exc)[:240]}
 
 
 @app.websocket("/ws")

@@ -60,6 +60,15 @@ curl "$base/privacy"
 curl "https://y666suf.com/api/mobile/platform/status"
 ```
 
+Hangman guess + chat hardening smoke test:
+
+```powershell
+.\scripts\test-hangman-mobile-guess.ps1
+```
+
+See `WINDOWS-CURSOR-HANGMAN-GUESS-AND-CHAT-FINALIZE.md` if guess kills Electron.
+```
+
 ## Legal pages
 
 - Static fallback: `website/privacy.html`, `website/legal.html`

@@ -1,0 +1,31 @@
+# Secrets — never commit
+.env
+.env.local
+**/.env
+!.env.example
+
+# macOS
+.DS_Store
+
+# Node
+node_modules/
+**/node_modules/
+
+# iOS / Xcode (Crash)
+ios/DerivedData/
+ios/build/
+ios/archive/
+ios/export/*.ipa
+xcuserdata/
+*.xcuserstate
+*.xcarchive
+
+# Hangman Capacitor app
+hangman-v2/iOS/app/node_modules/
+hangman-v2/iOS/app/dist/
+hangman-v2/iOS/app/ios/App/Pods/
+hangman-v2/iOS/app/ios/App/build/
+
+# Logs & temp
+*.log
+.cursor/

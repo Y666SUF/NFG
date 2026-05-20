@@ -1,0 +1,17 @@
+{
+  "name": "nfg-crash-sync-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "LAN sync server for NFG Crash — run on your Windows PC",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "ws": "^8.18.1"
+  }
+}

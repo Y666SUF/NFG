@@ -1,6 +1,6 @@
 # NFG Crash — iOS + shared live server
 
-**Sync Mac ↔ PC:** see **[GITHUB-SYNC.md](GITHUB-SYNC.md)** (public GitHub repo).
+**Sync Mac ↔ PC:** [github.com/Y666SUF/NFG](https://github.com/Y666SUF/NFG) — see **[GITHUB-SYNC.md](GITHUB-SYNC.md)**.
 
 | Project | Path |
 |---------|------|

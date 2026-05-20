@@ -2,7 +2,7 @@
 
 Use **one public repo** so both machines always have the same code.
 
-Recommended repo name: **`nfg-crash`** (or `nfg-live` if you prefer).
+**Public repo:** [https://github.com/Y666SUF/NFG](https://github.com/Y666SUF/NFG)
 
 ---
 
@@ -15,6 +15,7 @@ Recommended repo name: **`nfg-crash`** (or `nfg-live` if you prefer).
 | `server/` | Mobile API files → copy to Windows `server/` |
 | `website/` | Privacy/legal HTML for y666suf.com |
 | `WINDOWS-*.md` | Paste-into-Cursor prompts for your **PC** |
+| **`WINDOWS-CURSOR-PC-FULL-SETUP.md`** | **One prompt: GitHub pull + Crash + Hangman + website** |
 
 **Windows game project** (full Hangman + Crash Node server) can live in the same repo root on PC, or only `server/` is synced and the rest of the PC game stays local — see below.
 
@@ -36,18 +37,12 @@ cd /Users/y666suf/Documents/nfg-crash
 git add -A
 git status   # confirm no .env files listed
 git commit -m "Initial commit: Crash iOS, Hangman companion, server mobile APIs, Windows docs"
-gh repo create nfg-crash --public --source=. --remote=origin --push
-```
-
-If you already created an empty repo on GitHub:
-
-```bash
-git remote add origin https://github.com/YOUR_USERNAME/nfg-crash.git
+git remote add origin https://github.com/Y666SUF/NFG.git
 git branch -M main
 git push -u origin main
 ```
 
-Replace `YOUR_USERNAME` with your GitHub account.
+Repo is already created: **https://github.com/Y666SUF/NFG**
 
 ---
 
@@ -61,8 +56,8 @@ https://git-scm.com/download/win
 
 ```powershell
 cd $HOME\Documents
-git clone https://github.com/YOUR_USERNAME/nfg-crash.git
-cd nfg-crash
+git clone https://github.com/Y666SUF/NFG.git
+cd NFG
 ```
 
 ### 3. Wire server files into your live game
@@ -104,7 +99,7 @@ git push
 ### Windows PC (get latest)
 
 ```powershell
-cd $HOME\Documents\nfg-crash
+cd $HOME\Documents\NFG
 git pull
 # Restart game server if server\ files changed
 # Rebuild Hangman app if hangman-v2\ changed

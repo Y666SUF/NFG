@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "installCommand": "corepack yarn install",
+  "buildCommand": "corepack yarn build",
+  "outputDirectory": "build",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

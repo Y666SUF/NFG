@@ -26,6 +26,10 @@ hangman v2/data/*.json
 !hangman v2/data/word_theme_map.json
 !hangman v2/data/word_bank*.json
 
+# Large archives
+node-v*.zip
+*.zip
+
 # Build outputs
 dist/
 hangman v2/iOS/app/dist/

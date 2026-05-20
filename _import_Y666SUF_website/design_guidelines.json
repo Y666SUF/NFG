@@ -1,0 +1,140 @@
+{
+  "theme": "DARK",
+  "archetype": "7 (Electric & Neon)",
+  "domain": "Gaming / Promo",
+  "typography": {
+    "font_families": {
+      "heading": "Unbounded, display",
+      "body": "Outfit, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scale": {
+      "h1": "text-5xl md:text-6xl lg:text-7xl tracking-tighter uppercase font-black",
+      "h2": "text-4xl md:text-5xl tracking-tight font-bold",
+      "h3": "text-2xl md:text-3xl tracking-tight font-semibold",
+      "h4": "text-xl font-medium",
+      "body": "text-base md:text-lg leading-relaxed text-zinc-300",
+      "label": "text-xs tracking-[0.2em] uppercase text-cyan-400"
+    },
+    "rules": [
+      "No Inter or Roboto allowed.",
+      "Headings should have tight letter spacing.",
+      "Labels must be uppercase with wide spacing."
+    ]
+  },
+  "colors": {
+    "background": {
+      "base": "#05050A",
+      "surface": "#0A0A12",
+      "glass": "rgba(10, 10, 18, 0.6)"
+    },
+    "text": {
+      "primary": "#FFFFFF",
+      "secondary": "#A1A1AA",
+      "muted": "#52525B"
+    },
+    "brand": {
+      "cyan": "#00F0FF",
+      "magenta": "#FF003C",
+      "purple": "#8A2BE2"
+    },
+    "states": {
+      "hover": "brightness-125",
+      "focus": "ring-2 ring-cyan-400",
+      "border": "rgba(0, 240, 255, 0.3)"
+    },
+    "rules": [
+      "Use black-on-black layers to ground neon colors.",
+      "Never use pure white #FFFFFF for backgrounds. Always dark void.",
+      "Glow effects should use drop-shadow with cyan or magenta."
+    ]
+  },
+  "layout_spacing": {
+    "system": "Generous Spacing (Tailwind Scale)",
+    "container": "max-w-7xl mx-auto px-6 md:px-12",
+    "grids": {
+      "bento_marketing": "grid-cols-1 md:grid-cols-8 lg:grid-cols-12 gap-8 md:gap-12"
+    },
+    "rules": [
+      "Use Tetris Grid for Games Gallery: asymmetrical spanning.",
+      "Containers with borders must have internal padding (p-6 or p-8).",
+      "Mobile-first: default to grid-cols-1 on small screens."
+    ]
+  },
+  "surfaces": {
+    "header": {
+      "style": "Glassmorphism",
+      "classes": "backdrop-blur-xl bg-black/60 border-b border-white/10"
+    },
+    "cards": {
+      "style": "Retro-Futurism / Neon Borders",
+      "classes": "bg-black/40 border border-cyan-500/30 hover:border-cyan-500/80 shadow-[0_0_15px_rgba(0,240,255,0.1)] hover:shadow-[0_0_25px_rgba(0,240,255,0.3)] transition-all duration-300"
+    }
+  },
+  "media": {
+    "image_urls": {
+      "hero_background": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/4ee96cb4-c90d-4357-90f1-5733bedb3fde/images/355c614e926af5bb2d1e706b4415db872ffc73d158ce1a8bff65f05c024c74c2.png",
+        "description": "Deep space nebula background, vibrant cyan and magenta cosmic dust",
+        "usage": "Fallback for 3D canvas or textured overlay for hero section"
+      },
+      "nfg_crash": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/4ee96cb4-c90d-4357-90f1-5733bedb3fde/images/58d092f3aadbd7cd8ffdd2b437b7108218cc00579b0ae310a5816c8fcde447ec.png",
+        "description": "Futuristic spaceship crashing, neon cyan and magenta glow",
+        "usage": "Featured game poster in hero or bento grid"
+      },
+      "nfg_wordwich": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/4ee96cb4-c90d-4357-90f1-5733bedb3fde/images/1232dbc46884a64c29a1d0c393af5dad63c4b422b9309d1c04ed2c34bc966f82.png",
+        "description": "Glowing neon letters stacked like a sandwich in deep space",
+        "usage": "Bento grid card image for NFG Wordwich"
+      },
+      "nfg_hangman": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/4ee96cb4-c90d-4357-90f1-5733bedb3fde/images/18cad6da67cbb9d146a296ebfcff5dd1bf257c8047b1a084cdcb067f0a211da0.png",
+        "description": "Futuristic glowing neon hangman game in deep space",
+        "usage": "Bento grid card image for NFG Hangman"
+      },
+      "nfg_wordwheel": {
+        "url": "https://static.prod-images.emergentagent.com/jobs/4ee96cb4-c90d-4357-90f1-5733bedb3fde/images/2bc0c97c1645c1ff41053a400258ed76dd6266378387624740c3e6eaed2779e0.png",
+        "description": "Glowing neon roulette wheel made of alphabet letters",
+        "usage": "Bento grid card image for NFG Wordwheel"
+      }
+    },
+    "rules": [
+      "Images must not exceed 80vh on mobile devices.",
+      "Overlay hero images with max bg-black/50 for readability."
+    ]
+  },
+  "interactions": {
+    "animations": {
+      "hover": "Elements scale up slightly (scale-105) with intensified neon drop-shadows.",
+      "entrance": "Staggered fade-up for grid items using Framer Motion.",
+      "marquee": "Use react-fast-marquee for a kinetic texture of '@y666.suf TikTok Live' running across the screen."
+    }
+  },
+  "components_strategy": {
+    "libraries_to_install": [
+      "three",
+      "@react-three/fiber",
+      "@react-three/drei",
+      "framer-motion",
+      "react-fast-marquee",
+      "lucide-react",
+      "@radix-ui/react-icons"
+    ],
+    "specific_instructions": [
+      "HERO: Use React Three Fiber to render a dark cosmic space scene. Use `<Stars>`, `<Sparkles>`, and `<Float>` from drei. Overlay text should be massive, glowing, and punchy.",
+      "GAMES GRID: Implement the Bento Grid protocol. NFG Crash is the Hero block (col-span-full md:col-span-8 row-span-2). Use the provided AI-generated game posters for cards.",
+      "LEADERBOARD: Use Shadcn UI Table but heavily customize it with Retro-Futurism style (black background, cyan/magenta thin borders, monospace fonts for scores).",
+      "TIKTOK CTA: Bold marquee text displaying '@y666.suf', pushing viewers to TikTok live.",
+      "NAVIGATION: Fixed top glassmorphism bar with glowing border on scroll.",
+      "TESTING: Add data-testid attributes to all interactive elements."
+    ]
+  },
+  "accessibility": {
+    "rules": [
+      "Ensure text over neon elements has sufficient contrast.",
+      "Focus states must use prominent cyan ring.",
+      "Support prefers-reduced-motion for the 3D canvas and marquees."
+    ]
+  }
+}

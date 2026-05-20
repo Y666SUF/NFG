@@ -1,79 +1,75 @@
-# Windows Cursor prompt — fix Hangman app guess crash + finalize shared chat labels
+# Windows Cursor prompt — finalize server, IPAs, Hangman guess fix, app chat labels
 
-**Copy everything below the line into Cursor on your Windows PC** (game root e.g. `C:\Users\Yusef\test` or your cloned `NFG` repo).
-
----
-
-You are fixing the **NFG Windows stack**: Electron + Node (**port 3847**, public **https://y666suf.com**) + Python Hangman (**port 19876**, proxied at `/hangman/ws` and `/api/hangman/*`).
-
-**Symptom:** When a player taps a letter in the **NFG Hangman** iOS app, the **entire Electron app exits** (Crash overlay + Hangman both die).
-
-**Also finish:** Shared **app chat** should show clean names: player display name from `pointStore`, plus app badge **NFG Crash** or **NFG Hangman** (not raw `nfg-crash` / `nfg-hangman`).
-
-**Do not break:** TikTok bridge, Crash bets/WebSocket, `!link`, presence, Super Fan badges, Cloudflare tunnel, IPA downloads.
+**Copy everything below the line into Cursor on your Windows PC** (game root e.g. `C:\Users\Yusef\test`).
 
 ---
 
-## Part 0 — Sync repo
+You are finishing the **NFG Windows stack**: Electron + Node (**port 3847**, **https://y666suf.com**) + Python Hangman (**port 19876**).
+
+**Goals:**
+
+1. **Fix:** iOS Hangman letter guess must **not** crash Electron (Crash + Hangman).
+2. **App chat:** show **NFG Crash** / **NFG Hangman** labels + clean TikTok display names.
+3. **IPAs:** use the `.ipa` files committed in **`releases/ipa/`** (also copy to PC Downloads for sideload).
+4. **Restart** tunnel + verify LIVE on @y666.suf.
+
+**Do not break:** TikTok bridge, Crash bets/WebSocket, `!link`, presence, Super Fan, Cloudflare tunnel.
+
+---
+
+## Part 0 — Sync repo (includes IPAs + server fixes)
 
 ```powershell
 cd C:\Users\Yusef\test
 git pull origin main
 ```
 
-Confirm Mac pushed latest `main` (includes `server/mobile-hangman.js`, `server/mobile-app-labels.js`, CORS for Capacitor, Hangman iOS fixes).
+Confirm these exist after pull:
+
+| Path | Purpose |
+|------|---------|
+| `releases/ipa/NFG-Crash.ipa` | Crash companion (~7 MB) |
+| `releases/ipa/NFG-Hangman.ipa` | Hangman companion (~2 MB) |
+| `server/mobile-hangman.js` | Safe mobile guess API |
+| `server/mobile-app-labels.js` | `appLabel` for chat/presence |
+| `server/index.js` | CORS + crash handlers |
+| `hangman v2/server.py` | Safe `hangman_app_guess` |
+| `scripts/test-hangman-mobile-guess.ps1` | API smoke test |
+| `WINDOWS-CURSOR-HANGMAN-GUESS-AND-CHAT-FINALIZE.md` | This file |
 
 ---
 
-## Part 1 — Root cause (guess crash)
+## Part 1 — Copy IPAs for sideload (PC Downloads)
 
-Mobile guess path:
+Node serves IPAs from **`releases/ipa/`** first, then `Downloads`. Copy both so Windows tools and old docs still work:
 
-1. iPhone → `POST https://y666suf.com/api/mobile/hangman/guess` (Bearer + `X-Client-App: nfg-hangman`)
-2. Node `server/mobile-hangman.js` → internal `POST http://127.0.0.1:19876/api/hangman/app/guess` with headers:
-   - `X-NFG-Internal: <NFG_INTERNAL_SECRET>`
-   - `X-NFG-User-Id`, `X-NFG-Display-Name`
-3. Python `hangman v2/server.py` → `process_chat_message()` (same as TikTok chat)
-
-**Electron quits** when the **Node child** spawned by `electron/main.js` exits with **code ≠ 0** (see `serverProcess.on("exit")`). So any **unhandled exception** in the guess route or a **fatal Node crash** kills both games.
-
-**Fix strategy:**
-
-- Wrap the mobile guess handler in **try/catch** (never throw to Express).
-- Add **HTTP timeout** on the internal guess call (fail with JSON, don’t hang).
-- Wrap Python `hangman_app_guess` in **try/except** (return 500 JSON, don’t kill uvicorn).
-- Add Node **process-level** handlers that log errors instead of exiting (optional but recommended).
-- Verify **`NFG_INTERNAL_SECRET`** is identical in Node env and Hangman Python env (default `nfg-dev-internal`).
-
----
-
-## Part 2 — Files to verify / merge
-
-| File | Action |
-|------|--------|
-| `server/mobile-hangman.js` | Hardened guess route + timeout |
-| `server/mobile-app-labels.js` | **NEW** — `formatAppLabel()`, `resolveChatDisplayName()` |
-| `server/mobile-chat.js` | Adds `appLabel`, normalized `displayName` |
-| `server/mobile-presence.js` | Adds `appLabel` on online list |
-| `server/index.js` | CORS: `capacitor://`, `X-Device-Id`, `X-Client-App` |
-| `hangman v2/server.py` | `hangman_app_guess` try/except |
-| `server/mobile-api.js` | Registers hangman mobile routes (must exist) |
-| `electron/main.js` | Only quits on Node exit — Hangman Python death alone must not kill Node |
-
-**Route order in `server/index.js` (critical):**
-
-```javascript
-registerMobileApi(app, { game, pointStore, isLocalhost, broadcast });
-registerHangmanHttpProxy(app);  // only /api/hangman/* — NOT /api/mobile/*
+```powershell
+cd C:\Users\Yusef\test
+New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\Downloads" | Out-Null
+Copy-Item -Force "releases\ipa\NFG-Crash.ipa"    "$env:USERPROFILE\Downloads\NFG-Crash.ipa"
+Copy-Item -Force "releases\ipa\NFG-Hangman.ipa" "$env:USERPROFILE\Downloads\NFG-Hangman.ipa"
+Get-Item "$env:USERPROFILE\Downloads\NFG-*.ipa" | Format-Table Name, Length, LastWriteTime
 ```
 
-Mobile guess must stay at **`/api/mobile/hangman/guess`** (not proxied to Python directly from the phone).
+Website routes (after server start):
+
+- https://y666suf.com/download/nfg-crash.ipa
+- https://y666suf.com/download/nfg-hangman.ipa
+- https://y666suf.com/sideload
+
+Check metadata:
+
+```powershell
+Invoke-RestMethod http://127.0.0.1:3847/api/ipa/download-info | ConvertTo-Json -Depth 5
+```
+
+Both apps should show `"ok": true`.
 
 ---
 
-## Part 3 — Environment (Windows)
+## Part 2 — Environment (Windows)
 
-In `run-electron-cloudflare.bat` or system env (same values everywhere):
+Set in `run-electron-cloudflare.bat` or system env:
 
 ```bat
 set PORT=3847
@@ -86,138 +82,120 @@ set NFG_START_HANGMAN=1
 set HANGMAN_PYTHON=py
 ```
 
-If you change `NFG_INTERNAL_SECRET`, set the **same** value for the Hangman child (Node passes it in `server/hangman-process.js` → Python `os.environ`).
+Optional explicit IPA paths (normally not needed if `releases/ipa/` exists):
 
----
-
-## Part 4 — App chat display names (server)
-
-After edits, each chat row should look like:
-
-- `displayName`: TikTok nickname from `pointStore.getDisplayName(userId)` (fallback session / userId)
-- `clientApp`: `nfg-crash` | `nfg-hangman` (raw, for logic)
-- `appLabel`: **`NFG Crash`** | **`NFG Hangman`** (for UI)
-
-`POST /api/mobile/chat` and WebSocket `app_chat` broadcasts must include **`appLabel`**.
-
-Presence `activeAppUserList` entries should include **`appLabel`** too.
-
-Clients:
-
-- **NFG Crash** (Swift): show `displayName` + optional subtitle with `appLabel` if not self
-- **NFG Hangman** (React): prefer `row.appLabel` over raw `clientApp`
-
-Both apps must send on every mobile request:
-
-- `X-Client-App: nfg-crash` or `nfg-hangman`
-- `X-Device-Id: <stable device id>`
-
----
-
-## Part 5 — Implement / confirm code (if missing after pull)
-
-### 5A. `server/mobile-hangman.js`
-
-- `POST /api/mobile/hangman/guess` wrapped in **try/catch**
-- `hangmanGuessRequest` uses **request timeout** (~12s)
-- On error: `res.status(502).json({ ok: false, error: 'hangman_guess_failed', message })` — **never throw**
-- Log: `[Mobile hangman guess] @user letter=X status=...`
-
-### 5B. `hangman v2/server.py` — `hangman_app_guess`
-
-Wrap `process_chat_message` in:
-
-```python
-try:
-    ...
-except Exception as e:
-    log.exception("hangman_app_guess failed")
-    raise HTTPException(status_code=500, detail="Guess failed safely")
+```bat
+set NFG_IPA_FILE=%CD%\releases\ipa\NFG-Crash.ipa
+set NFG_HANGMAN_IPA_FILE=%CD%\releases\ipa\NFG-Hangman.ipa
 ```
 
-### 5C. `server/index.js` — optional safety net
+---
 
-At top of server startup:
+## Part 3 — Hangman guess crash fix (verify code)
 
-```javascript
-process.on("uncaughtException", (err) => console.error("[fatal]", err));
-process.on("unhandledRejection", (err) => console.error("[reject]", err));
-```
+Mobile guess chain:
 
-(Do **not** call `process.exit(1)` — keep Crash running.)
+`POST /api/mobile/hangman/guess` → Node → `POST http://127.0.0.1:19876/api/hangman/app/guess` → Python `process_chat_message`.
+
+**Must be true:**
+
+- `registerMobileApi` runs **before** `registerHangmanHttpProxy` in `server/index.js`
+- Guess handler has **try/catch** and **timeout** (never throws to crash Node)
+- Python `hangman_app_guess` has **try/except**
+- `NFG_INTERNAL_SECRET` matches on Node + Hangman child
 
 ---
 
-## Part 6 — Test on PC (before iPhone)
+## Part 4 — App chat display names
 
-PowerShell:
+Server adds per message / presence row:
+
+- `displayName` — from `pointStore` (TikTok nickname)
+- `clientApp` — `nfg-crash` | `nfg-hangman`
+- `appLabel` — **`NFG Crash`** | **`NFG Hangman`**
+
+No code change needed on PC if `mobile-app-labels.js` is present after pull.
+
+---
+
+## Part 5 — Smoke test (before LIVE)
+
+Start server only if not already running, or run tests against existing instance:
 
 ```powershell
-$Base = "http://127.0.0.1:3847"
-$H = @{ "Content-Type" = "application/json"; "X-Client-App" = "nfg-hangman"; "X-Device-Id" = "pc-test" }
-
-# 1) Link code
-$start = Invoke-RestMethod -Uri "$Base/api/mobile/link/start" -Method POST -Headers $H -Body '{"deviceId":"pc-test"}'
-$start | ConvertTo-Json
-
-# 2) Simulate TikTok link (while testing)
-$chat = @{ userId = "y666.suf"; displayName = "Yusuf"; message = "!link $($start.code)" } | ConvertTo-Json -Compress
-Invoke-RestMethod -Uri "$Base/api/chat" -Method POST -Body $chat -ContentType "application/json"
-
-# 3) Poll link
-Invoke-RestMethod -Uri "$Base/api/mobile/link/status/$($start.code)" | ConvertTo-Json
-
-# 4) Guess (use token from step 3 if linked)
-$token = "<paste token>"
-$GH = @{ "Authorization" = "Bearer $token"; "X-Client-App" = "nfg-hangman"; "Content-Type" = "application/json" }
-Invoke-RestMethod -Uri "$Base/api/mobile/hangman/guess" -Method POST -Headers $GH -Body '{"letter":"e"}' | ConvertTo-Json
-
-# 5) App chat labels
-Invoke-RestMethod -Uri "$Base/api/mobile/chat?limit=5" | ConvertTo-Json -Depth 6
+cd C:\Users\Yusef\test
+.\scripts\test-hangman-mobile-guess.ps1
 ```
 
-**Pass criteria:**
-
-- Step 4 returns JSON (`ok`, `masked`, `wrong`, …) — **Electron stays open**
-- PC console shows `[Mobile hangman guess]` not a stack trace + process exit
-- Step 5 messages include `appLabel` and readable `displayName`
+**Pass:** link + guess return JSON; **Electron still open** if it was running.
 
 ---
 
-## Part 7 — Restart production stack
+## Part 6 — Start production stack
 
 ```powershell
 cd C:\Users\Yusef\test
 .\run-electron-cloudflare.bat
 ```
 
-Wait for:
+Wait for console:
 
 - `Listening on: 0.0.0.0:3847`
 - `[Hangman] Ready (proxied through this server).`
-- Cloudflare tunnel healthy → **https://y666suf.com**
+- iOS download lines pointing at `releases/ipa/...` or Downloads
 
 ---
 
-## Part 8 — Live test with iPhones
+## Part 7 — Install IPAs on iPhone (testers)
 
-1. **NFG Hangman** + **NFG Crash** on cellular
-2. @y666.suf **LIVE** — Hangman round active on PC
-3. Account → **Generate link code** → TikTok `!link CODE`
-4. Hangman **Play** → tap **one letter** → PC updates word; **Electron must not close**
-5. **App chat** in both apps: same thread; names show **NFG Crash** / **NFG Hangman** badges
-6. Presence: “X in apps” lists both with correct labels
+1. AirDrop / USB / link: `https://y666suf.com/sideload`
+2. Install **NFG Crash** and **NFG Hangman** (separate apps)
+3. **Settings → General → VPN & Device Management** → trust developer cert
+4. Open on **cellular** (not only Wi‑Fi) → `https://y666suf.com` must load
 
 ---
 
-## Part 9 — Final deliverables checklist
+## Part 8 — LIVE end-to-end test (@y666.suf)
 
-- [ ] Guess from iOS no longer kills Electron
-- [ ] `git add` / `git commit` / `git push origin main` with server + Python fixes
-- [ ] IPAs in `Downloads`: `NFG-Crash.ipa`, `NFG-Hangman.ipa` (sideload page works)
-- [ ] `GET /api/mobile/platform/status` shows LIVE when streaming
-- [ ] TikTok `!link` works on Hangman LIVE and Crash LIVE
+| Step | Crash | Hangman |
+|------|-------|---------|
+| Top bar LIVE | ✓ | ✓ |
+| Account → link code → TikTok `!link CODE` | ✓ | ✓ |
+| Game action | bet / ads | letter guess |
+| App chat | send message | same thread, **NFG Crash** / **NFG Hangman** tags |
+| Guess does not kill PC | — | **Electron must stay open** |
 
-**Report back:** Paste PC console lines from one mobile guess + one app chat message JSON (redact tokens).
+---
+
+## Part 9 — If guess still crashes Electron
+
+1. Read Node console for `[Mobile hangman guess]` or `[NFG] uncaughtException`
+2. Read Hangman Python console for `[hangman_app_guess] failed`
+3. Confirm `git log -1` includes commit with mobile-hangman + server.py fixes
+4. Re-run: `.\scripts\test-hangman-mobile-guess.ps1`
+
+---
+
+## Part 10 — Commit on PC (only if you changed files locally)
+
+```powershell
+git add server releases scripts hangman v2/server.py
+git commit -m "Apply Windows-side config for NFG finalize"
+git push origin main
+```
+
+---
+
+## Part 11 — Final checklist
+
+- [ ] `git pull` — has `releases/ipa/*.ipa`
+- [ ] IPAs copied to `%USERPROFILE%\Downloads\`
+- [ ] `/api/ipa/download-info` — both `ok: true`
+- [ ] `.\run-electron-cloudflare.bat` running
+- [ ] Mobile guess does **not** quit Electron
+- [ ] App chat shows **NFG Crash** / **NFG Hangman**
+- [ ] TikTok LIVE @y666.suf — link + guess + chat work on cellular
+
+**Report:** Paste `Invoke-RestMethod .../api/ipa/download-info` JSON + one line from a successful mobile guess test.
 
 ---

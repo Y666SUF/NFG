@@ -6,6 +6,7 @@ const path = require("path");
 const os = require("os");
 
 const IPA_DOWNLOADS_DIR = path.join(os.homedir(), "Downloads");
+const IPA_REPO_DIR = path.join(__dirname, "..", "releases", "ipa");
 
 const IPA_CATALOG = {
   crash: {
@@ -54,8 +55,10 @@ function listDownloadedIpaFiles() {
 
 function resolveIpaFilePath(catalogEntry) {
   const envPath = String(process.env[catalogEntry.envVar] || "").trim();
+  const repoPath = path.join(IPA_REPO_DIR, catalogEntry.defaultBasename);
   const defaultPath = path.join(IPA_DOWNLOADS_DIR, catalogEntry.defaultBasename);
   if (envPath && fs.existsSync(envPath)) return envPath;
+  if (fs.existsSync(repoPath)) return repoPath;
   if (fs.existsSync(defaultPath)) return defaultPath;
   const ipaFiles = listDownloadedIpaFiles();
   if (!ipaFiles.length) return "";

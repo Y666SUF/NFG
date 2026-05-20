@@ -35,8 +35,10 @@ dist/
 hangman v2/iOS/app/dist/
 _import_Y666SUF_website/frontend/build/
 
-# iOS / binaries
+# iOS / binaries (tracked release IPAs live in releases/ipa/)
 *.ipa
+!releases/ipa/
+!releases/ipa/*.ipa
 *.exe
 *.dmg
 

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Contact Us | NFG Games</title>
+    <link rel="stylesheet" href="/website-assets/site.css?v=20260520d" />
+  </head>
+  <body>
+    <main class="wrap">
+      <header class="topbar">
+        <a class="brand" href="/" data-nav>NFG Games</a>
+        <nav class="nav">
+          <a class="chip" href="/privacy" data-nav>Privacy</a>
+          <a class="chip" href="/legal" data-nav>Legal</a>
+        </nav>
+      </header>
+
+      <div class="back-row">
+        <a class="chip" href="/" data-nav>← Back to home</a>
+      </div>
+
+      <section class="detail-card reveal" data-reveal>
+        <h1>Contact Us</h1>
+        <p>Send a message to the NFG team. Submissions are delivered to support@y666suf.com.</p>
+
+        <form id="contactForm" class="form-grid">
+          <label>
+            Name
+            <input id="contactName" name="name" type="text" maxlength="80" required />
+          </label>
+          <label>
+            Email
+            <input id="contactEmail" name="email" type="email" maxlength="160" required />
+          </label>
+          <label>
+            Subject
+            <input id="contactSubject" name="subject" type="text" maxlength="140" required />
+          </label>
+          <label>
+            Message
+            <textarea id="contactMessage" name="message" maxlength="4000" required></textarea>
+          </label>
+          <button class="btn-primary" type="submit">Send Message</button>
+          <p id="contactStatus" class="form-status" aria-live="polite"></p>
+        </form>
+      </section>
+    </main>
+    <script src="/website-assets/site.js?v=20260520d"></script>
+    <script src="/website-assets/contact.js?v=20260520d"></script>
+  </body>
+</html>

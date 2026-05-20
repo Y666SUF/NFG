@@ -1,0 +1,2 @@
+# Optional: only needed to regenerate data/hangman_word_bank_large.txt
+wordfreq>=3.0

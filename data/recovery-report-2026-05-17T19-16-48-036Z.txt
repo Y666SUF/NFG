@@ -1,0 +1,11 @@
+Created: 2026-05-17T19:16:48.041Z
+Backup of current points.json: C:\Users\Yusef\test\data\points.recovery-pre-2026-05-17T19-16-48-036Z.json
+New recovered file: C:\Users\Yusef\test\data\points.live.json
+Merged legacy file: C:\Users\Yusef\test\dist\data\points.json
+Applied screenshot recovery floors:
+- libbyali: 12845431
+- sk.07020: 1817275
+- madebymanah: 1523260
+- sameya.bx: 104285
+Shield users enforced: fatimahxm, libbyali, ishh.244, sameya.bx, liblobsss, madebymanah, sk.07020
+Total users in recovered balances: 28

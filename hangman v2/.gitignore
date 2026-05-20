@@ -1,0 +1,8 @@
+.env
+data/hangman_word_bank_large.txt
+data/words_alpha.txt
+data/en_50k.txt
+data/en_full.txt
+app-v2/node_modules/
+app-v2/dist/
+__pycache__/

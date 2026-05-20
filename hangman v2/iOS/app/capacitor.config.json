@@ -1,0 +1,9 @@
+{
+  "appId": "com.nfg.hangman",
+  "appName": "NFG Hangman",
+  "webDir": "dist",
+  "bundledWebRuntime": false,
+  "server": {
+    "cleartext": false
+  }
+}

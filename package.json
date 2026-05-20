@@ -1,0 +1,33 @@
+{
+  "name": "tiktok-live-crash-game",
+  "version": "1.0.0",
+  "description": "Crash-style betting game for live streams with points and chat commands",
+  "main": "server/index.js",
+  "bin": "launcher.js",
+  "pkg": {
+    "assets": [
+      "public/**/*"
+    ],
+    "outputPath": "dist"
+  },
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js",
+    "start:electron": "electron electron/main.js",
+    "build:exe": "pkg . --targets node18-win-x64 -o dist/NFGCrash.exe",
+    "build:exe:new": "pkg . --targets node18-win-x64 -o dist/NFGCrash-new.exe"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "nodemailer": "^8.0.7",
+    "tiktok-live-connector": "^2.1.0",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "electron": "^37.0.0",
+    "pkg": "^5.8.1"
+  }
+}

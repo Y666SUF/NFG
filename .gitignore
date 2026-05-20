@@ -1,0 +1,59 @@
+# Dependencies
+node_modules/
+hangman v2/**/node_modules/
+hangman v2/iOS/app/ios/
+_import_Y666SUF_website/frontend/node_modules/
+
+# Secrets & local config
+.env
+.env.*
+!.env.example
+!hangman v2/iOS/app/.env.example
+tiktok.config.json
+**/mobile-sessions.json
+**/.cursor/
+
+# Live runtime data (do not commit player balances)
+data/points*.json
+data/points.live.json
+data/*.backup.*
+data/backups/
+data/gift-ledger.jsonl
+data/mobile-ad-claims.json
+data/shields.json
+data/recovery-report-*
+hangman v2/data/*.json
+!hangman v2/data/word_theme_map.json
+!hangman v2/data/word_bank*.json
+
+# Build outputs
+dist/
+hangman v2/iOS/app/dist/
+_import_Y666SUF_website/frontend/build/
+
+# iOS / binaries
+*.ipa
+*.exe
+*.dmg
+
+# Bundled portable Node (Windows launcher only)
+tools/node/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+
+# Cloudflare token cache (local machine)
+*.cmd
+!run-electron*.bat
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Electron
+out/

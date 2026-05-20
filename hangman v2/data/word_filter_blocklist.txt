@@ -1,0 +1,3 @@
+# Extra words/phrases to exclude from the Hangman bank (UK/US informal, gaming chat, etc.).
+# One entry per line; letters and spaces only are used. Lines starting with # ignored.
+# The build script also merges https://github.com/LDNOOBW/List-of-Dirty-Naughty-Obscene-and-Otherwise-Bad-Words (en).

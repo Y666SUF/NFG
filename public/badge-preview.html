@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NFG Crash — Badge icons preview</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/stream-layout.css" />
+    <script src="/badge-icons.js"></script>
+    <style>
+      body.badge-preview-page {
+        margin: 0;
+        min-height: 100vh;
+        padding: 1.5rem;
+        background:
+          radial-gradient(ellipse 80% 50% at 50% 0%, rgba(124, 58, 237, 0.18), transparent),
+          radial-gradient(ellipse 60% 40% at 100% 100%, rgba(168, 85, 247, 0.1), transparent),
+          #070a12;
+        color: #e8eef7;
+        font-family: "Outfit", system-ui, sans-serif;
+      }
+
+      .bp-header {
+        max-width: 1100px;
+        margin: 0 auto 1.5rem;
+      }
+
+      .bp-header h1 {
+        margin: 0 0 0.35rem;
+        font-size: 1.5rem;
+        color: #c4b5fd;
+      }
+
+      .bp-header p {
+        margin: 0;
+        color: #94a3b8;
+        font-size: 0.95rem;
+        line-height: 1.5;
+      }
+
+      .bp-header code {
+        color: #a855f7;
+      }
+
+      .bp-notice {
+        margin: 0.65rem 0 0;
+        padding: 0.5rem 0.65rem;
+        border-radius: 8px;
+        font-size: 0.85rem;
+        line-height: 1.4;
+        color: #fde68a;
+        background: rgba(120, 53, 15, 0.35);
+        border: 1px solid rgba(251, 191, 36, 0.35);
+      }
+
+      .bp-grid {
+        max-width: 1100px;
+        margin: 0 auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 1rem;
+      }
+
+      .bp-card {
+        background: rgba(18, 25, 38, 0.92);
+        border: 1px solid rgba(168, 85, 247, 0.25);
+        border-radius: 14px;
+        padding: 1.1rem 1rem 1rem;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.65rem;
+        box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+      }
+
+      .bp-card:hover {
+        border-color: rgba(192, 132, 252, 0.55);
+        box-shadow: 0 0 28px rgba(124, 58, 237, 0.2);
+      }
+
+      .bp-icon-wrap {
+        width: 88px;
+        height: 88px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle, rgba(46, 16, 101, 0.5), transparent 70%);
+        border-radius: 12px;
+      }
+
+      .bp-icon-wrap .nfg-badge {
+        width: 64px;
+        height: 64px;
+        min-width: 64px;
+        min-height: 64px;
+        margin: 0;
+        vertical-align: middle;
+      }
+
+      .bp-tier {
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 0.7rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #a855f7;
+      }
+
+      .bp-name {
+        margin: 0;
+        font-size: 1.05rem;
+        font-weight: 700;
+        text-align: center;
+      }
+
+      .bp-cmd {
+        margin: 0;
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 0.82rem;
+        color: #c4b5fd;
+      }
+
+      .bp-cost {
+        margin: 0;
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 0.9rem;
+        font-weight: 700;
+        color: #fbbf24;
+      }
+
+      .bp-sample {
+        margin-top: 0.25rem;
+        padding: 0.45rem 0.65rem;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.35);
+        font-size: 0.95rem;
+        width: 100%;
+        text-align: center;
+        box-sizing: border-box;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.35rem;
+      }
+
+      .bp-sample .namefx-text {
+        font-weight: 700;
+      }
+
+      .bp-legacy {
+        max-width: 1100px;
+        margin: 1.25rem auto 0;
+        padding: 1rem;
+        border-radius: 12px;
+        border: 1px dashed rgba(251, 191, 36, 0.35);
+        background: rgba(30, 20, 10, 0.25);
+      }
+
+      .bp-legacy h2 {
+        margin: 0 0 0.75rem;
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #fbbf24;
+      }
+    </style>
+  </head>
+  <body class="badge-preview-page stream-ui">
+    <header class="bp-header">
+      <h1>NFG vault badge icons</h1>
+      <p>
+        Gambling &amp; crypto tiers lead up to <strong>NFG Imperial</strong> — a gold-rimmed crest with NFG + money. Tier 6 is a purple-rimmed
+        <strong>Litecoin (Ł)</strong> coin. <code>!buy &lt;id&gt;</code> once; repeat to switch free.
+      </p>
+      <p id="bpNotice" class="bp-notice" hidden></p>
+    </header>
+
+    <div class="bp-grid" id="badgeGrid"></div>
+
+    <section class="bp-legacy">
+      <h2>Legacy (old buyers only)</h2>
+      <div class="bp-grid" style="max-width: 100%; margin: 0">
+        <article class="bp-card">
+          <div class="bp-icon-wrap">
+            <span id="legacyCrownIcon"></span>
+          </div>
+          <p class="bp-tier">Legacy</p>
+          <h3 class="bp-name">Royal Vault</h3>
+          <p class="bp-cmd">saved as crown on profile</p>
+          <p class="bp-cost">not in shop</p>
+          <div class="bp-sample">
+            <span id="legacyCrownSample"></span>
+            <span class="namefx-text">@viewer</span>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <script>
+      const BADGE_CATALOG = [
+        { id: "acespades", label: "Ace of Spades", tier: 1, cost: 50000000 },
+        { id: "chip", label: "Vault Chip", tier: 2, cost: 100000000 },
+        { id: "dice", label: "High Roller", tier: 3, cost: 150000000 },
+        { id: "bullion", label: "Gold Bullion", tier: 4, cost: 200000000 },
+        { id: "lucky7", label: "Lucky Seven", tier: 5, cost: 250000000 },
+        { id: "ltc", label: "Litecoin", tier: 6, cost: 300000000 },
+        { id: "bitcoin", label: "Bitcoin", tier: 7, cost: 350000000 },
+        { id: "ethereum", label: "Ether Gem", tier: 8, cost: 400000000 },
+        { id: "whale", label: "Whale Vault", tier: 9, cost: 450000000 },
+        { id: "imperial", label: "NFG Imperial", tier: 10, cost: 500000000 },
+      ];
+
+      function mergeCatalog(apiList) {
+        const byId = new Map((apiList || []).map((b) => [String(b.id || "").toLowerCase(), b]));
+        return BADGE_CATALOG.map((row) => {
+          const fromApi = byId.get(row.id);
+          return fromApi ? { ...row, ...fromApi } : { ...row };
+        });
+      }
+
+      function badgeIcon(id) {
+        return typeof NFG_BADGE_ICONS !== "undefined" ? NFG_BADGE_ICONS.render(id) : "";
+      }
+
+      function cardHtml(b) {
+        const id = String(b.id || "").toLowerCase();
+        const cost = Number(b.cost || 0).toLocaleString();
+        const icon = badgeIcon(id);
+        return `
+          <article class="bp-card">
+            <div class="bp-icon-wrap">${icon}</div>
+            <p class="bp-tier">Tier ${b.tier || "—"}</p>
+            <h3 class="bp-name">${b.label || id}</h3>
+            <p class="bp-cmd">!buy ${id}</p>
+            <p class="bp-cost">${cost} pts</p>
+            <div class="bp-sample">${icon}<span class="namefx-text">@viewer</span></div>
+          </article>`;
+      }
+
+      async function load() {
+        const grid = document.getElementById("badgeGrid");
+        const notice = document.getElementById("bpNotice");
+        let apiList = [];
+
+        try {
+          let r = await fetch("/api/config/badges");
+          if (!r.ok) r = await fetch("/api/config/rewards");
+          const j = await r.json();
+          apiList = j.badges || j.nameBadgeShop || [];
+        } catch {
+          /* offline — catalog only */
+        }
+
+        const shopIds = new Set(apiList.map((b) => String(b.id || "").toLowerCase()));
+        const hasFullShop = BADGE_CATALOG.every((b) => shopIds.has(b.id));
+
+        if (apiList.length && !hasFullShop) {
+          notice.hidden = false;
+          notice.textContent =
+            "Server returned an old badge list (" +
+            apiList.map((b) => b.id).join(", ") +
+            "). Showing all 10 tiers from the game catalog — restart the server if costs look wrong.";
+        } else if (!apiList.length) {
+          notice.hidden = false;
+          notice.textContent =
+            "Game server not reachable — showing default catalog. Start NFG Crash and refresh for live costs.";
+        }
+
+        const list = mergeCatalog(apiList);
+        grid.innerHTML = list.map(cardHtml).join("");
+        const crownHtml = badgeIcon("crown");
+        const legacyIcon = document.getElementById("legacyCrownIcon");
+        const legacySample = document.getElementById("legacyCrownSample");
+        if (legacyIcon) legacyIcon.innerHTML = crownHtml;
+        if (legacySample) legacySample.innerHTML = crownHtml;
+      }
+
+      load();
+    </script>
+  </body>
+</html>

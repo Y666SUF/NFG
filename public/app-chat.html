@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NFG Crash - App Chat</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #111931;
+        --line: rgba(170, 210, 255, 0.18);
+        --text: #e7f1ff;
+        --muted: #9ab0ce;
+        --accent2: #a78bfa;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: radial-gradient(900px 500px at 80% -20%, rgba(167, 139, 250, 0.2), transparent 55%), var(--bg);
+        color: var(--text);
+        height: 100vh;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+      }
+      header {
+        padding: 0.65rem 0.75rem;
+        border-bottom: 1px solid var(--line);
+        background: rgba(0, 0, 0, 0.25);
+      }
+      h1 { margin: 0; font-size: 1rem; }
+      .sub { margin-top: 0.2rem; color: var(--muted); font-size: 0.78rem; }
+      .status { display: inline-flex; align-items: center; gap: 0.35rem; margin-top: 0.35rem; font-size: 0.75rem; }
+      .dot { width: 8px; height: 8px; border-radius: 50%; background: #f87171; }
+      .dot.live { background: #4ade80; }
+      #log {
+        overflow: auto;
+        padding: 0.6rem 0.75rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.45rem;
+      }
+      .msg {
+        background: linear-gradient(165deg, var(--panel), #0f1730);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 0.45rem 0.55rem;
+      }
+      .who { font-size: 0.8rem; font-weight: 700; color: var(--accent2); }
+      .who .user { color: var(--muted); font-weight: 500; }
+      .text { margin-top: 0.2rem; font-size: 0.9rem; line-height: 1.35; word-break: break-word; }
+      .time { margin-top: 0.25rem; font-size: 0.68rem; color: var(--muted); font-family: Consolas, monospace; }
+      footer { padding: 0.45rem 0.75rem; border-top: 1px solid var(--line); font-size: 0.72rem; color: var(--muted); }
+      .empty { color: var(--muted); font-size: 0.85rem; text-align: center; margin: auto; max-width: 280px; line-height: 1.4; }
+      .mono { font-family: Consolas, monospace; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>iPhone App Chat</h1>
+      <div class="sub">Messages from the NFG Crash mobile app (not TikTok live chat).</div>
+      <div class="status"><span id="dot" class="dot"></span><span id="statusText">Connecting…</span></div>
+    </header>
+    <div id="log"></div>
+    <footer>Also logged in server console as <span class="mono">[App chat] …</span></footer>
+    <script>
+      const log = document.getElementById("log");
+      const dot = document.getElementById("dot");
+      const statusText = document.getElementById("statusText");
+      const seen = new Set();
+      function esc(s) {
+        return String(s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+      }
+      function fmtTime(at) {
+        return new Date(Number(at) || Date.now()).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      }
+      function appendMessage(row) {
+        if (!row || !row.id || seen.has(row.id)) return;
+        seen.add(row.id);
+        const empty = log.querySelector(".empty");
+        if (empty) empty.remove();
+        const el = document.createElement("div");
+        el.className = "msg";
+        el.innerHTML = `<div class="who">${esc(row.displayName || row.userId)} <span class="user">@${esc(row.userId)}</span></div><div class="text">${esc(row.message)}</div><div class="time">${fmtTime(row.at)}</div>`;
+        log.appendChild(el);
+        log.scrollTop = log.scrollHeight;
+      }
+      function setStatus(live, text) {
+        dot.classList.toggle("live", !!live);
+        statusText.textContent = text;
+      }
+      async function loadHistory() {
+        try {
+          const res = await fetch("/api/mobile/chat?limit=80", { cache: "no-store" });
+          if (!res.ok) throw new Error("history unavailable");
+          const body = await res.json();
+          const rows = Array.isArray(body.messages) ? body.messages : [];
+          rows.sort((a, b) => Number(a.at) - Number(b.at));
+          rows.forEach(appendMessage);
+          if (!rows.length) log.innerHTML = '<div class="empty">No app chat yet. Send from iPhone App Chat.</div>';
+        } catch (err) {
+          log.innerHTML = `<div class="empty">${esc(err.message)}<br><br>Add mobile-chat.js on server</div>`;
+        }
+      }
+      function connectWs() {
+        const proto = location.protocol === "https:" ? "wss" : "ws";
+        const ws = new WebSocket(`${proto}://${location.host}`);
+        ws.addEventListener("open", () => setStatus(true, "Live"));
+        ws.addEventListener("error", () => setStatus(false, "Connection error"));
+        ws.addEventListener("message", (ev) => {
+          try {
+            const data = JSON.parse(ev.data);
+            if (data && data.type === "app_chat" && data.payload) appendMessage(data.payload);
+          } catch (_e) {}
+        });
+        ws.addEventListener("close", () => {
+          setStatus(false, "Disconnected — retrying…");
+          setTimeout(connectWs, 2000);
+        });
+      }
+      loadHistory().then(connectWs);
+    </script>
+  </body>
+</html>

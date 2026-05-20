@@ -19,6 +19,12 @@ function upperLetters(list) {
 /** WS poll, guess API, or nested `state` → raw snapshot for normalizeHangmanState. */
 export function payloadToHangmanRaw(payload) {
   if (!payload || typeof payload !== "object") return null;
+  const hasFlat =
+    Array.isArray(payload.slots) ||
+    payload.mask ||
+    payload.maskedWord ||
+    payload.masked_word;
+  if (hasFlat) return payload;
   if (payload.state && typeof payload.state === "object") return payload.state;
   return payload;
 }
@@ -61,6 +67,70 @@ function countLettersInMask(mask) {
   return String(mask).replace(/[^a-zA-Z_]/g, "").length;
 }
 
+/** Build slots from mask string e.g. "_ _ _ _ S _ _" or multi-word with | */
+export function parseMaskToSlots(mask, length = 0) {
+  const text = String(mask || "").trim();
+  if (!text) {
+    return length > 0 ? Array(length).fill(null) : null;
+  }
+  const slots = [];
+  const words = text.split(/\s*\|\s*/);
+  for (let wi = 0; wi < words.length; wi++) {
+    if (wi > 0) slots.push(" ");
+    const parts = words[wi].trim().split(/\s+/).filter(Boolean);
+    for (const part of parts) {
+      if (part.length === 1 && /^[a-zA-Z]$/.test(part)) slots.push(part.toUpperCase());
+      else slots.push(null);
+    }
+  }
+  if (slots.length) return slots;
+  return length > 0 ? Array(length).fill(null) : null;
+}
+
+function coerceSlotChar(ch) {
+  if (ch === " " || ch === "") return " ";
+  if (ch == null || ch === false) return null;
+  const s = String(ch).trim();
+  if (s.length === 1 && /^[a-zA-Z]$/.test(s)) return s.toUpperCase();
+  if (s === "_" || s === "—" || s === "\u00A0") return null;
+  return null;
+}
+
+function normalizeSlots(rawSlots, mask, length) {
+  let slots = null;
+  if (Array.isArray(rawSlots) && rawSlots.length > 0) {
+    slots = rawSlots.map(coerceSlotChar);
+  } else if (typeof rawSlots === "string") {
+    try {
+      const parsed = JSON.parse(rawSlots);
+      if (Array.isArray(parsed)) slots = parsed.map(coerceSlotChar);
+    } catch {
+      slots = parseMaskToSlots(rawSlots, length);
+    }
+  }
+  const hasRevealed = slots?.some((ch) => ch && ch !== " ");
+  const maskStr = String(mask || "").trim();
+  if ((!slots || !slots.length || !hasRevealed) && maskStr) {
+    const fromMask = parseMaskToSlots(maskStr, length);
+    if (fromMask?.length) {
+      if (!slots?.length) slots = fromMask;
+      else {
+        slots = slots.map((ch, i) => (ch && ch !== " " ? ch : fromMask[i] ?? ch));
+      }
+    }
+  }
+  if (!slots?.length && length > 0) slots = Array(length).fill(null);
+  return slots?.length ? slots : null;
+}
+
+function lettersRevealedInSlots(slots) {
+  if (!Array.isArray(slots)) return [];
+  return slots
+    .filter((ch) => ch && ch !== " ")
+    .map((ch) => String(ch).toUpperCase())
+    .filter((c) => /^[A-Z]$/.test(c));
+}
+
 function normalizeGuessedLetters(raw, keyboardCorrect, keyboardWrong) {
   if (Array.isArray(raw)) {
     return raw.map((c) => String(c).toLowerCase()).filter((c) => /^[a-z]$/.test(c));
@@ -72,15 +142,19 @@ export function normalizeHangmanState(raw) {
   try {
     if (!raw || typeof raw !== "object") return null;
 
-    const slots = Array.isArray(raw.slots) ? raw.slots : null;
-    const { correct: keyboardCorrect, wrong: keyboardWrong } = sanitizeKeyboard(raw.keyboard);
-
+    const maskStr = String(raw.mask ?? raw.masked_word ?? raw.maskedWord ?? "").trim();
     const length =
       Number(raw.length) ||
-      (slots ? slots.filter((c) => c !== " ").length : 0) ||
-      countLettersInMask(String(raw.mask ?? raw.masked_word ?? raw.maskedWord ?? ""));
+      countLettersInMask(maskStr) ||
+      (Array.isArray(raw.slots) ? raw.slots.filter((c) => c !== " ").length : 0);
 
-    let maskedWord = String(raw.masked_word ?? raw.maskedWord ?? raw.mask ?? "").trim();
+    const slots = normalizeSlots(raw.slots, maskStr, length);
+    const kb = sanitizeKeyboard(raw.keyboard);
+    const revealed = lettersRevealedInSlots(slots);
+    const keyboardCorrect = [...new Set([...kb.correct, ...revealed])];
+    const keyboardWrong = kb.wrong.filter((c) => !keyboardCorrect.includes(c));
+
+    let maskedWord = maskStr;
     if (slots?.length) {
       maskedWord = formatMaskFromSlots(slots);
     } else if (!maskedWord && length > 0) {

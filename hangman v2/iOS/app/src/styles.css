@@ -296,18 +296,6 @@ button,
   font-weight: 700;
 }
 
-.kb-key.kb-correct {
-  color: #0d1f16;
-  background: #5ee4a8;
-  border-color: rgba(94, 228, 168, 0.55);
-}
-
-.kb-key.kb-wrong {
-  color: #fff5f5;
-  background: rgba(180, 48, 48, 0.9);
-  border-color: rgba(255, 123, 123, 0.45);
-}
-
 .kb-hint {
   margin: 0.5rem 0 0;
   font-size: 0.78rem;
@@ -455,12 +443,36 @@ h2 {
   background: rgba(36, 48, 68, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.08);
   font-weight: 700;
+  color: #eef2ff;
 }
 
 .word-slots .slot.empty {
-  color: transparent;
+  color: #8b9cc8;
   background: rgba(36, 48, 68, 0.85);
   border-style: dashed;
+}
+
+.word-slots .slot.revealed {
+  color: #bef264;
+  background: rgba(30, 72, 48, 0.85);
+  border-color: rgba(94, 228, 168, 0.45);
+}
+
+.word-mask-text {
+  color: #eef2ff;
+  letter-spacing: 0.14em;
+}
+
+.kb-key.kb-correct {
+  color: #0d1f16 !important;
+  background: #5ee4a8 !important;
+  border-color: rgba(94, 228, 168, 0.55) !important;
+}
+
+.kb-key.kb-wrong {
+  color: #fff5f5 !important;
+  background: rgba(180, 48, 48, 0.9) !important;
+  border-color: rgba(255, 123, 123, 0.45) !important;
 }
 
 .stats-row {

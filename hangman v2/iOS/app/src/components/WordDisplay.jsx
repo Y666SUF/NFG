@@ -1,15 +1,45 @@
-import { formatMaskFromSlots, parseMaskToSlots, placeholderMask } from "../lib/hangmanState";
+import { parseMaskToSlots, placeholderMask } from "../lib/hangmanState";
+
+/** Render mask like Windows: "_ _ _ _ S _ _" with visible letters and underscores. */
+function MaskText({ text }) {
+  const chars = String(text || "").split("");
+  return (
+    <div className="word-box word-mask-chars">
+      {chars.map((ch, i) => {
+        if (/[A-Za-z]/.test(ch)) {
+          return (
+            <span key={i} className="mask-char revealed">
+              {ch.toUpperCase()}
+            </span>
+          );
+        }
+        if (ch === " ") {
+          return <span key={i} className="mask-char space" aria-hidden="true" />;
+        }
+        return (
+          <span key={i} className="mask-char empty">
+            {ch === "|" ? "|" : "_"}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
 
 export default function WordDisplay({ slots, length, maskedWord }) {
   const maskStr = String(maskedWord || "").trim();
+  const hasLettersInMask = /[A-Za-z]/.test(maskStr);
+
+  if (maskStr && (hasLettersInMask || maskStr.includes("_"))) {
+    return <MaskText text={maskStr} />;
+  }
+
   const letterSlots =
     Array.isArray(slots) && slots.length > 0
       ? slots
-      : maskStr
-        ? parseMaskToSlots(maskStr, length)
-        : length > 0
-          ? Array(length).fill(null)
-          : null;
+      : length > 0
+        ? Array(length).fill(null)
+        : parseMaskToSlots(maskStr, length);
 
   if (letterSlots?.length) {
     const groups = [];
@@ -38,7 +68,6 @@ export default function WordDisplay({ slots, length, maskedWord }) {
               <span
                 key={`${gi}-${si}`}
                 className={`slot${letter ? " revealed" : " empty"}`}
-                aria-label={letter || "hidden letter"}
               >
                 {letter || "_"}
               </span>
@@ -49,6 +78,6 @@ export default function WordDisplay({ slots, length, maskedWord }) {
     );
   }
 
-  const display = maskStr || (length > 0 ? placeholderMask(length) : "");
+  const display = length > 0 ? placeholderMask(length) : "";
   return <div className="word-box word-mask-text">{display || "Waiting for word…"}</div>;
 }

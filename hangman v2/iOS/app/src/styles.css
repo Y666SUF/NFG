@@ -463,6 +463,40 @@ h2 {
   letter-spacing: 0.14em;
 }
 
+.word-mask-chars {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.12rem;
+  letter-spacing: 0.08em;
+  line-height: 1.5;
+  color: #eef2ff;
+}
+
+.word-mask-chars .mask-char.revealed {
+  display: inline-block;
+  min-width: 1.1em;
+  padding: 0.2rem 0.35rem;
+  border-radius: 6px;
+  font-weight: 800;
+  color: #bef264;
+  background: rgba(30, 72, 48, 0.85);
+  border: 1px solid rgba(94, 228, 168, 0.45);
+}
+
+.word-mask-chars .mask-char.empty {
+  display: inline-block;
+  min-width: 0.65em;
+  color: #8b9cc8;
+  font-weight: 700;
+}
+
+.word-mask-chars .mask-char.space {
+  display: inline-block;
+  width: 0.35rem;
+}
+
 .kb-key.kb-correct {
   color: #0d1f16 !important;
   background: #5ee4a8 !important;

@@ -154,11 +154,16 @@ export function normalizeHangmanState(raw) {
     const keyboardCorrect = [...new Set([...kb.correct, ...revealed])];
     const keyboardWrong = kb.wrong.filter((c) => !keyboardCorrect.includes(c));
 
+    const revealedCount = lettersRevealedInSlots(slots).length;
+    const maskLetterCount = (maskStr.match(/[a-zA-Z]/g) || []).length;
     let maskedWord = maskStr;
-    if (slots?.length) {
+    if (slots?.length && revealedCount >= maskLetterCount) {
       maskedWord = formatMaskFromSlots(slots);
     } else if (!maskedWord && length > 0) {
       maskedWord = placeholderMask(length);
+    } else if (maskStr && revealedCount < maskLetterCount) {
+      // Keep server mask when slots[] are stale nulls but mask has letters
+      maskedWord = maskStr;
     }
 
     const guessedLetters = normalizeGuessedLetters(
@@ -167,8 +172,13 @@ export function normalizeHangmanState(raw) {
       keyboardWrong
     );
 
+    const displayMask =
+      maskLetterCount > 0 || maskStr.includes("_")
+        ? maskedWord
+        : formatMaskFromSlots(slots) || maskedWord;
+
     return {
-      maskedWord,
+      maskedWord: displayMask,
       slots,
       length,
       wrongGuesses: Number(raw.wrong_guesses ?? raw.wrong ?? 0),

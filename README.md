@@ -1,5 +1,13 @@
 # NFG Crash — iOS + shared live server
 
+**Sync Mac ↔ PC:** see **[GITHUB-SYNC.md](GITHUB-SYNC.md)** (public GitHub repo).
+
+| Project | Path |
+|---------|------|
+| Crash iOS | `ios/` |
+| Hangman iOS (Capacitor) | `hangman-v2/iOS/app/` |
+| Server mobile APIs (copy to PC) | `server/` |
+
 Your **TikTok live crash game** (`Documents/test`) and this **iOS app** share one account system: the same `points.live.json` on your **Windows PC game server**.
 
 ```

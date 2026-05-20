@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AccountPanel from "./components/AccountPanel";
+import NFGHangmanLogo from "./components/NFGHangmanLogo";
 import ChatPanel from "./components/ChatPanel";
 import GuessKeyboard from "./components/GuessKeyboard";
 import OnlinePanel from "./components/OnlinePanel";
@@ -185,7 +186,7 @@ export default function App() {
     <main className="app-shell">
       <header className="top-bar">
         <div className="brand">
-          <h1>NFG Hangman</h1>
+          <NFGHangmanLogo height={46} />
           <p className="tag">Companion</p>
         </div>
         <div className="live-stats">

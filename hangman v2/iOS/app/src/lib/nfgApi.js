@@ -1,5 +1,39 @@
+import { Capacitor, CapacitorHttp } from "@capacitor/core";
+
 const DEVICE_KEY = "nfg_device_id";
 const TOKEN_KEY = "nfg_session_token";
+
+function parseResponseData(data) {
+  if (data == null || data === "") return {};
+  if (typeof data === "object") return data;
+  try {
+    return JSON.parse(String(data));
+  } catch {
+    return { ok: false, error: "invalid_json" };
+  }
+}
+
+/** Native Capacitor WebView blocks cross-origin fetch (CORS); use native HTTP on device. */
+async function apiRequest(url, { method = "GET", headers = {}, body } = {}) {
+  const jsonBody =
+    body === undefined ? undefined : typeof body === "string" ? body : JSON.stringify(body);
+
+  if (Capacitor.isNativePlatform()) {
+    const nativeOpts = { url, method, headers };
+    if (body !== undefined) {
+      nativeOpts.data = typeof body === "string" ? JSON.parse(body) : body;
+    }
+    const res = await CapacitorHttp.request(nativeOpts);
+    return {
+      ok: res.status >= 200 && res.status < 300,
+      status: res.status,
+      data: parseResponseData(res.data),
+    };
+  }
+
+  const res = await fetch(url, { method, headers, body: jsonBody });
+  return { ok: res.ok, status: res.status, data: parseResponseData(await res.text()) };
+}
 
 export function apiBase() {
   const raw = String(import.meta.env.VITE_NFG_API_BASE || "").trim();
@@ -59,67 +93,77 @@ function authHeaders(extra = {}) {
 }
 
 export async function fetchPlatformStatus() {
-  const res = await fetch(`${apiBase()}/api/mobile/platform/status`, {
-    cache: "no-store",
+  const { data } = await apiRequest(`${apiBase()}/api/mobile/platform/status`, {
     headers: { "X-Client-App": "nfg-hangman" },
   });
-  return res.json();
+  return data;
 }
 
 export async function startLink() {
-  const res = await fetch(`${apiBase()}/api/mobile/link/start`, {
+  const { ok, status, data } = await apiRequest(`${apiBase()}/api/mobile/link/start`, {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ deviceId: getDeviceId() }),
+    body: { deviceId: getDeviceId() },
   });
-  return res.json();
+  if (!ok && data?.ok !== true) {
+    return {
+      ok: false,
+      error: data?.error || data?.message || `Server error (${status})`,
+    };
+  }
+  return { ok: data?.ok !== false, ...data };
 }
 
 export async function pollLinkStatus(code) {
-  const res = await fetch(`${apiBase()}/api/mobile/link/status/${encodeURIComponent(code)}`, {
-    cache: "no-store",
-  });
-  return res.json();
+  const { data } = await apiRequest(
+    `${apiBase()}/api/mobile/link/status/${encodeURIComponent(code)}`,
+    { headers: { "X-Client-App": "nfg-hangman" } }
+  );
+  return data;
 }
 
 export async function fetchSession() {
-  const res = await fetch(`${apiBase()}/api/mobile/session`, {
+  const { data } = await apiRequest(`${apiBase()}/api/mobile/session`, {
     headers: authHeaders(),
-    cache: "no-store",
   });
-  return res.json();
+  return data;
 }
 
 export async function sendPresenceHeartbeat() {
-  const res = await fetch(`${apiBase()}/api/mobile/presence/heartbeat`, {
+  const { data } = await apiRequest(`${apiBase()}/api/mobile/presence/heartbeat`, {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ deviceId: getDeviceId(), clientApp: "nfg-hangman" }),
+    body: { deviceId: getDeviceId(), clientApp: "nfg-hangman" },
   });
-  return res.json();
+  return data;
 }
 
 export async function fetchChat(limit = 60) {
-  const res = await fetch(`${apiBase()}/api/mobile/chat?limit=${limit}`, { cache: "no-store" });
-  return res.json();
+  const { data } = await apiRequest(`${apiBase()}/api/mobile/chat?limit=${limit}`, {
+    headers: { "X-Client-App": "nfg-hangman" },
+  });
+  return data;
 }
 
 export async function postChat(message) {
-  const res = await fetch(`${apiBase()}/api/mobile/chat`, {
+  const { ok, status, data } = await apiRequest(`${apiBase()}/api/mobile/chat`, {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ message }),
+    body: { message },
   });
-  return res.json();
+  if (!ok && data?.ok !== true) {
+    return { ok: false, error: data?.error || `HTTP ${status}` };
+  }
+  return data;
 }
 
 export async function guessLetter(letter) {
-  const res = await fetch(`${apiBase()}/api/mobile/hangman/guess`, {
+  const { data } = await apiRequest(`${apiBase()}/api/mobile/hangman/guess`, {
     method: "POST",
     headers: authHeaders(),
-    body: JSON.stringify({ letter }),
+    body: { letter },
   });
-  return res.json();
+  return data;
 }
 
 export function connectPlatformSocket(handlers = {}) {

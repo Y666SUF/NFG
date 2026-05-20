@@ -5,5 +5,13 @@
   "bundledWebRuntime": false,
   "server": {
     "cleartext": false
+  },
+  "ios": {
+    "packageManager": "SPM"
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
   }
 }

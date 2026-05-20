@@ -8,6 +8,7 @@ const { URL } = require("url");
 const { fetchHangmanJson, HANGMAN_BACKEND_URL } = require("./hangman-proxy");
 
 const NFG_INTERNAL_SECRET = String(process.env.NFG_INTERNAL_SECRET || "nfg-dev-internal").trim();
+const GUESS_TIMEOUT_MS = Math.min(30_000, Math.max(3000, Number(process.env.HANGMAN_GUESS_TIMEOUT_MS) || 12_000));
 
 function hangmanGuessRequest(body, headers) {
   const url = `${HANGMAN_BACKEND_URL}/api/hangman/app/guess`;
@@ -26,6 +27,7 @@ function hangmanGuessRequest(body, headers) {
           "Content-Length": Buffer.byteLength(payload),
           ...headers,
         },
+        timeout: GUESS_TIMEOUT_MS,
       },
       (res) => {
         const chunks = [];
@@ -42,6 +44,13 @@ function hangmanGuessRequest(body, headers) {
         });
       }
     );
+    req.on("timeout", () => {
+      req.destroy();
+      resolve({
+        status: 504,
+        body: { ok: false, error: "hangman_timeout", message: "Hangman guess timed out" },
+      });
+    });
     req.on(
       "error",
       (err) =>
@@ -108,39 +117,52 @@ function registerHangmanMobileRoutes(app, ctx) {
   });
 
   app.post("/api/mobile/hangman/guess", async (req, res) => {
-    const clientApp = String(req.headers["x-client-app"] || "").trim().toLowerCase();
-    if (clientApp && clientApp !== "nfg-hangman") {
-      return res.status(400).json({ ok: false, error: "wrong_client_app", message: "Use X-Client-App: nfg-hangman" });
-    }
+    try {
+      const clientApp = String(req.headers["x-client-app"] || "").trim().toLowerCase();
+      if (clientApp && clientApp !== "nfg-hangman") {
+        return res.status(400).json({ ok: false, error: "wrong_client_app", message: "Use X-Client-App: nfg-hangman" });
+      }
 
-    const session = typeof validateBearer === "function" ? validateBearer(req) : null;
-    if (!session || !session.userId) {
-      return res.status(401).json({
+      const session = typeof validateBearer === "function" ? validateBearer(req) : null;
+      if (!session || !session.userId) {
+        return res.status(401).json({
+          ok: false,
+          error: "auth_required",
+          message: "Link your TikTok account on live first (!link CODE).",
+        });
+      }
+
+      const letter = String(req.body?.letter || "")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z]/g, "");
+      const word = String(req.body?.word || "").trim();
+      const body =
+        word.length >= 2 ? { word } : letter.length === 1 ? { letter: letter.toUpperCase() } : null;
+      if (!body) {
+        return res.status(400).json({ ok: false, error: "invalid_letter", message: "Send one letter A–Z." });
+      }
+
+      const out = await hangmanGuessRequest(body, {
+        "X-NFG-Internal": NFG_INTERNAL_SECRET,
+        "X-NFG-User-Id": String(session.userId).toLowerCase(),
+        "X-NFG-Display-Name": String(session.displayName || session.userId),
+      });
+
+      const mapped = mapHangmanGuessResponse(out.body);
+      const status = out.status >= 200 && out.status < 300 ? 200 : out.status || 502;
+      console.log(
+        `[Mobile hangman guess] @${session.userId} ${letter || word} → HTTP ${out.status} ok=${!!mapped.ok}`
+      );
+      return res.status(status).json(mapped);
+    } catch (err) {
+      console.error("[Mobile hangman guess] error:", err && err.message ? err.message : err);
+      return res.status(500).json({
         ok: false,
-        error: "auth_required",
-        message: "Link your TikTok account on live first (!link CODE).",
+        error: "hangman_guess_failed",
+        message: "Guess could not be processed. Try again.",
       });
     }
-
-    const letter = String(req.body?.letter || "")
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z]/g, "");
-    const word = String(req.body?.word || "").trim();
-    const body =
-      word.length >= 2 ? { word } : letter.length === 1 ? { letter: letter.toUpperCase() } : null;
-    if (!body) {
-      return res.status(400).json({ ok: false, error: "invalid_letter", message: "Send one letter A–Z." });
-    }
-
-    const out = await hangmanGuessRequest(body, {
-      "X-NFG-Internal": NFG_INTERNAL_SECRET,
-      "X-NFG-User-Id": String(session.userId).toLowerCase(),
-      "X-NFG-Display-Name": String(session.displayName || session.userId),
-    });
-
-    const mapped = mapHangmanGuessResponse(out.body);
-    res.status(out.status || 502).json(mapped);
   });
 }
 

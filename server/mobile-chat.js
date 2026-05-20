@@ -3,6 +3,11 @@
  */
 const crypto = require("crypto");
 const { playerBadgesFromStore } = require("./mobile-player-badges");
+const {
+  formatAppLabel,
+  normalizeClientApp,
+  resolveChatDisplayName,
+} = require("./mobile-app-labels");
 
 const MAX_MESSAGES = 120;
 const MAX_MESSAGE_LEN = 240;
@@ -67,17 +72,16 @@ function registerMobileChatRoutes(app, ctx) {
     }
     lastSentAt.set(session.userId, now);
 
-    const clientApp = String(req.headers["x-client-app"] || req.body?.clientApp || "nfg")
-      .trim()
-      .slice(0, 32);
+    const clientApp = normalizeClientApp(req.headers["x-client-app"] || req.body?.clientApp || "nfg");
     const row = enrichChatRow(
       {
         id: crypto.randomBytes(8).toString("hex"),
         userId: session.userId,
-        displayName: session.displayName || session.userId,
+        displayName: resolveChatDisplayName(pointStore, session.userId, session.displayName),
         message: raw,
         at: now,
-        clientApp: clientApp || "nfg",
+        clientApp,
+        appLabel: formatAppLabel(clientApp),
       },
       pointStore
     );

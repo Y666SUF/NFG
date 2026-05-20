@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 140" role="img" aria-label="NFG Hangman">
+  <defs>
+    <linearGradient id="nfgGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#7c3aed"/>
+      <stop offset="55%" stop-color="#c026d3"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <filter id="glowPurple" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glowCyan" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur stdDeviation="2.5" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+  <!-- NFG wordmark (Crash-style italic block) -->
+  <g filter="url(#glowPurple)">
+    <text x="8" y="62" font-family="Segoe UI, Inter, Arial Black, sans-serif" font-size="56" font-weight="900" font-style="italic" fill="url(#nfgGrad)" stroke="#2a1040" stroke-width="2">NFG</text>
+    <text x="10" y="60" font-family="Segoe UI, Inter, Arial Black, sans-serif" font-size="56" font-weight="900" font-style="italic" fill="#f8fafc">NFG</text>
+  </g>
+  <!-- Hangman gallows + figure (cyan neon, Crash graph accent color) -->
+  <g filter="url(#glowCyan)" stroke="#67e8f9" stroke-width="3.2" stroke-linecap="round" fill="none">
+    <path d="M168 98 L168 38 L228 38"/>
+    <path d="M228 38 L228 52"/>
+    <circle cx="228" cy="58" r="6" fill="#67e8f9" stroke="none"/>
+    <path d="M228 64 L228 78 M228 71 L218 84 M228 71 L238 84 M228 78 L222 92 M228 78 L234 92"/>
+    <path d="M248 108 h52" stroke-width="2.5" opacity="0.85"/>
+    <text x="248" y="112" font-family="monospace" font-size="18" fill="#67e8f9" stroke="none" opacity="0.9">_ _ _ _ _</text>
+  </g>
+  <text x="168" y="128" font-family="Segoe UI, Inter, sans-serif" font-size="22" font-weight="800" font-style="italic" letter-spacing="0.12em" fill="#a78bfa">HANGMAN</text>
+</svg>

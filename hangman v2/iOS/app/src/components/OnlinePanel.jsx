@@ -14,7 +14,7 @@ export default function OnlinePanel({ users = [], count = 0 }) {
               <span className="online-name">{u.displayName || u.userId}</span>
               <span className="online-meta">
                 {u.isGuest ? "guest" : `@${u.username || u.userId}`}
-                {u.clientApp ? ` · ${u.clientApp}` : ""}
+                {u.appLabel || u.clientApp ? ` · ${u.appLabel || u.clientApp}` : ""}
               </span>
             </li>
           ))

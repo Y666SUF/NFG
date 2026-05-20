@@ -2571,43 +2571,47 @@ async def hangman_app_guess(request: Request) -> dict[str, Any]:
     help_pop = None
     wager_pop = None
     auto_next_delay_sec = None
-    async with game_lock:
-        (
-            lines,
-            _completed,
-            round_popup,
-            points_popup,
-            auto_next_delay_sec,
-            cmd_pop,
-            help_pop,
-            wager_pop,
-        ) = process_chat_message(
-            session,
-            text=guess_text,
-            uid=uid,
-            user_key=user_key,
-            nick=nick,
-            host_username=host_username,
-            auto_next=auto_next,
-            alltime_path=ALLTIME_PATH,
-        )
-        snap_round = session.round_id
+    try:
+        async with game_lock:
+            (
+                lines,
+                _completed,
+                round_popup,
+                points_popup,
+                auto_next_delay_sec,
+                cmd_pop,
+                help_pop,
+                wager_pop,
+            ) = process_chat_message(
+                session,
+                text=guess_text,
+                uid=uid,
+                user_key=user_key,
+                nick=nick,
+                host_username=host_username,
+                auto_next=auto_next,
+                alltime_path=ALLTIME_PATH,
+            )
+            snap_round = session.round_id
 
-    if lines or round_popup or points_popup or cmd_pop or help_pop or wager_pop:
-        await push_state(
-            lines,
-            round_popup=round_popup,
-            points_popup=points_popup,
-            command_list_popup=cmd_pop,
-            hangman_help_popup=help_pop,
-            wager_intro_popup=wager_pop,
-        )
-    if auto_next_delay_sec is not None and auto_next_delay_sec > 0:
-        global _auto_next_delay_task
-        _cancel_auto_next_delay_task()
-        _auto_next_delay_task = asyncio.create_task(
-            _run_delayed_auto_next(snap_round, float(auto_next_delay_sec))
-        )
+        if lines or round_popup or points_popup or cmd_pop or help_pop or wager_pop:
+            await push_state(
+                lines,
+                round_popup=round_popup,
+                points_popup=points_popup,
+                command_list_popup=cmd_pop,
+                hangman_help_popup=help_pop,
+                wager_intro_popup=wager_pop,
+            )
+        if auto_next_delay_sec is not None and auto_next_delay_sec > 0:
+            global _auto_next_delay_task
+            _cancel_auto_next_delay_task()
+            _auto_next_delay_task = asyncio.create_task(
+                _run_delayed_auto_next(snap_round, float(auto_next_delay_sec))
+            )
+    except Exception as e:
+        print(f"[hangman_app_guess] failed for @{uid}: {e!s}", flush=True)
+        raise HTTPException(status_code=500, detail="Guess failed — try again.")
 
     pl = session.players.get(user_key)
     eliminated = bool(pl and pl.eliminated_this_word)

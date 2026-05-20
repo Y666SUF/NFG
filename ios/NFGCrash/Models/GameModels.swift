@@ -394,10 +394,21 @@ struct AppChatMessage: Codable, Identifiable, Hashable {
     var displayName: String
     var message: String
     var at: Int64
+    var clientApp: String?
+    var appLabel: String?
     var superFan: Bool?
     var superFanLevel: Int?
     var nameStyle: String?
     var nameBadge: String?
+
+    var resolvedAppLabel: String {
+        let label = appLabel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !label.isEmpty { return label }
+        let raw = clientApp?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() ?? ""
+        if raw == "nfg-hangman" { return "NFG Hangman" }
+        if raw == "nfg-crash" { return "NFG Crash" }
+        return ""
+    }
 
     var isMine: Bool {
         userId.lowercased() == PlayerSession.tiktokUsername.lowercased()

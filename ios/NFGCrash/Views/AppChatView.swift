@@ -136,6 +136,11 @@ struct AppChatView: View {
                     Text(msg.displayName)
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundStyle(msg.isMine ? NFGTheme.accent2 : NFGTheme.muted)
+                    if !msg.resolvedAppLabel.isEmpty && !msg.isMine {
+                        Text(msg.resolvedAppLabel)
+                            .font(.system(size: 9, weight: .medium))
+                            .foregroundStyle(NFGTheme.muted.opacity(0.85))
+                    }
                     SuperFanBadgeView(badge: msg.badge, compact: true)
                 }
                 Text(msg.message)

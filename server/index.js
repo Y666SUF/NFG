@@ -1,5 +1,12 @@
 const fs = require("fs");
 const http = require("http");
+
+process.on("uncaughtException", (err) => {
+  console.error("[NFG] uncaughtException:", err && err.stack ? err.stack : err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[NFG] unhandledRejection:", reason);
+});
 const os = require("os");
 const path = require("path");
 const { spawn } = require("child_process");
@@ -68,15 +75,27 @@ const corsOrigins = new Set([
   "http://127.0.0.1:3000",
   "https://y666suf.com",
   "https://www.y666suf.com",
+  "capacitor://localhost",
+  "ionic://localhost",
+  "http://localhost",
 ]);
+
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return false;
+  if (corsOrigins.has("*") || corsOrigins.has(origin)) return true;
+  return /^capacitor:\/\//i.test(origin) || /^ionic:\/\//i.test(origin);
+}
 
 app.use((req, res, next) => {
   const origin = String(req.headers.origin || "").trim();
-  if (origin && (corsOrigins.has("*") || corsOrigins.has(origin))) {
+  if (origin && isAllowedCorsOrigin(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
     res.setHeader("Vary", "Origin");
     res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+    res.setHeader(
+      "Access-Control-Allow-Headers",
+      "Content-Type, Authorization, X-Device-Id, X-Client-App"
+    );
   }
   if (req.method === "OPTIONS") return res.status(204).end();
   next();

@@ -51,6 +51,10 @@ body {
   font-size: 1.15rem;
 }
 
+.brand img {
+  max-width: min(240px, 72vw);
+}
+
 .brand .tag {
   margin: 0.15rem 0 0;
   font-size: 0.72rem;

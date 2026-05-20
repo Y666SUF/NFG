@@ -6,6 +6,7 @@ export default function AccountPanel({ onSession }) {
   const [link, setLink] = useState(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     fetchSession().then((body) => {
@@ -36,14 +37,31 @@ export default function AccountPanel({ onSession }) {
   }, [link, onSession]);
 
   async function beginLink() {
+    if (busy) return;
     setError("");
-    const body = await startLink();
-    if (!body.ok) {
-      setError(body.error || "Could not start link");
-      return;
+    setStatus("");
+    setBusy(true);
+    try {
+      const body = await startLink();
+      if (!body.ok || !body.code) {
+        setError(body.error || "Could not start link. Check connection and try again.");
+        return;
+      }
+      setLink(body);
+      const cmd = body.tiktokCommand || `!link ${body.code}`;
+      let msg = `On TikTok LIVE chat, type: ${cmd}`;
+      try {
+        await navigator.clipboard.writeText(cmd);
+        msg = `Copied to clipboard. On LIVE chat, type: ${cmd}`;
+      } catch {
+        /* clipboard optional */
+      }
+      setStatus(msg);
+    } catch (e) {
+      setError(e?.message || "Network error — could not reach the server.");
+    } finally {
+      setBusy(false);
     }
-    setLink(body);
-    setStatus(`On TikTok LIVE chat, type: ${body.tiktokCommand || `!link ${body.code}`}`);
   }
 
   return (
@@ -60,8 +78,8 @@ export default function AccountPanel({ onSession }) {
       ) : (
         <>
           <p className="muted">Link your TikTok on live so app guesses count as you.</p>
-          <button type="button" className="btn btn-wide" onClick={beginLink}>
-            Generate link code
+          <button type="button" className="btn btn-wide" onClick={beginLink} disabled={busy}>
+            {busy ? "Generating…" : "Generate link code"}
           </button>
           {link?.code ? (
             <p className="link-code">

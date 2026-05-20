@@ -114,7 +114,12 @@ from racing_debut_shield import (
     trim_shield_by_hours,
 )
 from chat_bridge import process_chat_message
-from nfg_platform import forward_tiktok_link_to_platform, is_nfg_crash_chat_noise, parse_link_command
+from nfg_platform import (
+    forward_tiktok_link_to_platform,
+    is_nfg_crash_chat_noise,
+    is_nfg_crash_spotify_noise,
+    parse_link_command,
+)
 from hangman_game import HangmanSession, print_round_answer_to_console
 from hangman_spotify_now_playing import spotify_now_playing_async
 from hangman_spotify_playback import (
@@ -2607,13 +2612,29 @@ async def hangman_app_guess(request: Request) -> dict[str, Any]:
     pl = session.players.get(user_key)
     eliminated = bool(pl and pl.eliminated_this_word)
     wrong = int(pl.incorrect_this_word) if pl else 0
+    guessed = sorted(c.lower() for c in session.guessed_letters if c.isalpha())
+    won = bool(session.is_solved())
+    correct: bool | None = None
+    if letter and len(letter) == 1 and letter.isalpha():
+        joined = "\n".join(lines).lower()
+        if "is correct" in joined:
+            correct = True
+        elif "is not in the word" in joined or "you are out" in joined:
+            correct = False
+        elif "already guessed" in joined:
+            correct = None
     return {
         "ok": True,
         "lines": lines,
         "eliminated": eliminated,
         "wrongGuesses": wrong,
+        "wrong": wrong,
         "maxWrong": session.max_wrong_per_player,
         "maskedWord": session.mask(),
+        "masked": session.mask(),
+        "guessed": guessed,
+        "won": won,
+        "correct": correct,
     }
 
 

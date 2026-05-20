@@ -53,7 +53,13 @@ Place `.ipa` files in `%USERPROFILE%\Downloads\` or set env vars.
 
 ## App Store
 
-**Separate listings** — `com.nfg.crash` vs `com.nfg.hangman`. See `docs/MAC_IOS_NFG_HANGMAN_BUILD_PROMPT.md`.
+**Separate listings** — `com.nfg.crash` vs `com.nfg.hangman`.
+
+| Doc | Use |
+|-----|-----|
+| `docs/MAC_IOS_FINALIZE_PROMPT.md` | **MacBook** — finalize both apps + TestFlight + IPA handoff |
+| `docs/MAC_IOS_NFG_HANGMAN_BUILD_PROMPT.md` | Hangman UI/API detail |
+| `WINDOWS-PC-SETUP.md` | **This PC** — ports, tunnel, verify curls |
 
 ## Environment (optional)
 

@@ -13,6 +13,7 @@ const {
 } = require("./mobile-presence");
 const { buildWalletPayload } = require("./mobile-wallet");
 const { buildPlatformStatus, registerMobilePlatformRoutes } = require("./mobile-platform");
+const { registerHangmanMobileRoutes } = require("./mobile-hangman");
 
 /** Session object for route handlers (validateBearer in auth returns { ok, session }). */
 function validateBearer(req) {
@@ -31,6 +32,7 @@ function registerMobileApi(app, ctx) {
   registerMobileStoreRoutes(app, { pointStore, validateBearer, broadcast });
   registerMobilePresenceRoutes(app, { validateBearer, pointStore, broadcast });
   registerMobilePlatformRoutes(app, { game, pointStore, validateBearer, broadcast });
+  registerHangmanMobileRoutes(app, { validateBearer });
 
   app.get("/api/mobile/status", async (_req, res) => {
     const platform = await buildPlatformStatus(game, pointStore);

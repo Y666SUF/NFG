@@ -3,12 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sideload NFG Crash on iPhone</title>
+    <title>Install NFG on iPhone — Crash &amp; Hangman</title>
     <meta
       name="description"
-      content="How to sideload NFG Crash IPA on iPhone with Sideloadly or AltStore."
+      content="Download NFG Crash and NFG Hangman IPA files and sideload on iPhone with Sideloadly or AltStore."
     />
-    <link rel="stylesheet" href="/website-assets/site.css?v=20260520d" />
+    <link rel="stylesheet" href="/website-assets/site.css?v=20260520e" />
   </head>
   <body>
     <main class="wrap">
@@ -25,13 +25,28 @@
       </div>
 
       <section class="detail-card reveal" data-reveal>
-        <h1>Sideload NFG Crash on iPhone</h1>
+        <h1>Install NFG on iPhone</h1>
         <p>
-          This guide is for test installs before App Store release. Download the latest IPA and install using Sideloadly
-          (Windows/Mac) or AltStore.
+          NFG Crash and NFG Hangman are <strong>separate apps</strong> (different bundle IDs). Download the latest
+          builds below, then install with Sideloadly or AltStore.
         </p>
+      </section>
+
+      <section class="detail-card reveal" data-reveal id="crash">
+        <h2>NFG Crash</h2>
+        <p class="ipa-meta" id="ipa-meta-crash">Checking latest build…</p>
         <div class="footer-actions">
-          <a class="chip" href="/download/nfg-crash.ipa">Download NFG Crash .ipa</a>
+          <a class="chip" id="ipa-dl-crash" href="/download/nfg-crash.ipa">Download NFG Crash .ipa</a>
+          <a class="chip" href="/games/nfg-crash" data-nav>Crash game page</a>
+        </div>
+      </section>
+
+      <section class="detail-card reveal" data-reveal id="hangman">
+        <h2>NFG Hangman</h2>
+        <p class="ipa-meta" id="ipa-meta-hangman">Checking latest build…</p>
+        <div class="footer-actions">
+          <a class="chip" id="ipa-dl-hangman" href="/download/nfg-hangman.ipa">Download NFG Hangman .ipa</a>
+          <a class="chip" href="/games/nfg-hangman" data-nav>Hangman game page</a>
         </div>
       </section>
 
@@ -43,16 +58,16 @@
           <li>Connect iPhone to PC, unlock device, tap Trust if prompted.</li>
           <li>Open Sideloadly, choose your device, drag in the downloaded `.ipa`.</li>
           <li>Sign with your Apple ID and start sideload.</li>
-          <li>On iPhone: Settings -> General -> VPN & Device Management -> Trust your developer profile.</li>
-          <li>On iOS 16+: enable Developer Mode in Settings -> Privacy & Security.</li>
+          <li>On iPhone: Settings → General → VPN &amp; Device Management → Trust your developer profile.</li>
+          <li>On iOS 16+: enable Developer Mode in Settings → Privacy &amp; Security.</li>
         </ul>
       </section>
 
       <section class="detail-card reveal" data-reveal>
         <h2>Video tutorial</h2>
         <p>
-          Watch step-by-step video: <a href="https://www.youtube.com/watch?v=x_gvrT2tv-g">Install Sideloadly Properly:
-          Windows Guide</a>
+          Watch step-by-step video:
+          <a href="https://www.youtube.com/watch?v=x_gvrT2tv-g">Install Sideloadly Properly: Windows Guide</a>
         </p>
       </section>
 
@@ -72,6 +87,53 @@
         </div>
       </footer>
     </main>
-    <script src="/website-assets/site.js?v=20260520d"></script>
+    <script src="/website-assets/site.js?v=20260520e"></script>
+    <script>
+      (function () {
+        function fmtMb(n) {
+          return n > 0 ? (n / (1024 * 1024)).toFixed(1) + " MB" : "";
+        }
+        function fmtDate(iso) {
+          if (!iso) return "";
+          try {
+            return new Date(iso).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+          } catch (e) {
+            return "";
+          }
+        }
+        function apply(id, app) {
+          var meta = document.getElementById("ipa-meta-" + id);
+          var link = document.getElementById("ipa-dl-" + id);
+          if (!app || !app.ok) {
+            if (meta) meta.textContent = "Build not on server yet — sync releases/ipa on the PC.";
+            return;
+          }
+          if (link && app.downloadUrl) link.href = app.downloadUrl;
+          var parts = [];
+          if (app.sizeBytes) parts.push(fmtMb(app.sizeBytes));
+          if (app.updatedAt) parts.push("updated " + fmtDate(app.updatedAt));
+          if (meta) meta.textContent = parts.length ? "Latest build: " + parts.join(" · ") : "Latest build available.";
+          if (link && app.sizeBytes) {
+            var label = id === "crash" ? "NFG Crash" : "NFG Hangman";
+            link.textContent = "Download " + label + " .ipa (" + fmtMb(app.sizeBytes) + ")";
+          }
+        }
+        fetch("/api/ipa/download-info", { cache: "no-store" })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (body) {
+            if (!body || !body.apps) return;
+            apply("crash", body.apps.crash);
+            apply("hangman", body.apps.hangman);
+          })
+          .catch(function () {
+            ["crash", "hangman"].forEach(function (id) {
+              var meta = document.getElementById("ipa-meta-" + id);
+              if (meta) meta.textContent = "";
+            });
+          });
+      })();
+    </script>
   </body>
 </html>

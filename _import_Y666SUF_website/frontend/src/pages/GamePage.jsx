@@ -7,6 +7,8 @@ import CosmicSubpageShell from "@/components/CosmicSubpageShell";
 import CrashGraph from "@/components/animations/CrashGraph";
 import { HangmanAnim, WordwheelAnim, WordwichTiles } from "@/components/GameVisuals";
 import useFeaturedStats from "@/hooks/useFeaturedStats";
+import useIpaDownloads from "@/hooks/useIpaDownloads";
+import IpaMetaLine from "@/components/IpaMetaLine";
 
 function badgesFor(slug) {
   if (slug === "nfg-crash") {
@@ -34,6 +36,8 @@ export default function GamePage({ forcedSlug = "" }) {
   const resolvedSlug = forcedSlug || slug;
   const game = GAMES.find((g) => g.slug === resolvedSlug);
   const { stats: featuredStats } = useFeaturedStats(8000);
+  const { crash: crashIpa, hangman: hangmanIpa } = useIpaDownloads();
+  const ipa = game?.slug === "nfg-hangman" ? hangmanIpa : game?.slug === "nfg-crash" ? crashIpa : null;
 
   if (!game) {
     return (
@@ -128,6 +132,9 @@ export default function GamePage({ forcedSlug = "" }) {
               ))}
             </ul>
 
+            {(game.slug === "nfg-crash" || game.slug === "nfg-hangman") && (
+              <IpaMetaLine ipa={ipa} className="mt-4" />
+            )}
             <div className="mt-8 flex flex-wrap gap-4">
               {game.slug === "nfg-crash" ? (
                 <>
@@ -154,11 +161,11 @@ export default function GamePage({ forcedSlug = "" }) {
                     ► Install Hangman on iPhone
                   </Link>
                   <a
-                    href="/download/nfg-hangman.ipa"
+                    href={hangmanIpa.href}
                     className="btn-ghost"
                     data-testid="game-detail-download-ipa-hangman"
                   >
-                    ⬇ Download .ipa
+                    ⬇ Download .ipa{hangmanIpa.mb ? ` (${hangmanIpa.mb})` : ""}
                   </a>
                   <a
                     href="https://www.tiktok.com/@y666.suf"

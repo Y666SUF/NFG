@@ -1,8 +1,20 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import CosmicSubpageShell from "@/components/CosmicSubpageShell";
+import IpaMetaLine from "@/components/IpaMetaLine";
+import useIpaDownloads from "@/hooks/useIpaDownloads";
 
-function AppBlock({ id, accentClass, titleAccent, titleRest, testId, downloadHref, downloadLabel, gamePage }) {
+function AppBlock({
+  id,
+  accentClass,
+  titleAccent,
+  titleRest,
+  testId,
+  downloadHref,
+  downloadLabel,
+  gamePage,
+  ipa,
+}) {
   return (
     <section id={id} className="rounded-2xl border border-cyan-400/30 bg-black/65 p-7 md:p-9" data-testid={testId}>
       <span className="label-tag">// iPhone setup</span>
@@ -12,8 +24,9 @@ function AppBlock({ id, accentClass, titleAccent, titleRest, testId, downloadHre
       </h2>
       <p className="mt-4 text-zinc-300 text-sm">
         Test install before App Store release. Each game is a <strong>separate app</strong> (own bundle ID and .ipa).
-        Download the build below, then use Sideloadly or AltStore.
+        Download the latest build below, then use Sideloadly or AltStore.
       </p>
+      <IpaMetaLine ipa={ipa} className="mt-3" />
       <div className="mt-6 flex flex-wrap gap-4">
         <a href={downloadHref} className="btn-neon" data-testid={`${testId}-download`}>
           {downloadLabel}
@@ -27,6 +40,8 @@ function AppBlock({ id, accentClass, titleAccent, titleRest, testId, downloadHre
 }
 
 export default function SideloadPage() {
+  const { crash, hangman } = useIpaDownloads();
+
   return (
     <CosmicSubpageShell testId="sideload-page-shell">
       <div className="mx-auto max-w-5xl px-6 md:px-10 mt-8 space-y-8">
@@ -36,7 +51,8 @@ export default function SideloadPage() {
           </h1>
           <p className="mt-4 text-zinc-300">
             NFG Crash and NFG Hangman are two companion apps. They share app chat and live presence, but use
-            different game servers and leaderboards. You need the correct .ipa for each title.
+            different game servers and leaderboards. Download links below always point at the latest builds on this
+            server.
           </p>
         </div>
 
@@ -45,9 +61,12 @@ export default function SideloadPage() {
           accentClass="neon-text-cyan"
           titleAccent="Crash"
           testId="sideload-crash"
-          downloadHref="https://y666suf.com/download/nfg-crash.ipa"
-          downloadLabel="► Download NFG Crash .ipa"
+          downloadHref={crash.href}
+          downloadLabel={
+            crash.mb ? `► Download NFG Crash .ipa (${crash.mb})` : "► Download NFG Crash .ipa"
+          }
           gamePage="/games/nfg-crash"
+          ipa={crash}
         />
 
         <AppBlock
@@ -55,9 +74,12 @@ export default function SideloadPage() {
           accentClass="neon-text-fuchsia"
           titleAccent="Hangman"
           testId="sideload-hangman"
-          downloadHref="https://y666suf.com/download/nfg-hangman.ipa"
-          downloadLabel="► Download NFG Hangman .ipa"
+          downloadHref={hangman.href}
+          downloadLabel={
+            hangman.mb ? `► Download NFG Hangman .ipa (${hangman.mb})` : "► Download NFG Hangman .ipa"
+          }
           gamePage="/games/nfg-hangman"
+          ipa={hangman}
         />
 
         <div className="grid md:grid-cols-2 gap-6">

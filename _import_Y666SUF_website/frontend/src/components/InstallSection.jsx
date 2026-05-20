@@ -1,5 +1,7 @@
 import React from "react";
 import { motion } from "framer-motion";
+import IpaMetaLine from "@/components/IpaMetaLine";
+import useIpaDownloads from "@/hooks/useIpaDownloads";
 
 const steps = [
   {
@@ -10,7 +12,7 @@ const steps = [
   {
     n: "02",
     title: "Download .ipa",
-    body: "Tap the direct download link to grab the latest NFG Crash iOS build.",
+    body: "Tap the direct download for NFG Crash or NFG Hangman — sizes update when the PC syncs new builds.",
   },
   {
     n: "03",
@@ -20,11 +22,13 @@ const steps = [
   {
     n: "04",
     title: "Sign in & play",
-    body: "Open NFG Crash, link to a live round, and your wallet + leaderboard sync instantly.",
+    body: "Link on TikTok LIVE with !link, then play. Shared app chat works across both companions.",
   },
 ];
 
 export default function InstallSection() {
+  const { crash, hangman } = useIpaDownloads();
+
   return (
     <section
       id="install"
@@ -44,15 +48,19 @@ export default function InstallSection() {
             </p>
 
             <div className="mt-8 flex flex-wrap gap-4">
-              <a href="/download/nfg-crash.ipa" data-testid="install-download-crash" className="btn-neon">
-                ⬇ Crash .ipa
+              <a href={crash.href} data-testid="install-download-crash" className="btn-neon">
+                ⬇ Crash{crash.mb ? ` (${crash.mb})` : " .ipa"}
               </a>
-              <a href="/download/nfg-hangman.ipa" data-testid="install-download-hangman" className="btn-ghost">
-                ⬇ Hangman .ipa
+              <a href={hangman.href} data-testid="install-download-hangman" className="btn-ghost">
+                ⬇ Hangman{hangman.mb ? ` (${hangman.mb})` : " .ipa"}
               </a>
               <a href="/sideload" data-testid="install-sideload-guide" className="btn-ghost">
                 ◇ Sideload Tutorial
               </a>
+            </div>
+            <div className="mt-4 space-y-1">
+              <IpaMetaLine ipa={crash} />
+              <IpaMetaLine ipa={hangman} />
             </div>
 
             <p className="mt-6 font-mono text-[0.65rem] uppercase tracking-[0.25em] text-zinc-500">

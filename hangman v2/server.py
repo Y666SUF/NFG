@@ -2624,6 +2624,7 @@ async def hangman_app_guess(request: Request) -> dict[str, Any]:
                 correct = False
             elif "already guessed" in joined:
                 correct = None
+        snap = session.snapshot()
         return {
             "ok": True,
             "lines": lines,
@@ -2631,8 +2632,11 @@ async def hangman_app_guess(request: Request) -> dict[str, Any]:
             "wrongGuesses": wrong,
             "wrong": wrong,
             "maxWrong": session.max_wrong_per_player,
-            "maskedWord": session.mask(),
-            "masked": session.mask(),
+            "maskedWord": snap["mask"],
+            "masked": snap["mask"],
+            "slots": snap["slots"],
+            "keyboard": snap["keyboard"],
+            "length": snap["length"],
             "guessed": guessed,
             "won": won,
             "correct": correct,

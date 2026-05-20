@@ -4,6 +4,7 @@ import NFGHangmanLogo from "./components/NFGHangmanLogo";
 import ChatPanel from "./components/ChatPanel";
 import GuessKeyboard from "./components/GuessKeyboard";
 import OnlinePanel from "./components/OnlinePanel";
+import WordDisplay from "./components/WordDisplay";
 import {
   connectPlatformSocket,
   fetchPlatformStatus,
@@ -12,21 +13,7 @@ import {
   hangmanWsUrl,
   sendPresenceHeartbeat,
 } from "./lib/nfgApi";
-
-function normalizeState(raw) {
-  if (!raw || typeof raw !== "object") return null;
-  return {
-    maskedWord: String(raw.masked_word ?? raw.maskedWord ?? raw.mask ?? ""),
-    wrongGuesses: Number(raw.wrong_guesses ?? raw.wrong ?? 0),
-    maxWrong: Number(raw.max_wrong ?? raw.maxWrong ?? 6),
-    guessedLetters: Array.isArray(raw.guessed_letters)
-      ? raw.guessed_letters
-      : Array.isArray(raw.guessedLetters)
-        ? raw.guessedLetters
-        : [],
-    phase: String(raw.phase ?? ""),
-  };
-}
+import { mergeGuessIntoState, normalizeHangmanState } from "./lib/hangmanState";
 
 const TABS = [
   { id: "play", label: "Play" },
@@ -134,9 +121,12 @@ export default function App() {
           setHmStatus(data.tiktok_status);
         }
         if (typeof data.tiktok === "string") setStreamer(data.tiktok);
-        if (data.state) setState(normalizeState(data.state));
+        if (data.state) {
+          const next = normalizeHangmanState(data.state);
+          setState(next);
+          if (next?.wordTheme) setTheme(next.wordTheme);
+        }
         if (Array.isArray(data.alltime)) setAllTime(data.alltime.slice(0, 15));
-        if (data.state?.word_theme) setTheme(String(data.state.word_theme));
       };
       pingTimer = window.setInterval(() => {
         if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: "ping" }));
@@ -169,6 +159,7 @@ export default function App() {
       } else {
         const line = Array.isArray(out.lines) && out.lines.length ? out.lines[out.lines.length - 1] : "";
         setGuessResult({ ok: true, text: line || `Guessed ${letter}` });
+        setState((prev) => mergeGuessIntoState(prev, out));
       }
     } catch (e) {
       setGuessResult({ ok: false, text: e.message });
@@ -216,7 +207,7 @@ export default function App() {
             <span className={`pill ${hmConnected ? "ok" : "warn"}`}>{hmStatus}</span>
           </header>
           <p className="meta">@{streamer || "hangman"} · {theme || "Theme pending"}</p>
-          <div className="word-box">{state?.maskedWord || "_ _ _ _ _"}</div>
+          <WordDisplay slots={state?.slots} length={state?.length} maskedWord={state?.maskedWord} />
           <div className="stats-row">
             <span>
               Wrong: {state?.wrongGuesses ?? 0}/{state?.maxWrong ?? 6}
@@ -227,7 +218,8 @@ export default function App() {
             <strong>Guessed:</strong> {guessedLetters || "—"}
           </p>
           <GuessKeyboard
-            guessedLetters={state?.guessedLetters}
+            keyboardCorrect={state?.keyboardCorrect}
+            keyboardWrong={state?.keyboardWrong}
             disabled={!session?.userId || guessBusy}
             onGuess={handleGuess}
             lastResult={guessResult}

@@ -85,6 +85,10 @@ function mapHangmanGuessResponse(body) {
   return {
     ok: true,
     masked: body.masked || body.maskedWord || "",
+    maskedWord: body.maskedWord || body.masked || "",
+    slots: Array.isArray(body.slots) ? body.slots : undefined,
+    keyboard: body.keyboard && typeof body.keyboard === "object" ? body.keyboard : undefined,
+    length: Number(body.length) || undefined,
     wrong: Number(body.wrong ?? body.wrongGuesses ?? 0),
     maxWrong: Number(body.maxWrong ?? 6),
     guessed,

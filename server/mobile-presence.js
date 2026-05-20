@@ -2,7 +2,7 @@
  * Tracks iOS app users currently active (heartbeat within TTL).
  */
 const { playerBadgesFromStore } = require("./mobile-player-badges");
-const { formatAppLabel, normalizeClientApp, resolveChatDisplayName } = require("./mobile-app-labels");
+const { appLabelFromClientApp, chatDisplayName } = require("./mobile-app-labels");
 
 const PRESENCE_TTL_MS = 90_000;
 const presenceByKey = new Map();
@@ -29,13 +29,13 @@ function pruneStale() {
 function touchPresence(key, meta = {}) {
   if (!key) return;
   const prev = presenceByKey.get(key) || {};
-  const clientApp = normalizeClientApp(meta.clientApp || prev.clientApp || "nfg");
+  const clientApp = String(meta.clientApp || prev.clientApp || "nfg").trim().slice(0, 32) || "nfg";
   presenceByKey.set(key, {
     userId: meta.userId || prev.userId || null,
     displayName: meta.displayName || prev.displayName || null,
     deviceId: meta.deviceId || prev.deviceId || null,
     clientApp,
-    appLabel: formatAppLabel(clientApp),
+    appLabel: appLabelFromClientApp(clientApp),
     lastSeen: Date.now(),
   });
   pruneStale();
@@ -54,16 +54,16 @@ function getActiveAppUserList(pointStore) {
     const deviceId = row.deviceId || (key.startsWith("device:") ? key.slice(7) : null);
     const userId = linked ? String(row.userId).toLowerCase() : `guest:${deviceId || key}`;
     const displayName = linked
-      ? resolveChatDisplayName(pointStore, row.userId, row.displayName)
+      ? chatDisplayName(pointStore, row.userId, row.displayName)
       : guestDisplayName(deviceId);
-    const clientApp = normalizeClientApp(row.clientApp);
+    const clientApp = row.clientApp || "nfg";
     const entry = {
       userId,
       displayName,
       username: linked ? String(row.userId).toLowerCase() : null,
       isGuest: !linked,
       clientApp,
-      appLabel: row.appLabel || formatAppLabel(clientApp),
+      appLabel: row.appLabel || appLabelFromClientApp(clientApp),
     };
     if (linked) {
       Object.assign(entry, playerBadgesFromStore(pointStore, row.userId));
@@ -103,7 +103,7 @@ function registerMobilePresenceRoutes(app, ctx) {
   app.post("/api/mobile/presence/heartbeat", (req, res) => {
     const session = typeof validateBearer === "function" ? validateBearer(req) : null;
     const deviceId = String(req.headers["x-device-id"] || req.body?.deviceId || "").trim();
-    const clientApp = normalizeClientApp(req.headers["x-client-app"] || req.body?.clientApp || "nfg");
+    const clientApp = String(req.headers["x-client-app"] || req.body?.clientApp || "nfg").trim().slice(0, 32);
     const key = presenceKey(session?.userId, deviceId);
     if (!key) {
       return res.status(400).json({
@@ -115,10 +115,10 @@ function registerMobilePresenceRoutes(app, ctx) {
     touchPresence(key, {
       userId: session?.userId || null,
       displayName: session?.userId
-        ? resolveChatDisplayName(pointStore, session.userId, session.displayName)
+        ? chatDisplayName(pointStore, session.userId, session.displayName)
         : null,
       deviceId: deviceId || null,
-      clientApp,
+      clientApp: clientApp || "nfg",
     });
     const payload = presencePayload(pointStore);
     if (typeof broadcast === "function") {

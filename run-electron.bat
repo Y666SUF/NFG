@@ -71,7 +71,7 @@ if not exist "node_modules\" (
 )
 
 echo Platform port %PORT% ^| Hangman port %HANGMAN_PORT% ^(proxied on %PORT%^) ^| start Hangman: %NFG_START_HANGMAN%
-echo Launching Electron app...
+echo Launching Electron ^(Crash + Hangman windows, shared Node server^)...
 echo.
 call "%NPM_CMD%" run start:electron
 if errorlevel 1 (

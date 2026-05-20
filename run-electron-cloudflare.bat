@@ -73,7 +73,9 @@ if not "%NFG_CLOUDFLARED_EXE%"=="" (
   )
 )
 
-echo Starting NFG Platform ^(Crash + Hangman^) with Cloudflare tunnel "%NFG_CF_TUNNEL_NAME%"...
+echo Starting NFG Platform ^(Crash + Hangman + Cloudflare^) ...
+echo   Electron opens: NFG Crash, Player Lookup, App Chat, and NFG Hangman windows.
+echo   Tunnel: "%NFG_CF_TUNNEL_NAME%"
 if not "%NFG_CF_TUNNEL_TOKEN%"=="" (
   echo Tunnel auth mode: token
 ) else (
@@ -99,6 +101,7 @@ echo.
 echo Website / Cloudflare tunnel ^(single public origin^):
 echo   Public: https://y666suf.com
 echo   Crash stream: http://127.0.0.1:%PORT%/
+echo   Hangman stream UI: http://127.0.0.1:%HANGMAN_PORT%/ ^(Electron window^)
 echo   Hangman WS ^(apps^): wss://y666suf.com/hangman/ws
 echo   Shared chat API: https://y666suf.com/api/mobile/chat
 echo   Platform status: https://y666suf.com/api/mobile/platform/status

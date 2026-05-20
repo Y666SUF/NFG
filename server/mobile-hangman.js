@@ -8,7 +8,7 @@ const { URL } = require("url");
 const { fetchHangmanJson, HANGMAN_BACKEND_URL } = require("./hangman-proxy");
 
 const NFG_INTERNAL_SECRET = String(process.env.NFG_INTERNAL_SECRET || "nfg-dev-internal").trim();
-const GUESS_TIMEOUT_MS = Math.min(30_000, Math.max(3000, Number(process.env.HANGMAN_GUESS_TIMEOUT_MS) || 12_000));
+const GUESS_TIMEOUT_MS = Math.max(3000, Number(process.env.NFG_HANGMAN_GUESS_TIMEOUT_MS) || 12000);
 
 function hangmanGuessRequest(body, headers) {
   const url = `${HANGMAN_BACKEND_URL}/api/hangman/app/guess`;
@@ -27,7 +27,6 @@ function hangmanGuessRequest(body, headers) {
           "Content-Length": Buffer.byteLength(payload),
           ...headers,
         },
-        timeout: GUESS_TIMEOUT_MS,
       },
       (res) => {
         const chunks = [];
@@ -44,18 +43,18 @@ function hangmanGuessRequest(body, headers) {
         });
       }
     );
-    req.on("timeout", () => {
-      req.destroy();
-      resolve({
-        status: 504,
-        body: { ok: false, error: "hangman_timeout", message: "Hangman guess timed out" },
-      });
-    });
     req.on(
       "error",
       (err) =>
         resolve({ status: 502, body: { ok: false, error: "hangman_unreachable", message: err.message } })
     );
+    req.setTimeout(GUESS_TIMEOUT_MS, () => {
+      req.destroy();
+      resolve({
+        status: 504,
+        body: { ok: false, error: "hangman_timeout", message: `Hangman did not respond within ${GUESS_TIMEOUT_MS}ms` },
+      });
+    });
     req.write(payload);
     req.end();
   });
@@ -64,7 +63,12 @@ function hangmanGuessRequest(body, headers) {
 /** Map Python app/guess payload → iOS companion shape. */
 function mapHangmanGuessResponse(body) {
   if (!body || body.ok === false) {
-    return body || { ok: false, error: "hangman_error" };
+    return {
+      ok: false,
+      error: (body && body.error) || "hangman_error",
+      message: body && body.message ? String(body.message) : undefined,
+      lines: (body && body.lines) || [],
+    };
   }
   const guessed = Array.isArray(body.guessed)
     ? body.guessed.map((c) => String(c).toLowerCase())
@@ -120,7 +124,11 @@ function registerHangmanMobileRoutes(app, ctx) {
     try {
       const clientApp = String(req.headers["x-client-app"] || "").trim().toLowerCase();
       if (clientApp && clientApp !== "nfg-hangman") {
-        return res.status(400).json({ ok: false, error: "wrong_client_app", message: "Use X-Client-App: nfg-hangman" });
+        return res.status(400).json({
+          ok: false,
+          error: "wrong_client_app",
+          message: "Use X-Client-App: nfg-hangman",
+        });
       }
 
       const session = typeof validateBearer === "function" ? validateBearer(req) : null;
@@ -150,18 +158,17 @@ function registerHangmanMobileRoutes(app, ctx) {
       });
 
       const mapped = mapHangmanGuessResponse(out.body);
-      const status = out.status >= 200 && out.status < 300 ? 200 : out.status || 502;
-      console.log(
-        `[Mobile hangman guess] @${session.userId} ${letter || word} → HTTP ${out.status} ok=${!!mapped.ok}`
-      );
+      const status = mapped.ok === false ? out.status || 502 : out.status || 200;
       return res.status(status).json(mapped);
     } catch (err) {
-      console.error("[Mobile hangman guess] error:", err && err.message ? err.message : err);
-      return res.status(500).json({
-        ok: false,
-        error: "hangman_guess_failed",
-        message: "Guess could not be processed. Try again.",
-      });
+      console.error("[mobile-hangman] guess error:", err);
+      if (!res.headersSent) {
+        return res.status(500).json({
+          ok: false,
+          error: "guess_failed",
+          message: err && err.message ? String(err.message) : "Guess failed",
+        });
+      }
     }
   });
 }

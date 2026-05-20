@@ -90,9 +90,10 @@ export default function ChatPanel({ session, registerAppend }) {
               <div className="chat-who">
                 {esc(row.displayName || row.userId)}
                 {row.superFan ? <span className="sf"> ★</span> : null}
-                <span className="chat-user"> @{esc(row.userId)}</span>
-                {row.appLabel || (row.clientApp && row.clientApp !== "nfg") ? (
-                  <span className="chat-app"> · {esc(row.appLabel || row.clientApp)}</span>
+                {row.appLabel ? (
+                  <span className="chat-app"> · {esc(row.appLabel)}</span>
+                ) : row.clientApp && row.clientApp !== "nfg" ? (
+                  <span className="chat-app"> · {esc(row.clientApp)}</span>
                 ) : null}
               </div>
               <div className="chat-text">{esc(row.message)}</div>

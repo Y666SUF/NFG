@@ -4,8 +4,23 @@ const http = require("http");
 const https = require("https");
 const { app, BrowserWindow, dialog } = require("electron");
 
+const {
+  waitForHangman,
+  startHangmanProcess,
+  stopHangmanProcess,
+  HANGMAN_PORT,
+  HANGMAN_HOST,
+} = require("../server/hangman-process");
+
 const PORT = Number(process.env.PORT) || 3847;
 const ROOT_URL = `http://127.0.0.1:${PORT}/`;
+const HANGMAN_PORT_NUM = Number(process.env.HANGMAN_PORT) || HANGMAN_PORT;
+const HANGMAN_HOST_STR = String(process.env.HANGMAN_HOST || HANGMAN_HOST || "127.0.0.1").trim() || "127.0.0.1";
+const HANGMAN_URL =
+  String(process.env.NFG_HANGMAN_UI_URL || "").trim() ||
+  `http://${HANGMAN_HOST_STR}:${HANGMAN_PORT_NUM}/`;
+const START_HANGMAN = String(process.env.NFG_START_HANGMAN || "1").trim() !== "0";
+const OPEN_HANGMAN_WINDOW = String(process.env.NFG_OPEN_HANGMAN_WINDOW || "1").trim() !== "0";
 const IS_PORTRAIT_MODE = process.env.NFG_PORTRAIT === "1";
 const SERVER_URL = IS_PORTRAIT_MODE ? `${ROOT_URL}portrait.html` : ROOT_URL;
 const ENABLE_CF_TUNNEL = process.env.NFG_CF_TUNNEL === "1";
@@ -18,6 +33,7 @@ let cloudflaredOwnedByElectron = false;
 let mainWindow = null;
 let lookupWindow = null;
 let chatWindow = null;
+let hangmanWindow = null;
 
 function waitForServer(url, timeoutMs = 20000) {
   const start = Date.now();
@@ -238,12 +254,47 @@ async function ensureServerReady() {
   await waitForServer(ROOT_URL, 20000);
 }
 
+async function ensureHangmanReady() {
+  if (!START_HANGMAN) {
+    console.log("[Electron] Hangman auto-start disabled (NFG_START_HANGMAN=0).");
+    return false;
+  }
+  const firstTimeoutMs = serverOwnedByElectron ? 30000 : 6000;
+  try {
+    await waitForHangman(firstTimeoutMs);
+    return true;
+  } catch (_firstErr) {
+    if (serverOwnedByElectron) {
+      console.warn("[Electron] Hangman did not become ready while Node server was starting.");
+      return false;
+    }
+    // Reused platform on 3847 without Hangman — spawn Python from Electron.
+    console.log("[Electron] Hangman not up yet; starting Python backend...");
+    startHangmanProcess();
+    try {
+      await waitForHangman(45000);
+      return true;
+    } catch (err) {
+      console.warn("[Electron] Hangman backend failed:", err.message);
+      return false;
+    }
+  }
+}
+
 async function createWindows() {
   await ensureServerReady();
   startCloudflareTunnel();
   // Ensure mobile companion endpoints are available when launching via Electron.
   await waitForEndpoint("/api/mobile/status");
   await waitForEndpoint("/api/mobile/chat");
+  const hangmanOk = await ensureHangmanReady();
+  if (START_HANGMAN) {
+    try {
+      await waitForEndpoint("/api/hangman/status", 12000);
+    } catch (_err) {
+      console.warn("[Electron] Hangman API proxy not ready on port", PORT);
+    }
+  }
   const lanUrls = getLanUrls(PORT);
   if (lanUrls.length) {
     console.log("[Electron] LAN URLs for iPhone/Mac:");
@@ -304,6 +355,33 @@ async function createWindows() {
     chatWindow = null;
   });
 
+  if (OPEN_HANGMAN_WINDOW && START_HANGMAN) {
+    hangmanWindow = new BrowserWindow({
+      width: 1480,
+      height: 920,
+      minWidth: 1080,
+      minHeight: 700,
+      title: "NFG Hangman",
+      autoHideMenuBar: true,
+      backgroundColor: "#090d1c",
+      webPreferences: {
+        contextIsolation: true,
+        nodeIntegration: false,
+      },
+    });
+    if (hangmanOk) {
+      await hangmanWindow.loadURL(HANGMAN_URL);
+      console.log("[Electron] Hangman UI:", HANGMAN_URL);
+    } else {
+      await hangmanWindow.loadURL(
+        `data:text/html,<body style="font-family:system-ui;background:#090d1c;color:#e2e8f0;padding:24px"><h2>NFG Hangman</h2><p>Python backend did not start. Install Python 3 and run <code>py -m pip install uvicorn fastapi</code>, then restart <code>run-electron-cloudflare.bat</code>.</p><p>Expected URL: ${HANGMAN_URL}</p></body>`
+      );
+    }
+    hangmanWindow.on("closed", () => {
+      hangmanWindow = null;
+    });
+  }
+
   // Place utility windows next to main game when possible.
   try {
     const mainBounds = mainWindow.getBounds();
@@ -320,6 +398,15 @@ async function createWindows() {
         height: sideH,
       });
     }
+    if (hangmanWindow) {
+      const hangmanY = mainBounds.y + mainBounds.height + 12;
+      hangmanWindow.setBounds({
+        x: mainBounds.x,
+        y: hangmanY,
+        width: Math.max(1080, mainBounds.width),
+        height: Math.min(920, Math.max(640, Math.floor(mainBounds.height * 0.85))),
+      });
+    }
   } catch (_err) {
     // Keep default sizes/positions if bounds placement fails.
   }
@@ -331,6 +418,9 @@ async function createWindows() {
     }
     if (chatWindow && !chatWindow.isDestroyed()) {
       chatWindow.close();
+    }
+    if (hangmanWindow && !hangmanWindow.isDestroyed()) {
+      hangmanWindow.close();
     }
   });
 }
@@ -348,6 +438,7 @@ app.whenReady().then(async () => {
 app.on("before-quit", () => {
   app.isQuiting = true;
   stopCloudflareTunnel();
+  stopHangmanProcess();
   stopServer();
 });
 

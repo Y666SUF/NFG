@@ -83,7 +83,15 @@ Export IPA for website:
 cp ~/path/to/export/NFG-Hangman.ipa ~/Downloads/NFG-Hangman.ipa
 ```
 
-Copy to Windows: `C:\Users\Yusef\Downloads\NFG-Hangman.ipa` (USB/AirDrop/cloud).
+Copy to Windows repo (preferred):
+
+```bash
+# After export from Xcode Organizer
+scp NFG-Hangman.ipa pc:C:/Users/Yusef/test/releases/ipa/NFG-Hangman.ipa
+scp NFG-Crash.ipa    pc:C:/Users/Yusef/test/releases/ipa/NFG-Crash.ipa
+```
+
+Or AirDrop/USB to `releases\ipa\` on the PC. PC runs `.\scripts\sync-ipa-to-downloads.ps1` then `run-electron-cloudflare.bat`.
 
 ---
 

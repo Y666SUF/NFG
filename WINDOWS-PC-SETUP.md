@@ -23,6 +23,10 @@ If you use a separate clone, copy `server\mobile-*.js` and `server\hangman-*.js`
 
 ```powershell
 cd C:\Users\Yusef\test
+git pull origin main
+Copy-Item -Force "releases\ipa\NFG-Crash.ipa"    "$env:USERPROFILE\Downloads\NFG-Crash.ipa"    -ErrorAction SilentlyContinue
+Copy-Item -Force "releases\ipa\NFG-Hangman.ipa" "$env:USERPROFILE\Downloads\NFG-Hangman.ipa" -ErrorAction SilentlyContinue
+.\scripts\test-hangman-mobile-guess.ps1
 .\run-electron-cloudflare.bat
 ```
 
@@ -103,12 +107,20 @@ Copy-paste prompt for Cursor on Mac: **`docs/MAC_IOS_FINALIZE_PROMPT.md`**
 
 Hangman-only build detail: **`docs/MAC_IOS_NFG_HANGMAN_BUILD_PROMPT.md`**
 
-After Mac archives IPAs, copy to this PC:
+After Mac archives IPAs, copy into repo then sync to Downloads:
 
 ```
-%USERPROFILE%\Downloads\NFG-Crash.ipa
-%USERPROFILE%\Downloads\NFG-Hangman.ipa
+releases\ipa\NFG-Crash.ipa
+releases\ipa\NFG-Hangman.ipa
 ```
+
+Then:
+
+```powershell
+.\scripts\sync-ipa-to-downloads.ps1
+```
+
+Or copy straight to `%USERPROFILE%\Downloads\`.
 
 Optional env overrides: `NFG_IPA_FILE`, `NFG_HANGMAN_IPA_FILE`
 

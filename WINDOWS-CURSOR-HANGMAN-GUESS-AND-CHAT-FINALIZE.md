@@ -1,89 +1,103 @@
 # Windows Cursor — Hangman guess crash + app chat labels
 
-Copy everything below the line into **Cursor on Windows** after `git pull origin main`.
+Open this file and **copy everything below the line** into Cursor on Windows.
 
 ---
 
-You are fixing the **NFG platform** on Windows (`GAME_ROOT`, port **3847**). Mobile Hangman letter guesses must **never** kill the Node server or Electron. App chat must show clean names: **NFG Crash** / **NFG Hangman** plus `displayName` from `pointStore`.
+## Quick reference (PC)
+
+```powershell
+cd C:\Users\Yusef\test
+git pull origin main
+Copy-Item -Force "releases\ipa\NFG-Crash.ipa"    "$env:USERPROFILE\Downloads\NFG-Crash.ipa"    -ErrorAction SilentlyContinue
+Copy-Item -Force "releases\ipa\NFG-Hangman.ipa" "$env:USERPROFILE\Downloads\NFG-Hangman.ipa" -ErrorAction SilentlyContinue
+# Or: .\scripts\sync-ipa-to-downloads.ps1
+.\scripts\test-hangman-mobile-guess.ps1
+.\run-electron-cloudflare.bat
+```
+
+| Step | Purpose |
+|------|---------|
+| `git pull` | Server fixes: guess hardening, `appLabel` chat, CORS, Electron Hangman window |
+| Copy IPAs | Mac builds → `releases\ipa\` → Downloads → `https://y666suf.com/download/nfg-*.ipa` |
+| Smoke test | Guess endpoints return JSON; Node stays up |
+| Launcher | Crash + Hangman + tunnel from **one** `.bat` |
+
+IPAs are gitignored. Drop Mac exports into `releases\ipa\` (see `releases\ipa\README.md`).
+
+---
+
+You are fixing / verifying the **NFG platform** on Windows (`GAME_ROOT`, port **3847**). Mobile Hangman letter guesses must **never** kill the Node server or Electron. App chat must show clean names: **NFG Crash** / **NFG Hangman** plus `displayName` from `pointStore`.
 
 ## Context
 
 | Piece | Path |
 |-------|------|
-| GAME_ROOT | `C:\Users\Yusef\test` (or your clone) |
-| Hangman guess API | `POST /api/mobile/hangman/guess` → Python `POST /api/hangman/app/guess` → `process_chat_message` |
-| Chat | `server/mobile-chat.js` + `server/mobile-app-labels.js` |
+| GAME_ROOT | `C:\Users\Yusef\test` |
+| Hangman guess | `POST /api/mobile/hangman/guess` → Python `/api/hangman/app/guess` → `process_chat_message` |
+| Chat labels | `server/mobile-app-labels.js` + `server/mobile-chat.js` |
 | Launcher | `run-electron-cloudflare.bat` |
+| IPA staging | `releases\ipa\` → `%USERPROFILE%\Downloads\` |
 
-**Likely crash:** unhandled error in Node → Python guess chain → Node child exits → Electron shows “server stopped”.
+**Likely crash (fixed on `main`):** unhandled error in Node → Python guess → Node child exits → Electron “server stopped”.
 
-## Part 1 — Verify / apply server fixes
-
-Confirm these exist (implement if missing):
+## Part 1 — Verify fixes exist
 
 ### `server/mobile-app-labels.js`
 
 - `appLabelFromClientApp("nfg-crash")` → `"NFG Crash"`
 - `appLabelFromClientApp("nfg-hangman")` → `"NFG Hangman"`
-- `enrichChatMessage(row, pointStore)` — `displayName` from `pointStore.getUserPresentation`, adds `appLabel`
+- `enrichChatMessage(row, pointStore)` — `displayName` from `pointStore.getUserPresentation`
 
 ### `server/mobile-chat.js`
 
-- Uses `enrichChatMessage` on GET list and POST new messages
-- Console log: `[App chat] [NFG Hangman] DisplayName …`
+- Uses `enrichChatMessage` on GET/POST
+- Log: `[App chat] [NFG Hangman] DisplayName …`
 
 ### `server/mobile-hangman.js`
 
-- `hangmanGuessRequest`: **timeout** (12s), always resolves JSON (never throws)
-- `POST /api/mobile/hangman/guess`: outer **try/catch**, returns `{ ok: false, error }` on failure
+- Guess HTTP **timeout** (12s), always JSON
+- `POST /api/mobile/hangman/guess`: **try/catch**
 
 ### `hangman v2/server.py`
 
-- `hangman_app_guess`: whole body in **try/except**; generic errors return `{"ok": false, "error": "guess_failed"}`
+- `hangman_app_guess`: **try/except** → `{"ok": false, "error": "guess_failed"}`
 
 ### `server/index.js`
 
-- CORS: allow `capacitor://` and `ionic://` origins
-- CORS headers: `X-Device-Id`, `X-Client-App`, `Authorization`, etc.
-- `process.on("uncaughtException")` / `unhandledRejection` — **log only**, do not `process.exit`
+- CORS: `capacitor://`, `ionic://`, mobile headers
+- `uncaughtException` / `unhandledRejection` — log only, no `process.exit`
 
-### UI (optional on PC)
+### UI
 
-- `public/app-chat.html` — show `appLabel`
-- `hangman v2/iOS/app/src/components/ChatPanel.jsx` — show `appLabel` (phone rebuild on Mac)
+- `public/app-chat.html` — `appLabel`
+- Hangman Capacitor `ChatPanel.jsx` — `appLabel` (rebuild on Mac for phone)
 
 ## Part 2 — Do not break
 
 - Crash bets, TikTok bridge, `points.live.json`
-- Hangman 6-wrong rule via `process_chat_message`
-- Electron Crash + Hangman windows from one bat file
+- Hangman 6-wrong via `process_chat_message`
+- One launcher opens Crash + Hangman Electron windows
 
-## Part 3 — Test on PC
+## Part 3 — Test
 
 ```powershell
-cd C:\Users\Yusef\test
-git pull origin main
 .\scripts\test-hangman-mobile-guess.ps1
 ```
 
-**Pass:** script prints `PASS`; `/api/mobile/status` still returns JSON after guess attempts.
+**Pass:** `PASS`; then `.\run-electron-cloudflare.bat`.
 
-Then restart:
-
-```powershell
-.\run-electron-cloudflare.bat
-```
-
-On iPhone (linked on LIVE): one letter guess → JSON in app, **Electron stays open**.
+On iPhone (LIVE + linked): one letter guess → JSON; **Electron stays open**.
 
 ## Part 4 — Report
 
-1. `test-hangman-mobile-guess.ps1` output (PASS/FAIL)
-2. Whether Electron survived a real linked guess
-3. Sample `POST /api/mobile/chat` message showing `appLabel` + `displayName`
+1. Smoke test PASS/FAIL
+2. Electron survived linked guess?
+3. Sample chat JSON with `appLabel` + `displayName`
+4. `curl -I https://y666suf.com/download/nfg-hangman.ipa` after IPA copy
 
 ## Do NOT
 
-- `process.exit(1)` on uncaughtException in production server
-- Let guess route throw without try/catch
-- Show raw `nfg-hangman` in chat UI when `appLabel` exists
+- `process.exit` on uncaughtException
+- Throw from guess route without try/catch
+- Show raw `nfg-hangman` when `appLabel` exists

@@ -1,6 +1,5 @@
 /**
  * In-app store (test purchases until Apple StoreKit is wired).
- * Copy to Windows next to mobile-api.js.
  */
 const PRODUCTS = {
   points_10k: { points: 10_000, priceLabel: "£1.99", title: "10,000 points" },
@@ -21,7 +20,7 @@ function registerMobileStoreRoutes(app, ctx) {
     res.json({
       ok: true,
       testMode: true,
-      message: "Test store — no real payment. Use StoreKit + App Store for production.",
+      message: "Test store - no real payment. Use StoreKit + App Store for production.",
       products,
     });
   });

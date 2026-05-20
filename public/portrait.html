@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NFG Crash — Portrait Live</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="stylesheet" href="/stream-layout.css" />
+    <link rel="stylesheet" href="/portrait-layout.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=JetBrains+Mono:wght@400;600;800&family=Outfit:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="stream-ui portrait-ui">
+    <div id="pinnedSlot" class="pinned-slot" hidden>
+      <span class="pinned-label">Pinned</span>
+      <span id="pinnedText" class="pinned-text"></span>
+      <span id="pinnedTimer" class="pinned-timer"></span>
+    </div>
+    <div id="spinOverlay" class="spin-overlay" hidden>
+      <div class="spin-card">
+        <div class="spin-title" id="spinTitle">Wheel Spin</div>
+        <div class="spin-wheel-wrap">
+          <div class="spin-pointer">▼</div>
+          <div id="spinWheel" class="spin-wheel"></div>
+        </div>
+        <div id="spinLegend" class="spin-legend"></div>
+        <div id="spinResult" class="spin-result"></div>
+      </div>
+    </div>
+    <div id="balanceToast" class="balance-toast" role="status" aria-live="polite" hidden>
+      <span id="balanceToastText"></span>
+    </div>
+    <div id="roundSummary" class="round-summary" hidden>
+      <div class="round-summary-card">
+        <div class="round-summary-top">
+          <span class="round-summary-kicker">Round Summary</span>
+          <span id="roundCrashAt" class="round-summary-crash">Crash 0.00x</span>
+        </div>
+        <div class="round-summary-grid">
+          <div class="round-col round-col-win">
+            <h3>Won</h3>
+            <div id="roundWinTotal" class="round-total">+0</div>
+            <ul id="roundWinList" class="round-list"></ul>
+          </div>
+          <div class="round-col round-col-lose">
+            <h3>Lost</h3>
+            <div id="roundLoseTotal" class="round-total">-0</div>
+            <ul id="roundLoseList" class="round-list"></ul>
+          </div>
+        </div>
+        <div id="roundTopCards" class="round-top-cards"></div>
+      </div>
+    </div>
+    <div id="rewardToastStack" class="reward-toast-stack" aria-live="polite" aria-label="Point rewards"></div>
+    <div id="actionPopup" class="action-popup" hidden role="status" aria-live="assertive">
+      <div class="action-popup-inner">
+        <div id="actionPopupIcon" class="action-popup-icon" hidden aria-hidden="true"></div>
+        <div id="actionPopupKicker" class="action-popup-kicker" hidden></div>
+        <div id="actionPopupTitle" class="action-popup-title" hidden></div>
+        <div id="actionPopupSub" class="action-popup-sub" hidden></div>
+        <div id="actionPopupText" class="action-popup-text" hidden></div>
+      </div>
+    </div>
+    <div id="iconsOverlay" class="icons-overlay" hidden aria-hidden="true">
+      <div class="icons-overlay-card">
+        <div class="icons-overlay-head">
+          <h2 class="icons-overlay-title">Vault badges</h2>
+          <p class="icons-overlay-sub">Preview each icon on a name below &middot; <code>!buy &lt;id&gt;</code> once, switch free anytime</p>
+        </div>
+        <div id="iconsOverlayGrid" class="icons-overlay-grid"></div>
+        <p id="iconsOverlayFooter" class="icons-overlay-footer"></p>
+      </div>
+    </div>
+    <div class="viewport">
+      <header class="hv">
+        <div class="hv-brand">
+          <span class="nfg-logo" aria-hidden="true">
+            <span class="nfg-logo-core">NFG</span>
+            <span class="nfg-logo-glow"></span>
+          </span>
+          <div>
+            <h1>NFG Crash</h1>
+            <p class="tag">Portrait Live</p>
+          </div>
+        </div>
+        <div class="hv-center">
+          <span class="phase-pill" id="phasePill">Idle</span>
+          <span class="next-eta" id="nextRoundEta" hidden></span>
+        </div>
+        <div class="hv-mult-wrap">
+          <div class="multiplier-label">Mult</div>
+          <div class="multiplier-value" id="multDisplay">1.00×</div>
+        </div>
+      </header>
+
+      <section id="topProfiles" class="top-profiles" aria-label="Top 5 players"></section>
+      <div id="taxPotBanner" class="tax-pot-banner" aria-live="polite">Tax Pot: 0 pts</div>
+
+      <p class="subline" id="subline">Connecting…</p>
+
+      <div class="hv-body">
+        <div class="hv-main">
+          <div class="chart-wrap" id="chartWrap">
+            <div class="chart-watermark" aria-hidden="true">
+              <span class="wm-nfg">NFG</span>
+              <span class="wm-crash">CRASH</span>
+            </div>
+            <svg
+              id="chart"
+              class="chart-svg"
+              viewBox="0 0 400 200"
+              preserveAspectRatio="none"
+              aria-hidden="true"
+            >
+              <defs>
+                <linearGradient id="areaGrad" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="rgba(94, 234, 212, 0.45)" />
+                  <stop offset="55%" stop-color="rgba(94, 234, 212, 0.12)" />
+                  <stop offset="100%" stop-color="rgba(94, 234, 212, 0)" />
+                </linearGradient>
+                <linearGradient id="lineStrokeGrad" x1="0" y1="1" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#8b5cf6" />
+                  <stop offset="100%" stop-color="#ec4899" />
+                </linearGradient>
+                <filter id="lineGlow" x="-40%" y="-40%" width="180%" height="180%">
+                  <feGaussianBlur stdDeviation="2" result="blur" />
+                  <feMerge>
+                    <feMergeNode in="blur" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+                <filter id="headGlow" x="-100%" y="-100%" width="300%" height="300%">
+                  <feGaussianBlur stdDeviation="3" result="b" />
+                  <feMerge>
+                    <feMergeNode in="b" />
+                    <feMergeNode in="SourceGraphic" />
+                  </feMerge>
+                </filter>
+              </defs>
+              <g id="gridLines" class="chart-grid"></g>
+              <path id="areaPath" fill="url(#areaGrad)" d="" />
+              <path
+                id="linePath"
+                fill="none"
+                stroke="url(#lineStrokeGrad)"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                filter="url(#lineGlow)"
+                d=""
+              />
+              <circle id="headDot" class="chart-head" cx="24" cy="176" r="5" fill="#5eead4" filter="url(#headGlow)" />
+            </svg>
+            <div class="chart-scan" id="chartScan" aria-hidden="true"></div>
+            <div class="chart-crash-flash" id="crashFlash" aria-hidden="true"></div>
+          </div>
+
+          <div class="split-row">
+            <section class="panel-tight" aria-labelledby="betsTitle">
+              <h2 id="betsTitle">Entries</h2>
+              <ul id="betList" class="bet-list"></ul>
+              <h3 class="bet-subhead" id="queueHead" hidden>Queued — next round</h3>
+              <ul id="queueList" class="bet-list bet-queue"></ul>
+            </section>
+            <section class="panel-tight panel-last" id="lastPanel" aria-label="Last round">
+              <div id="lastResultWrap" class="last-result-wrap" hidden>
+                <h2 id="lastTitle">Last</h2>
+                <p class="crash-line-tight">Crash <strong id="lastCrash">—</strong></p>
+                <div class="mini-cols">
+                  <div>
+                    <h3>Wins</h3>
+                    <ul id="winList" class="mini-list"></ul>
+                  </div>
+                  <div>
+                    <h3>Loss</h3>
+                    <ul id="loseList" class="mini-list"></ul>
+                  </div>
+                </div>
+              </div>
+              <p class="panel-last-empty" id="lastPanelEmpty">Waiting for round result…</p>
+            </section>
+          </div>
+        </div>
+
+        <aside class="hv-scores" aria-label="Points standings">
+          <div class="score-panels">
+            <div class="score-panel score-panel--leaderboard">
+              <h2 id="lbTitle">Balances</h2>
+              <ol id="board" class="board-stream"></ol>
+            </div>
+            <section class="panel-tight panel-points" id="pointsPanel" aria-label="Points commands">
+              <div class="points-guide" id="pointsGuide">
+                <div class="points-guide-title">Points</div>
+                <ul class="points-guide-list" id="pointsGuideList"></ul>
+              </div>
+            </section>
+            <div id="spotifyMissionBlock" class="spotify-mission-block spotify-sidebar-foot" hidden>
+              <div class="spotify-mission-row">
+                <span class="spotify-mission-label">Now Playing</span>
+                <span id="spotifyMissionNowPlaying" class="spotify-mission-value">—</span>
+              </div>
+              <div class="spotify-mission-row">
+                <span class="spotify-mission-label">Up Next</span>
+                <span id="spotifyMissionQueueOne" class="spotify-mission-value">—</span>
+              </div>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <details class="tools-drawer" hidden>
+        <summary>Manual start · admin · testing</summary>
+        <div class="tools-grid">
+          <section class="card">
+            <h2>Round</h2>
+            <p class="hint">Rounds auto every 10s after a crash (server). Use this if you skipped one.</p>
+            <button type="button" class="btn primary" id="btnStart">Start round now</button>
+          </section>
+          <section class="card">
+            <h2>Simulate chat</h2>
+            <div class="form-grid">
+              <label>
+                User
+                <input type="text" id="simUser" placeholder="name" autocomplete="off" />
+              </label>
+              <label class="span-2">
+                Message
+                <input type="text" id="simMsg" placeholder="!3m 2.2 or !all 2" autocomplete="off" />
+              </label>
+              <button type="button" class="btn" id="btnSendSim">Send</button>
+              <button type="button" class="btn ghost" id="btnPoints">!points</button>
+            </div>
+            <ul id="feed" class="feed" aria-live="polite"></ul>
+          </section>
+          <section class="card">
+            <h2>Points admin</h2>
+            <div class="form-grid">
+              <label>
+                User
+                <input type="text" id="admUser" placeholder="viewer" />
+              </label>
+              <label>
+                Set
+                <input type="number" id="admSet" min="0" placeholder="1000" />
+              </label>
+              <label>
+                Add
+                <input type="number" id="admAdd" placeholder="200" />
+              </label>
+              <button type="button" class="btn" id="btnApplyPoints">Apply</button>
+            </div>
+            <div class="starter-row">
+              <label>
+                Starter pts
+                <input type="number" id="starterPts" min="0" />
+              </label>
+              <button type="button" class="btn small" id="btnSaveStarter">Save</button>
+            </div>
+          </section>
+        </div>
+      </details>
+    </div>
+    <script src="/badge-icons.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

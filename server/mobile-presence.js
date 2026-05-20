@@ -1,6 +1,5 @@
 /**
  * Tracks iOS app users currently active (heartbeat within TTL).
- * Copy to Windows next to mobile-api.js.
  */
 const { playerBadgesFromStore } = require("./mobile-player-badges");
 
@@ -29,10 +28,12 @@ function pruneStale() {
 function touchPresence(key, meta = {}) {
   if (!key) return;
   const prev = presenceByKey.get(key) || {};
+  const clientApp = String(meta.clientApp || prev.clientApp || "nfg").trim().slice(0, 32) || "nfg";
   presenceByKey.set(key, {
     userId: meta.userId || prev.userId || null,
     displayName: meta.displayName || prev.displayName || null,
     deviceId: meta.deviceId || prev.deviceId || null,
+    clientApp,
     lastSeen: Date.now(),
   });
   pruneStale();
@@ -49,17 +50,14 @@ function getActiveAppUserList(pointStore) {
   for (const [key, row] of presenceByKey) {
     const linked = !!row.userId;
     const deviceId = row.deviceId || (key.startsWith("device:") ? key.slice(7) : null);
-    const userId = linked
-      ? String(row.userId).toLowerCase()
-      : `guest:${deviceId || key}`;
-    const displayName = linked
-      ? row.displayName || row.userId
-      : guestDisplayName(deviceId);
+    const userId = linked ? String(row.userId).toLowerCase() : `guest:${deviceId || key}`;
+    const displayName = linked ? row.displayName || row.userId : guestDisplayName(deviceId);
     const entry = {
       userId,
       displayName,
       username: linked ? String(row.userId).toLowerCase() : null,
       isGuest: !linked,
+      clientApp: row.clientApp || "nfg",
     };
     if (linked) {
       Object.assign(entry, playerBadgesFromStore(pointStore, row.userId));
@@ -90,7 +88,7 @@ function presencePayload(pointStore) {
 }
 
 function registerMobilePresenceRoutes(app, ctx) {
-  const { validateBearer, pointStore } = ctx;
+  const { validateBearer, pointStore, broadcast } = ctx;
 
   app.get("/api/mobile/presence/active", (_req, res) => {
     res.json({ ok: true, ...presencePayload(pointStore) });
@@ -98,9 +96,8 @@ function registerMobilePresenceRoutes(app, ctx) {
 
   app.post("/api/mobile/presence/heartbeat", (req, res) => {
     const session = typeof validateBearer === "function" ? validateBearer(req) : null;
-    const deviceId = String(
-      req.headers["x-device-id"] || req.body?.deviceId || ""
-    ).trim();
+    const deviceId = String(req.headers["x-device-id"] || req.body?.deviceId || "").trim();
+    const clientApp = String(req.headers["x-client-app"] || req.body?.clientApp || "nfg").trim().slice(0, 32);
     const key = presenceKey(session?.userId, deviceId);
     if (!key) {
       return res.status(400).json({
@@ -113,8 +110,13 @@ function registerMobilePresenceRoutes(app, ctx) {
       userId: session?.userId || null,
       displayName: session?.displayName || session?.userId || null,
       deviceId: deviceId || null,
+      clientApp: clientApp || "nfg",
     });
-    res.json({ ok: true, ...presencePayload(pointStore) });
+    const payload = presencePayload(pointStore);
+    if (typeof broadcast === "function") {
+      broadcast({ type: "presence_update", payload });
+    }
+    res.json({ ok: true, ...payload });
   });
 }
 

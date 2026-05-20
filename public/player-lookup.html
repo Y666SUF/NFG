@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>NFG Crash - Player Lookup</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --panel: #111931;
+        --panel2: #0f1730;
+        --line: rgba(170, 210, 255, 0.18);
+        --text: #e7f1ff;
+        --muted: #9ab0ce;
+        --accent: #4fd1ff;
+        --good: #4ade80;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: "Segoe UI", Arial, sans-serif;
+        background: radial-gradient(1200px 600px at 20% -10%, rgba(79, 209, 255, 0.18), transparent 55%), var(--bg);
+        color: var(--text);
+      }
+      .wrap {
+        padding: 0.75rem;
+        display: grid;
+        gap: 0.65rem;
+      }
+      .card {
+        background: linear-gradient(165deg, var(--panel), var(--panel2));
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 0.65rem;
+      }
+      h1 {
+        margin: 0;
+        font-size: 1.05rem;
+      }
+      .sub {
+        margin-top: 0.2rem;
+        color: var(--muted);
+        font-size: 0.82rem;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 0.45rem;
+        align-items: center;
+      }
+      input {
+        width: 100%;
+        padding: 0.48rem 0.55rem;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: #0b1328;
+        color: var(--text);
+      }
+      button {
+        padding: 0.48rem 0.62rem;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--text);
+        cursor: pointer;
+      }
+      .meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 0.4rem;
+        margin-top: 0.55rem;
+      }
+      .kv {
+        background: rgba(0, 0, 0, 0.18);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 0.4rem;
+      }
+      .k {
+        color: var(--muted);
+        font-size: 0.74rem;
+      }
+      .v {
+        margin-top: 0.15rem;
+        font-weight: 700;
+      }
+      .good {
+        color: var(--good);
+      }
+      .list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 0.25rem;
+        max-height: 280px;
+        overflow: auto;
+      }
+      .list li {
+        display: grid;
+        grid-template-columns: 1.4rem 1fr auto;
+        gap: 0.35rem;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 0.24rem 0.1rem;
+        font-size: 0.82rem;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .mono {
+        font-family: Consolas, "Courier New", monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <section class="card">
+        <h1>NFG Player Lookup</h1>
+        <div class="sub">Track player balance, locks, shields, inventory, missions in real time.</div>
+      </section>
+
+      <section class="card">
+        <div class="row">
+          <input id="userInput" type="text" placeholder="username (or @username)" />
+          <button id="btnLookup" type="button">Lookup</button>
+          <button id="btnRefresh" type="button">Refresh</button>
+        </div>
+        <div class="meta" id="metaGrid"></div>
+      </section>
+
+      <section class="card">
+        <div class="sub" style="margin: 0 0 0.4rem">Top balances (click to load)</div>
+        <ul id="topList" class="list"></ul>
+      </section>
+    </div>
+
+    <script>
+      const userInput = document.getElementById("userInput");
+      const btnLookup = document.getElementById("btnLookup");
+      const btnRefresh = document.getElementById("btnRefresh");
+      const metaGrid = document.getElementById("metaGrid");
+      const topList = document.getElementById("topList");
+      let lastUser = "";
+
+      function esc(s) {
+        return String(s || "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;");
+      }
+
+      function normalizeUser(s) {
+        return String(s || "").trim().replace(/^@+/, "");
+      }
+
+      function fmtMs(ms) {
+        const n = Math.max(0, Math.floor(Number(ms) || 0));
+        const sec = Math.floor(n / 1000);
+        const h = Math.floor(sec / 3600);
+        const m = Math.floor((sec % 3600) / 60);
+        const s = sec % 60;
+        if (h > 0) return `${h}h ${m}m ${s}s`;
+        if (m > 0) return `${m}m ${s}s`;
+        return `${s}s`;
+      }
+
+      function kv(label, value, extraClass = "") {
+        return `<div class="kv"><div class="k">${esc(label)}</div><div class="v ${extraClass}">${value}</div></div>`;
+      }
+
+      function renderLookup(p) {
+        const inv = p.inventory || {};
+        const shieldText = p.shieldActive ? `Active (${fmtMs(p.shieldMsLeft)})` : "Inactive";
+        const jetText = p.jetLockActive ? `Active (${fmtMs(p.jetLockMsLeft)})` : "Inactive";
+        const missions = Array.isArray(p.missions) ? p.missions : [];
+        const missionText = missions.length
+          ? missions.map((m) => `${m.title}: ${m.progress}/${m.target}`).join("<br>")
+          : "No missions";
+
+        metaGrid.innerHTML = [
+          kv("User", `@${esc(p.user)} (${esc(p.displayName || p.user)})`),
+          kv("Balance", `<span class="mono">${Number(p.balance || 0).toLocaleString()} pts</span>`),
+          kv("All-time", `<span class="mono">${Number(p.allTime || 0).toLocaleString()} pts</span>`),
+          kv("Level / Rank", `Lv.${Math.max(1, Number(p.level || 1))} · ${esc(p.rank || "Rookie")}`),
+          kv("Superfan", p.superFan ? `Yes (Lv ${Math.max(0, Number(p.superFanLevel || 0))})` : "No", p.superFan ? "good" : ""),
+          kv("Shield", shieldText, p.shieldActive ? "good" : ""),
+          kv("Jet lock", jetText, p.jetLockActive ? "" : "muted"),
+          kv(
+            "Inventory",
+            `steals ${Math.max(0, Number(inv.stealCharges || 0))} · breaks ${Math.max(
+              0,
+              Number(inv.shieldBreakCharges || 0)
+            )} · jets ${Math.max(0, Number(inv.jetLockCharges || 0))}`
+          ),
+          kv("Missions", missionText),
+        ].join("");
+      }
+
+      async function lookupUser(user) {
+        const u = normalizeUser(user);
+        if (!u) return;
+        const res = await fetch(`/api/economy/lookup/${encodeURIComponent(u)}`, { cache: "no-store" });
+        if (!res.ok) throw new Error(`Lookup failed (${res.status})`);
+        const body = await res.json();
+        if (!body || !body.ok) throw new Error("Lookup unavailable");
+        lastUser = u;
+        userInput.value = u;
+        renderLookup(body);
+      }
+
+      async function loadTop() {
+        const res = await fetch("/api/balances", { cache: "no-store" });
+        const body = await res.json();
+        const rows = Array.isArray(body.balances) ? body.balances.slice(0, 20) : [];
+        topList.innerHTML = "";
+        rows.forEach((row, i) => {
+          const li = document.createElement("li");
+          li.innerHTML = `<span class="muted">#${i + 1}</span><span>@${esc(row.user || "")}</span><span class="mono">${Number(
+            row.balance || 0
+          ).toLocaleString()}</span>`;
+          li.style.cursor = "pointer";
+          li.addEventListener("click", () => lookupUser(row.user || ""));
+          topList.appendChild(li);
+        });
+      }
+
+      btnLookup.addEventListener("click", () => lookupUser(userInput.value));
+      btnRefresh.addEventListener("click", async () => {
+        if (lastUser) await lookupUser(lastUser);
+        await loadTop();
+      });
+      userInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") btnLookup.click();
+      });
+
+      (async () => {
+        await loadTop();
+      })().catch((err) => {
+        metaGrid.innerHTML = kv("Error", esc(err.message || err), "");
+      });
+    </script>
+  </body>
+</html>

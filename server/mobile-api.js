@@ -1,8 +1,7 @@
 /**
  * Mobile / iOS companion endpoints.
- * Copy this file + mobile-presence.js (+ other mobile-*.js) to Windows server/.
  */
-const { registerMobileAuthRoutes, validateBearer } = require("./mobile-auth");
+const { registerMobileAuthRoutes, validateBearer: validateBearerResult } = require("./mobile-auth");
 const { getTikTokBridgeStatus } = require("./tiktok-bridge");
 const { registerMobileChatRoutes } = require("./mobile-chat");
 const { registerMobileRewardedAdRoutes } = require("./mobile-rewarded-ad");
@@ -13,6 +12,14 @@ const {
   getActiveAppUserList,
 } = require("./mobile-presence");
 const { buildWalletPayload } = require("./mobile-wallet");
+const { buildPlatformStatus, registerMobilePlatformRoutes } = require("./mobile-platform");
+const { registerHangmanMobileRoutes } = require("./mobile-hangman");
+
+/** Session object for route handlers (validateBearer in auth returns { ok, session }). */
+function validateBearer(req) {
+  const auth = validateBearerResult(req);
+  return auth && auth.ok ? auth.session : null;
+}
 
 function registerMobileApi(app, ctx) {
   const { game, pointStore, isLocalhost, broadcast } = ctx;
@@ -23,29 +30,43 @@ function registerMobileApi(app, ctx) {
   }
   registerMobileRewardedAdRoutes(app, { pointStore, validateBearer, broadcast });
   registerMobileStoreRoutes(app, { pointStore, validateBearer, broadcast });
-  registerMobilePresenceRoutes(app, { validateBearer, pointStore });
+  registerMobilePresenceRoutes(app, { validateBearer, pointStore, broadcast });
+  registerMobilePlatformRoutes(app, { game, pointStore, validateBearer, broadcast });
+  registerHangmanMobileRoutes(app, { validateBearer });
 
-  app.get("/api/mobile/status", (_req, res) => {
+  app.get("/api/mobile/status", async (_req, res) => {
+    const platform = await buildPlatformStatus(game, pointStore);
     const state = game.getState();
     const tiktok = getTikTokBridgeStatus();
     const playerCount = pointStore.listBalances ? pointStore.listBalances(999999).length : 0;
     res.json({
-      ok: true,
+      ...platform,
       service: "nfg-crash",
-      version: "1.0.0",
       phase: state.phase,
       roundId: state.roundId,
       multiplier: state.multiplier,
       playerCount,
-      activeAppUsers: getActiveAppUserCount(),
-      activeAppUserList: getActiveAppUserList(pointStore),
+      activeAppUsers: platform.activeAppUsers ?? getActiveAppUserCount(),
+      activeAppUserList: platform.activeAppUserList ?? getActiveAppUserList(pointStore),
       sharedData: true,
-      tiktokLive: {
-        ...tiktok,
-        isLive: tiktok.state === "live",
-      },
+      tiktokLive: platform.tiktokLive || { ...tiktok, isLive: tiktok.state === "live" },
       message:
-        "Connect iOS to this server. Bets and balances use the same points file as TikTok live.",
+        "Shared app chat across NFG apps. Crash bets use this server's points; Hangman uses its own all-time board.",
+    });
+  });
+
+  app.get("/api/mobile/debug/session", (req, res) => {
+    if (typeof isLocalhost === "function" && !isLocalhost(req)) {
+      return res.status(403).json({ ok: false, error: "local only" });
+    }
+    const auth = validateBearerResult(req);
+    if (!auth.ok) return res.status(401).json({ ok: false, error: "auth_required" });
+    const profile = pointStore.getUserPresentation(auth.session.userId);
+    return res.json({
+      ok: true,
+      session: auth.session,
+      profile,
+      state: game.getState(),
     });
   });
 
@@ -62,4 +83,4 @@ function registerMobileApi(app, ctx) {
   });
 }
 
-module.exports = { registerMobileApi, buildWalletPayload };
+module.exports = { registerMobileApi, buildWalletPayload, validateBearer };

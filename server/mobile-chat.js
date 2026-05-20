@@ -8,9 +8,7 @@ const MAX_MESSAGES = 120;
 const MAX_MESSAGE_LEN = 240;
 const RATE_LIMIT_MS = 1200;
 
-/** @type {Array<object>} */
 const messages = [];
-/** @type {Map<string, number>} */
 const lastSentAt = new Map();
 
 function enrichChatRow(row, pointStore) {
@@ -69,6 +67,9 @@ function registerMobileChatRoutes(app, ctx) {
     }
     lastSentAt.set(session.userId, now);
 
+    const clientApp = String(req.headers["x-client-app"] || req.body?.clientApp || "nfg")
+      .trim()
+      .slice(0, 32);
     const row = enrichChatRow(
       {
         id: crypto.randomBytes(8).toString("hex"),
@@ -76,6 +77,7 @@ function registerMobileChatRoutes(app, ctx) {
         displayName: session.displayName || session.userId,
         message: raw,
         at: now,
+        clientApp: clientApp || "nfg",
       },
       pointStore
     );

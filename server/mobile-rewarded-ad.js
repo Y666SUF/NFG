@@ -1,13 +1,11 @@
 /**
  * Rewarded video claims from the iOS app (watch ad → points on server).
- * Copy this file to your Windows game server folder (same level as mobile-api.js).
  */
 const fs = require("fs");
 const path = require("path");
 const { getAppRoot } = require("./paths");
 
 const REWARD_AMOUNT = 10_000;
-/** No cooldown between ad rewards — unlimited watches. */
 const COOLDOWN_MS = 0;
 
 const CLAIMS_FILE = path.join(getAppRoot(), "data", "mobile-ad-claims.json");

@@ -1,17 +1,68 @@
-# Secrets — never commit
-.env
-.env.local
-**/.env
-!.env.example
-
-# macOS
-.DS_Store
-
-# Node
+# Dependencies
 node_modules/
-**/node_modules/
+hangman v2/**/node_modules/
+hangman v2/iOS/app/ios/
+_import_Y666SUF_website/frontend/node_modules/
 
-# iOS / Xcode (Crash)
+# Secrets & local config
+.env
+.env.*
+!.env.example
+!hangman v2/iOS/app/.env.example
+tiktok.config.json
+**/mobile-sessions.json
+**/.cursor/
+
+# Live runtime data (do not commit player balances)
+data/points*.json
+data/points.live.json
+data/*.backup.*
+data/backups/
+data/gift-ledger.jsonl
+data/mobile-ad-claims.json
+data/shields.json
+data/recovery-report-*
+hangman v2/data/*.json
+!hangman v2/data/word_theme_map.json
+!hangman v2/data/word_bank*.json
+
+# Large archives
+node-v*.zip
+*.zip
+
+# Build outputs
+dist/
+hangman v2/iOS/app/dist/
+_import_Y666SUF_website/frontend/build/
+
+# iOS / binaries
+*.ipa
+*.exe
+*.dmg
+
+# Bundled portable Node (Windows launcher only)
+tools/node/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+*.log
+npm-debug.log*
+
+# Cloudflare token cache (local machine)
+*.cmd
+!run-electron*.bat
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Electron
+out/
+
+# iOS / Xcode (NFG Crash — Mac)
 ios/DerivedData/
 ios/build/
 ios/archive/
@@ -19,13 +70,3 @@ ios/export/*.ipa
 xcuserdata/
 *.xcuserstate
 *.xcarchive
-
-# Hangman Capacitor app
-hangman-v2/iOS/app/node_modules/
-hangman-v2/iOS/app/dist/
-hangman-v2/iOS/app/ios/App/Pods/
-hangman-v2/iOS/app/ios/App/build/
-
-# Logs & temp
-*.log
-.cursor/

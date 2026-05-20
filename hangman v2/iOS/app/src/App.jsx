@@ -14,7 +14,11 @@ import {
   hangmanWsUrl,
   sendPresenceHeartbeat,
 } from "./lib/nfgApi";
-import { mergeGuessIntoState, normalizeHangmanState } from "./lib/hangmanState";
+import {
+  mergeGuessIntoState,
+  normalizeHangmanState,
+  payloadToHangmanRaw,
+} from "./lib/hangmanState";
 
 const TABS = [
   { id: "play", label: "Play" },
@@ -49,7 +53,7 @@ export default function App() {
     if (typeof payload.tiktok_status === "string" && payload.tiktok_status.trim()) {
       setHmStatus(payload.tiktok_status);
     }
-    const raw = payload.state && typeof payload.state === "object" ? payload.state : payload;
+    const raw = payloadToHangmanRaw(payload);
     try {
       const next = normalizeHangmanState(raw);
       if (next) {

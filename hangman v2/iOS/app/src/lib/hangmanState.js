@@ -16,6 +16,13 @@ function upperLetters(list) {
   return asLetterArray(list).map((c) => c.toUpperCase());
 }
 
+/** WS poll, guess API, or nested `state` → raw snapshot for normalizeHangmanState. */
+export function payloadToHangmanRaw(payload) {
+  if (!payload || typeof payload !== "object") return null;
+  if (payload.state && typeof payload.state === "object") return payload.state;
+  return payload;
+}
+
 export function sanitizeKeyboard(kb) {
   if (!kb || typeof kb !== "object" || Array.isArray(kb)) {
     return { correct: [], wrong: [] };

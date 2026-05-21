@@ -3,7 +3,17 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 title NFG Platform - Crash + Hangman + Cloudflare
 
-rem --- Shared NFG platform (Node, port 3847) + Hangman (Python, port 19876, proxied on 3847) ---
+rem =============================================================================
+rem NFG Platform launcher (Crash + Hangman + public tunnel)
+rem   Node platform     : PORT 3847  (Crash, website, mobile APIs, IPA downloads)
+rem   Hangman Python    : HANGMAN_PORT 19876  (FastAPI in hangman v2\)
+rem   Hangman proxied   : /hangman/ws  and  /api/hangman/*  on 3847
+rem   iOS Hangman app   : polls GET /api/mobile/hangman/state every 2s
+rem                       guesses POST /api/mobile/hangman/guess
+rem   Public origin     : https://y666suf.com  (Cloudflare tunnel)
+rem Pull latest from GitHub before live streams so mobile + desktop stay in sync.
+rem =============================================================================
+
 set "PORT=3847"
 set "HOST=0.0.0.0"
 set "HANGMAN_PORT=19876"
@@ -12,12 +22,25 @@ set "HANGMAN_BACKEND_URL=http://127.0.0.1:19876"
 set "NFG_PLATFORM_URL=http://127.0.0.1:3847"
 set "NFG_INTERNAL_SECRET=nfg-dev-internal"
 set "NFG_START_HANGMAN=1"
+set "NFG_HANGMAN_GUESS_TIMEOUT_MS=12000"
 if "%HANGMAN_PYTHON%"=="" set "HANGMAN_PYTHON=py"
 
 set "NFG_CF_TUNNEL=1"
 if "%NFG_CF_TUNNEL_NAME%"=="" set "NFG_CF_TUNNEL_NAME=NFG Crash"
 set "NFG_CF_TOKEN_FILE=%USERPROFILE%\.nfg-crash-cloudflare-token.cmd"
 set "NFG_WEBSITE_FRONTEND_DIR=%~dp0_import_Y666SUF_website\frontend"
+
+rem --- IPA paths: repo releases\ipa first (served by Node), then Downloads ---
+if exist "%~dp0releases\ipa\NFG-Crash.ipa" (
+  set "NFG_IPA_FILE=%~dp0releases\ipa\NFG-Crash.ipa"
+) else (
+  set "NFG_IPA_FILE=%USERPROFILE%\Downloads\NFG-Crash.ipa"
+)
+if exist "%~dp0releases\ipa\NFG-Hangman.ipa" (
+  set "NFG_HANGMAN_IPA_FILE=%~dp0releases\ipa\NFG-Hangman.ipa"
+) else (
+  set "NFG_HANGMAN_IPA_FILE=%USERPROFILE%\Downloads\NFG-Hangman.ipa"
+)
 
 if "%NFG_CF_TUNNEL_TOKEN%"=="" (
   if exist "%NFG_CF_TOKEN_FILE%" call "%NFG_CF_TOKEN_FILE%"
@@ -73,75 +96,87 @@ if not "%NFG_CLOUDFLARED_EXE%"=="" (
   )
 )
 
-echo Starting NFG Platform ^(Crash + Hangman + Cloudflare^) ...
-echo   Electron opens: NFG Crash, Player Lookup, App Chat, and NFG Hangman windows.
+echo.
+echo ============================================================
+echo  NFG Platform - Crash + Hangman + Cloudflare
+echo ============================================================
+echo   Electron: NFG Crash, Player Lookup, App Chat, NFG Hangman
 echo   Tunnel: "%NFG_CF_TUNNEL_NAME%"
 if not "%NFG_CF_TUNNEL_TOKEN%"=="" (
-  echo Tunnel auth mode: token
+  echo   Tunnel auth: token
 ) else (
-  echo Tunnel auth mode: named tunnel ^(requires cloudflared login/cert^)
+  echo   Tunnel auth: named tunnel ^(cloudflared login/cert^)
   if not exist "%USERPROFILE%\.cloudflared\cert.pem" (
     echo.
-    echo WARNING: cert.pem not found at:
-    echo   %USERPROFILE%\.cloudflared\cert.pem
-    echo.
-    echo Fix either by running once:
-    echo   cloudflared tunnel login
-    echo.
-    echo Or set a tunnel token before launch:
-    echo   set "NFG_CF_TUNNEL_TOKEN=YOUR_TOKEN_HERE"
+    echo WARNING: cert.pem not found. Run once: cloudflared tunnel login
     echo.
   )
 )
 echo.
-echo Platform server: port %PORT% ^(Crash + website + shared app chat^)
-echo Hangman backend: port %HANGMAN_PORT% ^(auto-started by Node unless NFG_START_HANGMAN=0^)
-echo   Proxied on %PORT%: /hangman/ws  and  /api/hangman/*
+echo --- Ports ---
+echo   Platform Node:     %PORT%  ^(0.0.0.0^)
+echo   Hangman Python:    %HANGMAN_PORT%  ^(auto-start unless NFG_START_HANGMAN=0^)
+echo   Hangman backend:   %HANGMAN_BACKEND_URL%
 echo.
-echo Website / Cloudflare tunnel ^(single public origin^):
-echo   Public: https://y666suf.com
-echo   Crash stream: http://127.0.0.1:%PORT%/
-echo   Hangman stream UI: http://127.0.0.1:%HANGMAN_PORT%/ ^(Electron window^)
-echo   Hangman WS ^(apps^): wss://y666suf.com/hangman/ws
-echo   Shared chat API: https://y666suf.com/api/mobile/chat
-echo   Platform status: https://y666suf.com/api/mobile/platform/status
-echo   Local pages: http://127.0.0.1:%PORT%/games/nfg-crash
-echo   Crash IPA: https://y666suf.com/download/nfg-crash.ipa
+echo --- Public ^(https://y666suf.com^) ---
+echo   Website / sideload:  https://y666suf.com/sideload
+echo   Crash stream:        http://127.0.0.1:%PORT%/
+echo   Hangman desktop UI:  http://127.0.0.1:%HANGMAN_PORT%/
+echo.
+echo --- Hangman mobile companion ^(NFG Hangman iOS^) ---
+echo   WebSocket:   wss://y666suf.com/hangman/ws
+echo   State poll:  GET  https://y666suf.com/api/mobile/hangman/state
+echo   App guess:   POST https://y666suf.com/api/mobile/hangman/guess
+echo   Link/chat:   /api/mobile/link/*  /api/mobile/chat
+echo   Python API:  GET  /api/hangman/app/state  ^(proxied on %PORT%^)
+echo.
+echo --- Shared APIs ---
+echo   App chat:    https://y666suf.com/api/mobile/chat
+echo   Presence:    https://y666suf.com/api/mobile/platform/status
+echo   Crash IPA:   https://y666suf.com/download/nfg-crash.ipa
+echo   Hangman IPA: https://y666suf.com/download/nfg-hangman.ipa
 echo.
 where %HANGMAN_PYTHON% >nul 2>&1
 if errorlevel 1 (
-  echo WARNING: Python ^(%HANGMAN_PYTHON%^) not found — Hangman will not start.
-  echo Install Python 3 and ensure `py` works, or set HANGMAN_PYTHON=full\path\to\python.exe
+  echo WARNING: Python ^(%HANGMAN_PYTHON%^) not found - Hangman will not start.
+  echo   Install Python 3 or set HANGMAN_PYTHON=full\path\to\python.exe
   echo.
 ) else (
   if not exist "%~dp0hangman v2\server.py" (
-    echo WARNING: hangman v2\server.py not found — Hangman disabled.
+    echo WARNING: hangman v2\server.py not found - Hangman disabled.
     set "NFG_START_HANGMAN=0"
   ) else (
-    echo Hangman folder: %~dp0hangman v2
+    echo Hangman source: %~dp0hangman v2
   )
   echo.
 )
-set "NFG_IPA_FILE=%USERPROFILE%\Downloads\NFG-Crash.ipa"
-set "NFG_HANGMAN_IPA_FILE=%USERPROFILE%\Downloads\NFG-Hangman.ipa"
-if exist "%NFG_IPA_FILE%" (echo Crash IPA: %NFG_IPA_FILE%) else (echo Crash IPA: scan Downloads for NFG-Crash.ipa)
-if exist "%NFG_HANGMAN_IPA_FILE%" (echo Hangman IPA: %NFG_HANGMAN_IPA_FILE%) else (echo Hangman IPA: scan Downloads for NFG-Hangman.ipa)
-echo   Public: https://y666suf.com/download/nfg-hangman.ipa
+if exist "%NFG_IPA_FILE%" (
+  echo Crash IPA:   %NFG_IPA_FILE%
+) else (
+  echo Crash IPA:   not found - run git pull for releases\ipa\NFG-Crash.ipa
+)
+if exist "%NFG_HANGMAN_IPA_FILE%" (
+  echo Hangman IPA: %NFG_HANGMAN_IPA_FILE%
+) else (
+  echo Hangman IPA: not found - run git pull for releases\ipa\NFG-Hangman.ipa
+)
 echo.
 if /I not "%NFG_BUILD_WEBSITE%"=="0" (
   if exist "%NFG_WEBSITE_FRONTEND_DIR%\package.json" (
-    echo Building React website for port 3847 ...
+    echo Building React website for port %PORT% ...
     pushd "%NFG_WEBSITE_FRONTEND_DIR%"
     set "REACT_APP_BACKEND_URL="
     call corepack yarn build
     if errorlevel 1 (
       echo.
-      echo Website build failed. Public domain may show the legacy site until build succeeds.
+      echo Website build failed. Public domain may show legacy site until build succeeds.
       echo.
     )
     popd
   )
 )
+echo Starting Electron + Node + Hangman + tunnel...
+echo.
 call "%~dp0run-electron.bat"
 
 endlocal

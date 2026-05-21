@@ -54,6 +54,7 @@ if not defined NFG_PLATFORM_URL set "NFG_PLATFORM_URL=http://127.0.0.1:%PORT%"
 if not defined NFG_INTERNAL_SECRET set "NFG_INTERNAL_SECRET=nfg-dev-internal"
 if not defined NFG_START_HANGMAN set "NFG_START_HANGMAN=1"
 if not defined HANGMAN_PYTHON set "HANGMAN_PYTHON=py"
+if not defined NFG_HANGMAN_GUESS_TIMEOUT_MS set "NFG_HANGMAN_GUESS_TIMEOUT_MS=12000"
 
 echo Using Node: %NODE_EXE%
 echo.
@@ -70,7 +71,8 @@ if not exist "node_modules\" (
   echo.
 )
 
-echo Platform port %PORT% ^| Hangman port %HANGMAN_PORT% ^(proxied on %PORT%^) ^| start Hangman: %NFG_START_HANGMAN%
+echo Platform port %PORT% ^| Hangman %HANGMAN_PORT% proxied on %PORT% ^| Hangman start: %NFG_START_HANGMAN%
+echo Mobile: GET /api/mobile/hangman/state  POST /api/mobile/hangman/guess  WS /hangman/ws
 echo Launching Electron ^(Crash + Hangman windows, shared Node server^)...
 echo.
 call "%NPM_CMD%" run start:electron

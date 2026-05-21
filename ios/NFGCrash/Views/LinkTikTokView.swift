@@ -2,7 +2,6 @@ import SwiftUI
 
 struct LinkTikTokView: View {
     @EnvironmentObject private var sync: SyncClient
-    @EnvironmentObject private var sync: SyncClient
     @State private var linkCode = ""
     @State private var tiktokCommand = ""
     @State private var secondsLeft = 0

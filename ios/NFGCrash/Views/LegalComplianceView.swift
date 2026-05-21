@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct LegalComplianceView: View {
+    @EnvironmentObject private var sync: SyncClient
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
@@ -39,6 +40,31 @@ struct LegalComplianceView: View {
                         title: "Age",
                         body: "Recommended for users 17 and older due to simulated betting mechanics."
                     )
+
+                    NavigationLink {
+                        AdSetupDiagnosticsView()
+                            .environmentObject(sync)
+                    } label: {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Ads & IAP setup")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(NFGTheme.text)
+                                Text("AdMob IDs, server checks, test rewarded ad")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(NFGTheme.muted)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(NFGTheme.muted)
+                        }
+                        .padding(14)
+                        .background(NFGTheme.panel)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .overlay(RoundedRectangle(cornerRadius: 12).stroke(NFGTheme.border))
+                    }
+                    .buttonStyle(.plain)
 
                     NavigationLink {
                         PrivacyPolicyView()

@@ -197,9 +197,62 @@ final class SyncClient: ObservableObject {
             return
         }
         do {
-            storeProducts = try await api.fetchStoreProducts()
+            let resp = try await api.fetchStoreProductsResponse()
+            storeProducts = resp.products ?? StoreCatalog.fallbackProducts
+            storeIsTestMode = resp.testMode == true && AppDistribution.allowsDevTestStore
+            let ids = resp.productIds ?? storeProducts.map(\.id)
+            await StoreKitService.shared.loadProducts(ids: ids)
         } catch {
             storeProducts = StoreCatalog.fallbackProducts
+            await StoreKitService.shared.loadProducts(ids: StoreCatalog.fallbackProducts.map(\.id))
+        }
+    }
+
+    func purchaseStoreProduct(_ product: StoreProduct) async {
+        guard PlayerSession.isLoggedIn else {
+            storePurchaseMessage = "Link your TikTok account first."
+            return
+        }
+        guard let api else {
+            storePurchaseMessage = "Not connected to the game."
+            return
+        }
+
+        isPurchasingStore = true
+        storePurchaseMessage = nil
+        defer { isPurchasingStore = false }
+
+        if storeIsTestMode && AppDistribution.allowsDevTestStore {
+            await testPurchaseStoreProduct(product)
+            return
+        }
+
+        do {
+            let resp = try await StoreKitService.shared.purchase(productId: product.id) { pid, txnId, signed in
+                try await api.verifyPurchase(
+                    productId: pid,
+                    transactionId: txnId,
+                    signedTransactionInfo: signed
+                )
+            }
+            if resp.ok == true {
+                if let bal = resp.balance {
+                    wallet.balance = bal
+                    profile.balance = bal
+                }
+                let gained = resp.gained ?? product.points
+                if resp.alreadyProcessed == true {
+                    storePurchaseMessage = "Purchase already credited. Balance updated."
+                } else {
+                    storePurchaseMessage = "+\(gained.formatted()) pts added."
+                }
+                await refreshWallet()
+                await refreshLeaderboard()
+            } else {
+                storePurchaseMessage = resp.message ?? "Purchase failed."
+            }
+        } catch {
+            storePurchaseMessage = error.localizedDescription
         }
     }
 

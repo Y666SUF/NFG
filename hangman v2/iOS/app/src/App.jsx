@@ -142,11 +142,7 @@ export default function App() {
           return;
         }
         if (data.type !== "update") return;
-        if (typeof data.tiktok_status === "string" && data.tiktok_status.trim()) {
-          setHmStatus(data.tiktok_status);
-        }
-        if (typeof data.tiktok === "string") setStreamer(data.tiktok);
-        if (data.state) applyHangmanPayload({ state: data.state });
+        applyHangmanPayload(data);
         if (Array.isArray(data.alltime)) setAllTime(data.alltime.slice(0, 15));
       };
       pingTimer = window.setInterval(() => {

@@ -50,7 +50,7 @@ export function formatMaskFromSlots(slots) {
         current = [];
       }
     } else {
-      current.push(ch ? String(c).toUpperCase() : "_");
+      current.push(ch ? String(ch).toUpperCase() : "_");
     }
   }
   if (current.length) groups.push(current.join(" "));

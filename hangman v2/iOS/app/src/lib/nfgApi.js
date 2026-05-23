@@ -39,7 +39,7 @@ export function apiBase() {
   const raw = String(import.meta.env.VITE_NFG_API_BASE || "").trim();
   if (raw) return raw.replace(/\/$/, "");
   if (typeof window !== "undefined" && window.location?.origin) {
-    return window.location.origin;
+    return window.location.origin.replace(/\/$/, "");
   }
   return "http://127.0.0.1:3847";
 }

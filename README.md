@@ -57,6 +57,8 @@ Place `.ipa` files in `%USERPROFILE%\Downloads\` or set env vars.
 
 | Doc | Use |
 |-----|-----|
+| `docs/PC_MAC_SYNC.md` | **PC ↔ Mac** — push/pull via GitHub (`scripts/sync-*.ps1` / `sync-*.sh`) |
+| `docs/cross-device/README.md` | **Cursor handoff** — auto companion prompts between PC and Mac |
 | `docs/MAC_IOS_FINALIZE_PROMPT.md` | **MacBook** — finalize both apps + TestFlight + IPA handoff |
 | `docs/MAC_IOS_NFG_HANGMAN_BUILD_PROMPT.md` | Hangman UI/API detail |
 | `WINDOWS-PC-SETUP.md` | **This PC** — ports, tunnel, verify curls |

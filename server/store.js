@@ -10,10 +10,14 @@ const LEGACY_POINTS_FILES = [
   path.join(DATA_DIR, "points.json"),
   path.join(getAppRoot(), "dist", "data", "points.json"),
 ];
-const POINTS_FILE_CANDIDATES = [PRIMARY_POINTS_FILE, ...LEGACY_POINTS_FILES].filter(
-  (filePath, idx, arr) => arr.indexOf(filePath) === idx
-);
 const SHIELDS_FILE = path.join(DATA_DIR, "shields.json");
+const POINTS_BAK_FILE = `${PRIMARY_POINTS_FILE}.bak`;
+const POINTS_META_FILE = path.join(DATA_DIR, "points.live.meta.json");
+const MIN_USERS_GUARD = Math.max(0, Math.floor(Number(process.env.POINTS_MIN_USERS_GUARD) || 5));
+const SHRINK_RATIO_GUARD = Math.min(
+  1,
+  Math.max(0.05, Number(process.env.POINTS_SHRINK_RATIO_GUARD) || 0.5)
+);
 const SHIELD_UNIT_MS = 48 * 60 * 60 * 1000;
 const TAX_POT_RESET_MS = 7 * 24 * 60 * 60 * 1000;
 const HIGH_STAKE_BET_THRESHOLD = 1000;
@@ -210,6 +214,71 @@ function emptyPointsState() {
   return { balances: {}, allTime: {}, profiles: {}, notifications: [], taxPot: defaultTaxPotState() };
 }
 
+function countPointsUsers(state) {
+  const balances = Object.keys((state && state.balances) || {}).length;
+  const profiles = Object.keys((state && state.profiles) || {}).length;
+  return Math.max(balances, profiles);
+}
+
+function serializePointsState(state) {
+  return {
+    balances: state.balances || {},
+    allTime: state.allTime || {},
+    profiles: state.profiles || {},
+    notifications: Array.isArray(state.notifications) ? state.notifications : [],
+    taxPot: state.taxPot && typeof state.taxPot === "object" ? state.taxPot : defaultTaxPotState(),
+  };
+}
+
+function readPointsMeta() {
+  if (!fs.existsSync(POINTS_META_FILE)) return null;
+  try {
+    const obj = JSON.parse(fs.readFileSync(POINTS_META_FILE, "utf8"));
+    if (!obj || typeof obj !== "object") return null;
+    return {
+      users: Math.max(0, Math.floor(Number(obj.users) || 0)),
+      savedAt: String(obj.savedAt || ""),
+      bytes: Math.max(0, Math.floor(Number(obj.bytes) || 0)),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writePointsMeta(state, filePath = PRIMARY_POINTS_FILE) {
+  let bytes = 0;
+  try {
+    if (fs.existsSync(filePath)) bytes = fs.statSync(filePath).size;
+  } catch {
+    // Ignore stat errors.
+  }
+  const meta = {
+    users: countPointsUsers(state),
+    savedAt: new Date().toISOString(),
+    bytes,
+  };
+  atomicWriteJsonFile(POINTS_META_FILE, meta);
+  return meta;
+}
+
+function atomicWriteJsonFile(filePath, obj) {
+  ensureDataDir();
+  const tmpPath = `${filePath}.tmp`;
+  const payload = `${JSON.stringify(obj, null, 2)}\n`;
+  fs.writeFileSync(tmpPath, payload, "utf8");
+  fs.renameSync(tmpPath, filePath);
+}
+
+function isSuspiciousShrink(prevUsers, nextUsers) {
+  const prev = Math.max(0, Math.floor(Number(prevUsers) || 0));
+  const next = Math.max(0, Math.floor(Number(nextUsers) || 0));
+  if (prev < MIN_USERS_GUARD) return false;
+  if (next >= prev) return false;
+  if (next < MIN_USERS_GUARD) return true;
+  if (next < Math.floor(prev * SHRINK_RATIO_GUARD)) return true;
+  return false;
+}
+
 function normalizePointsPayload(obj) {
   if (!obj || typeof obj !== "object") return null;
   if (obj.balances && typeof obj.balances === "object") {
@@ -225,44 +294,171 @@ function normalizePointsPayload(obj) {
   return { balances: { ...obj }, allTime: {}, profiles: {}, notifications: [], taxPot: defaultTaxPotState() };
 }
 
-function loadPoints() {
-  ensureDataDir();
-  for (const filePath of POINTS_FILE_CANDIDATES) {
-    if (!fs.existsSync(filePath)) continue;
+function loadPointsFromFile(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  try {
+    const raw = fs.readFileSync(filePath, "utf8");
+    if (!String(raw || "").trim()) return null;
+    const obj = JSON.parse(raw);
+    const normalized = normalizePointsPayload(obj);
+    if (!normalized) return null;
+    if (countPointsUsers(normalized) === 0) return null;
+    return normalized;
+  } catch {
+    return null;
+  }
+}
+
+function listBackupSnapshotDirs() {
+  if (!fs.existsSync(BACKUPS_DIR)) return [];
+  const days = fs
+    .readdirSync(BACKUPS_DIR, { withFileTypes: true })
+    .filter((d) => d.isDirectory())
+    .map((d) => d.name)
+    .sort();
+  const snapshots = [];
+  for (const day of days) {
+    const dayDir = path.join(BACKUPS_DIR, day);
+    let slots = [];
     try {
-      const raw = fs.readFileSync(filePath, "utf8");
-      const obj = JSON.parse(raw);
-      const normalized = normalizePointsPayload(obj);
-      if (!normalized) continue;
-      // Migrate any legacy location/format to the primary file so future runs stay consistent.
-      if (filePath !== PRIMARY_POINTS_FILE) {
-        savePoints(normalized);
-      }
-      return normalized;
+      slots = fs
+        .readdirSync(dayDir, { withFileTypes: true })
+        .filter((d) => d.isDirectory())
+        .map((d) => d.name)
+        .sort();
     } catch {
-      // Try next candidate.
+      continue;
+    }
+    for (const slot of slots) {
+      snapshots.push(path.join(dayDir, slot));
     }
   }
+  return snapshots.sort();
+}
+
+function readBackupManifest(backupDir) {
+  const manifestPath = path.join(backupDir, "manifest.json");
+  if (!fs.existsSync(manifestPath)) return null;
+  try {
+    const obj = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+    if (!obj || typeof obj !== "object") return null;
+    return {
+      users: Math.max(0, Math.floor(Number(obj.users) || 0)),
+      profiles: Math.max(0, Math.floor(Number(obj.profiles) || 0)),
+      createdAt: String(obj.createdAt || ""),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function findBestBackupPoints(minUsersHint = MIN_USERS_GUARD) {
+  const snapshots = listBackupSnapshotDirs();
+  let best = null;
+  let bestUsers = 0;
+  let bestDir = "";
+  for (let i = snapshots.length - 1; i >= 0; i -= 1) {
+    const backupDir = snapshots[i];
+    const pointsName = path.basename(PRIMARY_POINTS_FILE);
+    const pointsPath = path.join(backupDir, pointsName);
+    const manifest = readBackupManifest(backupDir);
+    const manifestUsers = manifest ? Math.max(manifest.users, manifest.profiles) : 0;
+    const normalized = loadPointsFromFile(pointsPath);
+    if (!normalized) continue;
+    const users = countPointsUsers(normalized);
+    if (users <= bestUsers) continue;
+    if (manifestUsers > 0 && users < Math.min(manifestUsers, minUsersHint > 0 ? Math.max(1, Math.floor(minUsersHint * SHRINK_RATIO_GUARD)) : 1)) {
+      continue;
+    }
+    best = normalized;
+    bestUsers = users;
+    bestDir = backupDir;
+  }
+  return best ? { state: best, users: bestUsers, backupDir: bestDir } : null;
+}
+
+function loadPoints() {
+  ensureDataDir();
+  const meta = readPointsMeta();
+  const minExpected = meta && meta.users >= MIN_USERS_GUARD ? meta.users : 0;
+  const candidates = [
+    PRIMARY_POINTS_FILE,
+    POINTS_BAK_FILE,
+    ...LEGACY_POINTS_FILES.filter((filePath) => filePath !== PRIMARY_POINTS_FILE),
+  ].filter((filePath, idx, arr) => arr.indexOf(filePath) === idx);
+
+  let best = null;
+  let bestUsers = 0;
+  let bestPath = "";
+
+  for (const filePath of candidates) {
+    const normalized = loadPointsFromFile(filePath);
+    if (!normalized) continue;
+    const users = countPointsUsers(normalized);
+    if (minExpected >= MIN_USERS_GUARD && users < Math.max(MIN_USERS_GUARD, Math.floor(minExpected * SHRINK_RATIO_GUARD))) {
+      console.warn(
+        `[Points] Ignoring ${filePath} (${users} users; meta expects ~${minExpected}).`
+      );
+      continue;
+    }
+    if (users > bestUsers) {
+      best = normalized;
+      bestUsers = users;
+      bestPath = filePath;
+    }
+    if (filePath === PRIMARY_POINTS_FILE && users >= Math.max(MIN_USERS_GUARD, minExpected || 0)) {
+      return normalized;
+    }
+  }
+
+  if (best && bestUsers > 0) {
+    if (bestPath !== PRIMARY_POINTS_FILE) {
+      console.warn(`[Points] Loaded ${bestUsers} users from ${bestPath}. Restoring primary file.`);
+      savePoints(best, { force: true, source: bestPath });
+    }
+    return best;
+  }
+
+  const recovered = findBestBackupPoints(minExpected || MIN_USERS_GUARD);
+  if (recovered && recovered.users > 0) {
+    console.error(
+      `[Points] Primary data missing or corrupt. Recovered ${recovered.users} users from backup ${recovered.backupDir}.`
+    );
+    savePoints(recovered.state, { force: true, source: recovered.backupDir });
+    return recovered.state;
+  }
+
+  if (best && bestUsers > 0) return best;
+  console.warn("[Points] No existing database found; starting with an empty hi-scores file.");
   return emptyPointsState();
 }
 
-function savePoints(state) {
+function savePoints(state, options = {}) {
   ensureDataDir();
-  fs.writeFileSync(
-    PRIMARY_POINTS_FILE,
-    JSON.stringify(
-      {
-        balances: state.balances || {},
-        allTime: state.allTime || {},
-        profiles: state.profiles || {},
-        notifications: Array.isArray(state.notifications) ? state.notifications : [],
-        taxPot: state.taxPot && typeof state.taxPot === "object" ? state.taxPot : defaultTaxPotState(),
-      },
-      null,
-      2
-    ),
-    "utf8"
-  );
+  const payload = serializePointsState(state);
+  const nextUsers = countPointsUsers(payload);
+  const meta = readPointsMeta();
+  const prevUsers = meta?.users ?? nextUsers;
+  const force = options.force === true;
+
+  if (!force && isSuspiciousShrink(prevUsers, nextUsers)) {
+    console.error(
+      `[Points] Refusing to save: user count would drop ${prevUsers} -> ${nextUsers}. Disk left unchanged.`
+    );
+    return { ok: false, reason: "shrink_guard", prevUsers, nextUsers };
+  }
+
+  atomicWriteJsonFile(PRIMARY_POINTS_FILE, payload);
+  try {
+    fs.copyFileSync(PRIMARY_POINTS_FILE, POINTS_BAK_FILE);
+  } catch (err) {
+    console.warn("[Points] Could not refresh .bak copy:", err.message);
+  }
+  writePointsMeta(payload);
+  if (options.source) {
+    console.log(`[Points] Saved ${nextUsers} users (${options.source}).`);
+  }
+  return { ok: true, users: nextUsers };
 }
 
 function loadShields() {
@@ -279,7 +475,7 @@ function loadShields() {
 
 function saveShields(shields) {
   ensureDataDir();
-  fs.writeFileSync(SHIELDS_FILE, JSON.stringify(shields, null, 2), "utf8");
+  atomicWriteJsonFile(SHIELDS_FILE, shields || {});
 }
 
 function normalizeUser(name) {
@@ -293,17 +489,47 @@ class PointStore {
   constructor(defaultStarter) {
     this.defaultStarter = defaultStarter;
     this.points = loadPoints();
+    this._recoverPointsFromBackupIfWiped();
+    if (!readPointsMeta() && countPointsUsers(this.points) >= MIN_USERS_GUARD) {
+      writePointsMeta(this.points);
+    }
     this.shields = loadShields();
     this._pruneExpiredShields();
   }
 
   _savePoints() {
-    savePoints(this.points);
+    const result = savePoints(this.points);
+    if (result && result.ok === false && result.reason === "shrink_guard") {
+      console.error("[Points] Reloading in-memory hi-scores from last good on-disk copy.");
+      this.points = loadPoints();
+    }
   }
 
   /** Reload balances/profiles from disk (use after manual data fixes while server runs). */
   reloadFromDisk() {
     this.points = loadPoints();
+  }
+
+  _recoverPointsFromBackupIfWiped() {
+    const meta = readPointsMeta();
+    const users = countPointsUsers(this.points);
+    const expected = meta?.users || 0;
+    if (expected < MIN_USERS_GUARD) return { recovered: false, users };
+    const minAllowed = Math.max(MIN_USERS_GUARD, Math.floor(expected * SHRINK_RATIO_GUARD));
+    if (users >= minAllowed) return { recovered: false, users };
+    const recovered = findBestBackupPoints(expected);
+    if (!recovered || recovered.users <= users) {
+      console.error(
+        `[Points] Database looks wiped (${users} users; expected ~${expected}) but no better backup was found.`
+      );
+      return { recovered: false, users, expected };
+    }
+    console.error(
+      `[Points] Auto-recovering ${recovered.users} users from ${recovered.backupDir} (was ${users}).`
+    );
+    this.points = recovered.state;
+    savePoints(this.points, { force: true, source: recovered.backupDir });
+    return { recovered: true, users: recovered.users, backupDir: recovered.backupDir };
   }
 
   _saveShields() {
@@ -325,25 +551,7 @@ class PointStore {
   }
 
   _listBackupSnapshotDirs() {
-    if (!fs.existsSync(BACKUPS_DIR)) return [];
-    const days = fs
-      .readdirSync(BACKUPS_DIR, { withFileTypes: true })
-      .filter((d) => d.isDirectory())
-      .map((d) => d.name)
-      .sort();
-    const snapshots = [];
-    for (const day of days) {
-      const dayDir = path.join(BACKUPS_DIR, day);
-      const slots = fs
-        .readdirSync(dayDir, { withFileTypes: true })
-        .filter((d) => d.isDirectory())
-        .map((d) => d.name)
-        .sort();
-      for (const slot of slots) {
-        snapshots.push(path.join(dayDir, slot));
-      }
-    }
-    return snapshots.sort();
+    return listBackupSnapshotDirs();
   }
 
   _buildInventorySnapshot() {
@@ -382,6 +590,19 @@ class PointStore {
   createDataBackup(options = {}) {
     const keepLatest = Math.max(1, Math.floor(Number(options.keepLatest) || 12));
     ensureDataDir();
+    this._recoverPointsFromBackupIfWiped();
+    const liveUsers = countPointsUsers(this.points);
+    const meta = readPointsMeta();
+    if (
+      meta &&
+      meta.users >= MIN_USERS_GUARD &&
+      liveUsers < Math.max(MIN_USERS_GUARD, Math.floor(meta.users * SHRINK_RATIO_GUARD))
+    ) {
+      console.error(
+        `[Backup] Skipped snapshot: only ${liveUsers} users loaded (meta expects ~${meta.users}).`
+      );
+      return { ok: false, reason: "skipped_low_users", users: liveUsers, expectedUsers: meta.users };
+    }
     if (!fs.existsSync(BACKUPS_DIR)) {
       fs.mkdirSync(BACKUPS_DIR, { recursive: true });
     }
@@ -1679,6 +1900,25 @@ class PointStore {
   /** Sorted by balance (highest first), for full on-stream list. */
   listBalances(limit = 50) {
     return this.snapshotTop(limit);
+  }
+
+  getDataHealth() {
+    const meta = readPointsMeta();
+    const users = countPointsUsers(this.points);
+    const latestBackup = findBestBackupPoints(MIN_USERS_GUARD);
+    return {
+      users,
+      meta,
+      minUsersGuard: MIN_USERS_GUARD,
+      shrinkRatioGuard: SHRINK_RATIO_GUARD,
+      primaryFile: PRIMARY_POINTS_FILE,
+      backupFile: POINTS_BAK_FILE,
+      latestBackupUsers: latestBackup ? latestBackup.users : 0,
+      latestBackupDir: latestBackup ? latestBackup.backupDir : "",
+      looksHealthy:
+        users >= MIN_USERS_GUARD &&
+        (!meta || meta.users < MIN_USERS_GUARD || users >= Math.max(MIN_USERS_GUARD, Math.floor(meta.users * SHRINK_RATIO_GUARD))),
+    };
   }
 }
 

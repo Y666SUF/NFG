@@ -56,6 +56,12 @@ function startHangmanProcess() {
     HANGMAN_WEB_PORT: String(HANGMAN_PORT),
     NFG_PLATFORM_URL: process.env.NFG_PLATFORM_URL || `http://127.0.0.1:${process.env.PORT || 3847}`,
     NFG_INTERNAL_SECRET: process.env.NFG_INTERNAL_SECRET || "nfg-dev-internal",
+    HANGMAN_TIKTOK_COMMENTS_VIA_PLATFORM:
+      process.env.HANGMAN_TIKTOK_COMMENTS_VIA_PLATFORM != null
+        ? String(process.env.HANGMAN_TIKTOK_COMMENTS_VIA_PLATFORM)
+        : "1",
+    PYTHONUTF8: "1",
+    PYTHONIOENCODING: "utf-8",
   };
 
   hangmanProcess = spawn(py, args, {

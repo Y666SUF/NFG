@@ -12,9 +12,13 @@ async function buildPlatformStatus(game, pointStore) {
 
   const hangmanProbe = await fetchHangmanJson("/api/hangman/status", 900);
   const hangmanBody = hangmanProbe.ok && hangmanProbe.body ? hangmanProbe.body : null;
+  const hangmanViaBridge = hangmanBody && hangmanBody.tiktok_comments_via_platform !== false;
   const hangmanLive =
     hangmanBody &&
-    (hangmanBody.tiktok_status === "connected" || hangmanBody.tiktok_status === "connecting");
+    (hangmanBody.isLive === true ||
+      hangmanBody.tiktok_status === "connected" ||
+      hangmanBody.tiktok_status === "connecting" ||
+      (hangmanViaBridge && crashLive && hangmanBody.has_session !== false));
 
   const state = game.getState();
   const anyLive = !!(crashLive || hangmanLive);

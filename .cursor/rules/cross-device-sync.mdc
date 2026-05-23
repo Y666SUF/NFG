@@ -1,0 +1,83 @@
+---
+description: Auto-queue companion prompts for the other device (PC ↔ Mac) when a task spans both
+alwaysApply: true
+---
+
+# Cross-device companion prompts (PC ↔ Mac)
+
+This repo runs on **Windows PC** (live server, Electron, Cloudflare, player data) and **MacBook** (Xcode, Capacitor iOS builds, TestFlight). GitHub syncs code; **companion prompt files** sync the *other half* of a task.
+
+## When you MUST write a companion prompt
+
+After completing (or partially completing) work, if **the other device still needs changes** for the feature to work end-to-end, update the correct pending file:
+
+| You are on | Other device needs | Write to |
+|------------|-------------------|----------|
+| PC (Windows) | Mac / iOS / Xcode | `docs/cross-device/pending-on-mac.md` |
+| Mac | PC server / Electron / tunnel / website | `docs/cross-device/pending-on-pc.md` |
+
+**Trigger examples (PC → Mac):** new/changed `server/mobile-*.js` API, new WebSocket fields, Hangman Python API changes, env vars iOS must use, IPA rebuild needed, chat/UI contract changes for `hangman v2/iOS/app/` or native Crash Swift.
+
+**Trigger examples (Mac → PC):** iOS app expects new endpoint, proxy path, CORS/header, IPA copied to `releases/ipa/`, Capacitor source changes that need server deploy.
+
+**No companion file** if the task is single-device only (e.g. PC data failsafes, Mac-only Xcode signing).
+
+## Pending file format (required)
+
+Replace the entire file with YAML frontmatter + markdown body:
+
+```markdown
+---
+cross_device_status: pending
+from_device: pc
+target_device: mac
+created_at: 2026-05-23T14:30:00Z
+title: Short task name
+related_paths:
+  - server/mobile-cosmetics.js
+  - hangman v2/iOS/app/src/...
+---
+
+# Mac companion task: <title>
+
+## Context
+What changed on the other device and why Mac work is needed.
+
+## Do on this device
+1. Step-by-step actions (paths, commands, Xcode steps).
+2. Include exact API URLs, headers (`X-Client-App`), env vars.
+
+## Verify
+- curl / build / device test checklist
+
+## When done
+- Set `cross_device_status: done` in frontmatter
+- `./scripts/sync-push.sh` (Mac) or `.\scripts\sync-push.ps1` (PC)
+```
+
+Use **`cross_device_status: pending`** until the receiving device finishes. Then set **`done`**.
+
+## After writing a companion prompt
+
+Tell the user clearly:
+
+1. **This device:** run sync-push with a commit message.
+2. **Other device:** sync-pull, then run `run-pending-task` script OR Agent chat:
+   > Run the pending cross-device task in @docs/cross-device/pending-on-mac.md
+   (or `pending-on-pc.md` on Windows)
+
+## When you RECEIVE a pending task
+
+If the user says "run pending", "cross-device task", or `@docs/cross-device/pending-on-*.md`:
+
+1. Read the pending file; confirm `cross_device_status: pending`.
+2. Execute the task completely on **this** device only.
+3. Mark `cross_device_status: done` and push via sync-push.
+4. If your work creates **new** needs on the other device, write the reverse pending file.
+
+## Architecture reminders
+
+- **PC live stack:** `run-electron-cloudflare.bat` — Node **3847**, Hangman **19876**, `https://y666suf.com`
+- **Player data:** `data/points.live.json` — PC only, never commit
+- **iOS source:** `hangman v2/iOS/app/` (Capacitor); Crash may be separate Swift repo — still write companion prompt if API contract changes
+- **IPAs:** not in git — copy to `releases/ipa/` on PC after Mac archive

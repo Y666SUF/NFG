@@ -68,6 +68,15 @@ from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
+
+def _safe_console_log(message: str) -> None:
+    """Print without crashing on Windows cp1252 consoles when nicknames contain emoji."""
+    try:
+        print(message, flush=True)
+    except UnicodeEncodeError:
+        print(message.encode("ascii", "replace").decode("ascii"), flush=True)
+
+
 from fastapi import FastAPI, Header, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
@@ -1134,13 +1143,13 @@ async def _like_mvp_maybe_award_and_push() -> None:
                     f"[Like MVP] @{nm} +{pts} all-time points (top lifetime LIVE likes) for slot {slot_label}. "
                     f"Next: {next_human}."
                 )
-                print(log_lines[-1], flush=True)
+                _safe_console_log(log_lines[-1])
             else:
                 log_lines.append(
                     f"[Like MVP] No lifetime likes on file yet — bonus skipped for slot {slot_label}. "
                     f"Next: {next_human}."
                 )
-                print(log_lines[-1], flush=True)
+                _safe_console_log(log_lines[-1])
             # Reset like-lifetime totals immediately after each awarded slot.
             # This does not touch current live-session like counters.
             if awarded_this_slot:
@@ -1150,7 +1159,7 @@ async def _like_mvp_maybe_award_and_push() -> None:
                     f"(next contest starts fresh)."
                 )
                 log_lines.append(line)
-                print(line, flush=True)
+                _safe_console_log(line)
                 w_n = _reset_wordwich_alltime_likes_json()
                 if w_n > 0:
                     wline = (
@@ -1158,7 +1167,7 @@ async def _like_mvp_maybe_award_and_push() -> None:
                         "(same contest period as Hangman)."
                     )
                     log_lines.append(wline)
-                    print(wline, flush=True)
+                    _safe_console_log(wline)
             # Advance clock per slot so catch-up runs are crash-safe.
             _like_mvp_save_last_awarded_slot(float(slot_unix))
     if log_lines:
@@ -1220,10 +1229,16 @@ async def push_state(
     assert session is not None
     if log_lines:
         _append_logs(log_lines)
+    snap = _snapshot_with_cosmetics()
     payload: dict[str, Any] = {
         "type": "update",
         "logs": list(event_log),
-        "state": _snapshot_with_cosmetics(),
+        "state": snap,
+        "maskedWord": snap.get("mask", ""),
+        "masked": snap.get("mask", ""),
+        "slots": snap.get("slots", []),
+        "keyboard": snap.get("keyboard", {"correct": [], "wrong": []}),
+        "length": snap.get("length", 0),
         "alltime": _alltime_payload(),
         "shield_grace_windows": _shield_grace_windows_payload(),
         "tiktok": tiktok_username,
@@ -1585,6 +1600,392 @@ async def _handle_tiktok_play_guide_comment(text: str, user_key: str, nick: str)
     return True
 
 
+def _tiktok_comments_via_platform() -> bool:
+    """Ingest TikTok chat via the NFG Node bridge so one LIVE connection feeds Crash + Hangman."""
+    v = os.environ.get("HANGMAN_TIKTOK_COMMENTS_VIA_PLATFORM", "1").strip().lower()
+    return v not in ("0", "false", "no", "off")
+
+
+async def _dispatch_tiktok_comment(
+    text: str,
+    uid: str,
+    nick: str,
+    *,
+    fan_club_member: bool = False,
+) -> None:
+    global _auto_next_delay_task
+    assert session is not None
+    text = normalize_chat_for_letter_parse((text or "").strip())
+    uid = (uid or "").strip()
+    nick = (nick or "").strip() or uid or "anon"
+    user_key = _session_user_key(uid, nick)
+    if is_nfg_crash_chat_noise(text) or is_nfg_crash_spotify_noise(text):
+        return
+    if parse_link_command(text):
+        link_out = forward_tiktok_link_to_platform(
+            user_id=uid,
+            display_name=nick,
+            message=text,
+        )
+        reply = str(link_out.get("tiktokChatReply") or "").strip()
+        if reply:
+            await push_state([f"[Link] {reply}"])
+            if _tiktok_chat_posting_configured() and tt_client is not None:
+                for chunk in _split_tiktok_chat_chunks(reply):
+                    try:
+                        await tt_client.send_room_chat(chunk)
+                    except Exception:
+                        break
+        return
+    if _lion_nuke_active_now():
+        if _lion_lock_notice_allowed(_lion_lock_chat_notice_last, user_key):
+            left = max(0, int((_lion_nuke_deadline_unix or 0) - time.time()))
+            await push_state(
+                [
+                    f"[Lion Nuke] Gameplay paused ({left // 60}:{left % 60:02d} left). "
+                    "No guesses, commands, or point usage until canceled or timer ends."
+                ]
+            )
+        return
+    if await _handle_tiktok_play_guide_comment(text, user_key, nick):
+        return
+    if await _handle_spotify_queue_admin(text, nick, uid, user_key):
+        return
+    if await _handle_spotify_queue_chat(text, nick, uid, user_key):
+        return
+    if text.lower() == "!hangman":
+        assert session is not None
+        async with game_lock:
+            h_lines, _, _, _, _, _, hpop, _ = process_chat_message(
+                session,
+                text=text,
+                uid=uid,
+                user_key=user_key,
+                nick=nick,
+                host_username=host_username,
+                auto_next=auto_next,
+                alltime_path=ALLTIME_PATH,
+            )
+        if h_lines or hpop:
+            await push_state(h_lines, hangman_help_popup=hpop)
+        return
+    if fan_only_mode and not _is_stream_host(uid, user_key):
+        if not fan_club_member:
+            if _fan_gate_should_emit(user_key):
+                await push_state(
+                    [],
+                    fan_gate_popup={
+                        "name": nick,
+                        "user_key": user_key,
+                        "duration_ms": 7000,
+                    },
+                )
+            return
+    galaxy_lines: list[str] = []
+    cap_lines: list[str] = []
+    car_drift_lines: list[str] = []
+    space_cat_lines: list[str] = []
+    galaxy_popup_payload: dict[str, Any] | None = None
+    cap_popup_payload: dict[str, Any] | None = None
+    car_drift_popup_payload: dict[str, Any] | None = None
+    consume_chat = False
+    now = time.monotonic()
+    async with game_lock:
+        for k in [x for x in galaxy_pending if galaxy_pending[x] <= now]:
+            galaxy_pending.pop(k, None)
+        for k in [x for x in cap_ignore_pending if cap_ignore_pending[x] <= now]:
+            cap_ignore_pending.pop(k, None)
+        for k in [x for x in car_drifting_pending if car_drifting_pending[x] <= now]:
+            car_drifting_pending.pop(k, None)
+        for k in [x for x in space_cat_pending if space_cat_pending[x] <= now]:
+            space_cat_pending.pop(k, None)
+        exp = galaxy_pending.get(user_key)
+        if exp is not None and exp > now:
+            target_raw = _parse_galaxy_target(text)
+            if target_raw:
+                consume_chat = True
+                resolved = resolve_user_key_from_handle(target_raw, ALLTIME_PATH)
+                if resolved is None:
+                    galaxy_lines.append(
+                        f'[Galaxy] @{nick}: no all-time entry matched "{target_raw}". Try their @username.'
+                    )
+                elif resolved == user_key:
+                    galaxy_lines.append(
+                        f"[Galaxy] @{nick}: you can't take all-time points from yourself."
+                    )
+                elif is_protected(resolved, SHIELD_PATH):
+                    exp = shield_expiry_unix(resolved, SHIELD_PATH)
+                    vlab = display_name_for_key(resolved, ALLTIME_PATH)
+                    galaxy_lines.append(
+                        f"[Galaxy] @{nick}: {vlab} is protected from Galaxy steals (Racing Debut) "
+                        f"— {_fmt_shield_remaining(exp) if exp else 'active'}."
+                    )
+                elif is_shield_drop_grace_active(resolved):
+                    vlab = display_name_for_key(resolved, ALLTIME_PATH)
+                    until = shield_drop_grace_until(resolved)
+                    left = max(0, int((until or 0) - time.time()))
+                    galaxy_lines.append(
+                        f"[Galaxy] @{nick}: {vlab} can re-buy with Racing Debut — Galaxy steals paused "
+                        f"({left // 60}:{left % 60:02d} left)."
+                    )
+                else:
+                    ok, moved, victim_label = transfer_alltime_points(
+                        resolved, user_key, nick, ALLTIME_PATH
+                    )
+                    if ok:
+                        galaxy_pending.pop(user_key, None)
+                        galaxy_lines.append(
+                            f"[Galaxy] @{nick} took {moved} all-time pts from {victim_label} "
+                            f"— new total added to @{nick}."
+                        )
+                        galaxy_popup_payload = {
+                            "from_name": nick,
+                            "from_user_key": user_key,
+                            "victim_name": victim_label,
+                            "victim_user_key": resolved,
+                            "points": moved,
+                            "duration_ms": 8500,
+                        }
+                        print(
+                            f"[Hangman] Galaxy transfer: {moved} pts from {resolved!r} to {user_key!r}",
+                            flush=True,
+                        )
+                    else:
+                        if victim_label:
+                            galaxy_lines.append(
+                                f"[Galaxy] @{nick}: {victim_label} has no all-time points to take."
+                            )
+                        else:
+                            galaxy_lines.append("[Galaxy] That all-time entry was removed; try again.")
+
+        if not consume_chat:
+            cexp = cap_ignore_pending.get(user_key)
+            if cexp is not None and cexp > now:
+                target_raw = _parse_galaxy_target(text)
+                if target_raw:
+                    consume_chat = True
+                    assert session is not None
+                    resolved = _resolve_cap_ignore_target(target_raw)
+                    if resolved is None:
+                        cap_lines.append(
+                            f'[Cap] @{nick}: nobody matched "{target_raw}". '
+                            f"Use @username or a name from this session's leaderboard."
+                        )
+                    elif resolved == user_key:
+                        cap_lines.append(
+                            f"[Cap] @{nick}: pick someone else to sideline (not yourself)."
+                        )
+                    else:
+                        session.queue_ignore_next_round(resolved)
+                        cap_ignore_pending.pop(user_key, None)
+                        vp = session.players.get(resolved)
+                        vlab = (vp.display_name if vp else None) or resolved
+                        cap_lines.append(
+                            f"[Cap] @{nick} — {vlab} can't play the next word. Current word unchanged."
+                        )
+                        cap_popup_payload = {
+                            "from_name": nick,
+                            "from_user_key": user_key,
+                            "victim_name": vlab,
+                            "victim_user_key": resolved,
+                            "duration_ms": 8500,
+                        }
+                        print(
+                            f"[Hangman] Cap sideline queued for next word: victim={resolved!r} by {user_key!r}",
+                            flush=True,
+                        )
+
+        if not consume_chat:
+            drexp = car_drifting_pending.get(user_key)
+            if drexp is not None and drexp > now:
+                target_raw = _parse_galaxy_target(text)
+                if target_raw:
+                    consume_chat = True
+                    resolved = resolve_user_key_from_handle(target_raw, ALLTIME_PATH)
+                    trim_h = _car_drifting_trim_hours()
+                    if resolved is None:
+                        car_drift_lines.append(
+                            f'[Car Drifting] @{nick}: no all-time entry matched "{target_raw}". Try their @username.'
+                        )
+                    elif resolved == user_key:
+                        car_drift_lines.append(
+                            f"[Car Drifting] @{nick}: pick another player (not yourself)."
+                        )
+                    else:
+                        vlab = display_name_for_key(resolved, ALLTIME_PATH)
+                        outcome, new_exp = trim_shield_by_hours(resolved, trim_h, SHIELD_PATH)
+                        if outcome == "no_shield":
+                            car_drift_lines.append(
+                                f"[Car Drifting] @{nick}: {vlab} has no active Racing Debut shield to trim."
+                            )
+                        elif outcome == "removed":
+                            car_drifting_pending.pop(user_key, None)
+                            grace_until = start_shield_drop_grace(resolved)
+                            gsec = max(0, int(grace_until - time.time()))
+                            car_drift_lines.append(
+                                f"[Car Drifting] @{nick}: removed {trim_h:g}h from {vlab}'s shield — "
+                                f"protection ended. Galaxy steals from them paused {gsec // 60}:{gsec % 60:02d} "
+                                f"so they can send Racing Debut."
+                            )
+                            car_drift_popup_payload = {
+                                "from_name": nick,
+                                "from_user_key": user_key,
+                                "victim_name": vlab,
+                                "victim_user_key": resolved,
+                                "hours_trimmed": trim_h,
+                                "outcome": "removed",
+                                "shield_until": None,
+                                "grace_until": grace_until,
+                                "detail": (
+                                    f"{vlab} — shield gone. Nobody can Galaxy-steal for "
+                                    f"{gsec // 60}:{gsec % 60:02d} — send Racing Debut to get protection again."
+                                ),
+                                "duration_ms": 8500,
+                            }
+                            print(
+                                f"[Hangman] Car Drifting: shield removed for {resolved!r} by {user_key!r}",
+                                flush=True,
+                            )
+                        else:
+                            car_drifting_pending.pop(user_key, None)
+                            new_exp_f = float(new_exp) if new_exp is not None else 0.0
+                            left = _fmt_shield_remaining(new_exp_f)
+                            detail_short = f"{vlab} still has Galaxy protection — ends in {left}."
+                            car_drift_lines.append(
+                                f"[Car Drifting] @{nick}: removed {trim_h:g}h from {vlab}'s shield — "
+                                f"protection now ends in {left}."
+                            )
+                            car_drift_popup_payload = {
+                                "from_name": nick,
+                                "from_user_key": user_key,
+                                "victim_name": vlab,
+                                "victim_user_key": resolved,
+                                "hours_trimmed": trim_h,
+                                "outcome": "shortened",
+                                "shield_until": new_exp_f,
+                                "detail": detail_short,
+                                "duration_ms": 8500,
+                            }
+                            print(
+                                f"[Hangman] Car Drifting: shield shortened for {resolved!r} by {user_key!r}",
+                                flush=True,
+                            )
+
+        if not consume_chat:
+            scex = space_cat_pending.get(user_key)
+            if scex is not None and scex > now:
+                target_raw = _parse_galaxy_target(text)
+                if target_raw:
+                    consume_chat = True
+                    resolved = resolve_user_key_from_handle(target_raw, ALLTIME_PATH)
+                    if resolved is None:
+                        space_cat_lines.append(
+                            f'[Space Cat] @{nick}: no all-time entry matched "{target_raw}". Try their @username.'
+                        )
+                    elif resolved == user_key:
+                        space_cat_lines.append(
+                            f"[Space Cat] @{nick}: this gift shields someone else — type @theirname (not yourself)."
+                        )
+                    else:
+                        space_cat_pending.pop(user_key, None)
+                        exp = grant_shield(resolved, SHIELD_PATH)
+                        left = _fmt_shield_remaining(exp)
+                        vlab = display_name_for_key(resolved, ALLTIME_PATH)
+                        hrs = shield_duration_sec() / 3600.0
+                        space_cat_lines.append(
+                            f"[Space Cat] @{nick} — {vlab} now has ~{hrs:g}h Galaxy protection ({left})."
+                        )
+                        print(
+                            f"[Hangman] Space Cat: shield granted to {resolved!r} by {user_key!r}",
+                            flush=True,
+                        )
+
+    if galaxy_lines:
+        await push_state(galaxy_lines, galaxy_popup=galaxy_popup_payload)
+        if consume_chat:
+            return
+
+    if cap_lines:
+        await push_state(cap_lines, cap_popup=cap_popup_payload)
+        if consume_chat:
+            return
+
+    if car_drift_lines:
+        await push_state(car_drift_lines, shield_trim_popup=car_drift_popup_payload)
+        if consume_chat:
+            return
+
+    if space_cat_lines:
+        await push_state(space_cat_lines)
+        if consume_chat:
+            return
+
+    round_popup_out: dict[str, Any] | None = None
+    async with game_lock:
+        rid_before = session.round_id
+        (
+            lines,
+            _,
+            round_popup,
+            points_popup,
+            auto_next_delay_sec,
+            cmd_list_popup,
+            hangman_help_popup,
+            wager_intro_popup,
+        ) = process_chat_message(
+            session,
+            text=text,
+            uid=uid,
+            user_key=user_key,
+            nick=nick,
+            host_username=host_username,
+            auto_next=auto_next,
+            alltime_path=ALLTIME_PATH,
+        )
+        rid_after = session.round_id
+        snap_round = session.round_id
+        if rid_after != rid_before:
+            _cancel_auto_next_delay_task()
+        round_popup_out = dict(round_popup) if round_popup is not None else None
+        if round_popup_out and round_popup_out.get("wager_settlement"):
+            ws = round_popup_out["wager_settlement"]
+            ok, settle_err, transferred = try_wager_settle(
+                str(ws.get("winner_key") or ""),
+                str(ws.get("loser_key") or ""),
+                int(ws.get("amount") or 0),
+                str(ws.get("winner_name") or ""),
+                ALLTIME_PATH,
+            )
+            round_popup_out["wager_alltime_settled"] = ok
+            ws["settled_amount"] = int(transferred)
+            if not ok and settle_err:
+                ws["settlement_error"] = settle_err
+        if round_popup_out and round_popup_out.get("sealed_by"):
+            suk = str(round_popup_out["sealed_by"].get("user_key") or "")
+            if suk:
+                wsnd = win_sound_payload_for_user(suk, ALLTIME_PATH)
+                if wsnd:
+                    round_popup_out["win_sound"] = wsnd
+    if lines and any("Session scores reset" in ln for ln in lines):
+        print("[Hangman] Session scores reset (host chat).", flush=True)
+    # Always push so Windows UI + iOS app keyboard/slots stay in sync (even duplicate guesses).
+    await push_state(
+        lines,
+        round_popup=round_popup_out,
+        points_popup=points_popup,
+        command_list_popup=cmd_list_popup,
+        hangman_help_popup=hangman_help_popup,
+        wager_intro_popup=wager_intro_popup,
+    )
+    if auto_next_delay_sec is not None and auto_next_delay_sec > 0:
+        _cancel_auto_next_delay_task()
+        global _auto_next_delay_task
+        _auto_next_delay_task = asyncio.create_task(
+            _run_delayed_auto_next(snap_round, float(auto_next_delay_sec))
+        )
+
+
+
 def setup_tiktok_client() -> TikTokLiveClient:
     assert session is not None
     client = TikTokLiveClient(unique_id=tiktok_username)
@@ -1621,382 +2022,18 @@ def setup_tiktok_client() -> TikTokLiveClient:
 
     @client.on(CommentEvent)
     async def on_comment(event: CommentEvent) -> None:
+        if _tiktok_comments_via_platform():
+            return
         if not _tiktok_event_is_current_session(event):
             return
         text = normalize_chat_for_letter_parse((event.comment or "").strip())
         uid, nick = extract_comment_author(event)
-        user_key = _session_user_key(uid, nick)
-        if is_nfg_crash_chat_noise(text) or is_nfg_crash_spotify_noise(text):
-            return
-        if parse_link_command(text):
-            link_out = forward_tiktok_link_to_platform(
-                user_id=uid,
-                display_name=nick,
-                message=text,
-            )
-            reply = str(link_out.get("tiktokChatReply") or "").strip()
-            if reply:
-                await push_state([f"[Link] {reply}"])
-                if _tiktok_chat_posting_configured() and tt_client is not None:
-                    for chunk in _split_tiktok_chat_chunks(reply):
-                        try:
-                            await tt_client.send_room_chat(chunk)
-                        except Exception:
-                            break
-            return
-        if _lion_nuke_active_now():
-            if _lion_lock_notice_allowed(_lion_lock_chat_notice_last, user_key):
-                left = max(0, int((_lion_nuke_deadline_unix or 0) - time.time()))
-                await push_state(
-                    [
-                        f"[Lion Nuke] Gameplay paused ({left // 60}:{left % 60:02d} left). "
-                        "No guesses, commands, or point usage until canceled or timer ends."
-                    ]
-                )
-            return
-        if await _handle_tiktok_play_guide_comment(text, user_key, nick):
-            return
-        if await _handle_spotify_queue_admin(text, nick, uid, user_key):
-            return
-        if await _handle_spotify_queue_chat(text, nick, uid, user_key):
-            return
-        if text.lower() == "!hangman":
-            assert session is not None
-            async with game_lock:
-                h_lines, _, _, _, _, _, hpop, _ = process_chat_message(
-                    session,
-                    text=text,
-                    uid=uid,
-                    user_key=user_key,
-                    nick=nick,
-                    host_username=host_username,
-                    auto_next=auto_next,
-                    alltime_path=ALLTIME_PATH,
-                )
-            if h_lines or hpop:
-                await push_state(h_lines, hangman_help_popup=hpop)
-            return
-        if fan_only_mode and not _is_stream_host(uid, user_key):
-            if not comment_user_is_fan_club_member(event):
-                if _fan_gate_should_emit(user_key):
-                    await push_state(
-                        [],
-                        fan_gate_popup={
-                            "name": nick,
-                            "user_key": user_key,
-                            "duration_ms": 7000,
-                        },
-                    )
-                return
-        galaxy_lines: list[str] = []
-        cap_lines: list[str] = []
-        car_drift_lines: list[str] = []
-        space_cat_lines: list[str] = []
-        galaxy_popup_payload: dict[str, Any] | None = None
-        cap_popup_payload: dict[str, Any] | None = None
-        car_drift_popup_payload: dict[str, Any] | None = None
-        consume_chat = False
-        now = time.monotonic()
-        async with game_lock:
-            for k in [x for x in galaxy_pending if galaxy_pending[x] <= now]:
-                galaxy_pending.pop(k, None)
-            for k in [x for x in cap_ignore_pending if cap_ignore_pending[x] <= now]:
-                cap_ignore_pending.pop(k, None)
-            for k in [x for x in car_drifting_pending if car_drifting_pending[x] <= now]:
-                car_drifting_pending.pop(k, None)
-            for k in [x for x in space_cat_pending if space_cat_pending[x] <= now]:
-                space_cat_pending.pop(k, None)
-            exp = galaxy_pending.get(user_key)
-            if exp is not None and exp > now:
-                target_raw = _parse_galaxy_target(text)
-                if target_raw:
-                    consume_chat = True
-                    resolved = resolve_user_key_from_handle(target_raw, ALLTIME_PATH)
-                    if resolved is None:
-                        galaxy_lines.append(
-                            f'[Galaxy] @{nick}: no all-time entry matched "{target_raw}". Try their @username.'
-                        )
-                    elif resolved == user_key:
-                        galaxy_lines.append(
-                            f"[Galaxy] @{nick}: you can't take all-time points from yourself."
-                        )
-                    elif is_protected(resolved, SHIELD_PATH):
-                        exp = shield_expiry_unix(resolved, SHIELD_PATH)
-                        vlab = display_name_for_key(resolved, ALLTIME_PATH)
-                        galaxy_lines.append(
-                            f"[Galaxy] @{nick}: {vlab} is protected from Galaxy steals (Racing Debut) "
-                            f"— {_fmt_shield_remaining(exp) if exp else 'active'}."
-                        )
-                    elif is_shield_drop_grace_active(resolved):
-                        vlab = display_name_for_key(resolved, ALLTIME_PATH)
-                        until = shield_drop_grace_until(resolved)
-                        left = max(0, int((until or 0) - time.time()))
-                        galaxy_lines.append(
-                            f"[Galaxy] @{nick}: {vlab} can re-buy with Racing Debut — Galaxy steals paused "
-                            f"({left // 60}:{left % 60:02d} left)."
-                        )
-                    else:
-                        ok, moved, victim_label = transfer_alltime_points(
-                            resolved, user_key, nick, ALLTIME_PATH
-                        )
-                        if ok:
-                            galaxy_pending.pop(user_key, None)
-                            galaxy_lines.append(
-                                f"[Galaxy] @{nick} took {moved} all-time pts from {victim_label} "
-                                f"— new total added to @{nick}."
-                            )
-                            galaxy_popup_payload = {
-                                "from_name": nick,
-                                "from_user_key": user_key,
-                                "victim_name": victim_label,
-                                "victim_user_key": resolved,
-                                "points": moved,
-                                "duration_ms": 8500,
-                            }
-                            print(
-                                f"[Hangman] Galaxy transfer: {moved} pts from {resolved!r} to {user_key!r}",
-                                flush=True,
-                            )
-                        else:
-                            if victim_label:
-                                galaxy_lines.append(
-                                    f"[Galaxy] @{nick}: {victim_label} has no all-time points to take."
-                                )
-                            else:
-                                galaxy_lines.append("[Galaxy] That all-time entry was removed; try again.")
-
-            if not consume_chat:
-                cexp = cap_ignore_pending.get(user_key)
-                if cexp is not None and cexp > now:
-                    target_raw = _parse_galaxy_target(text)
-                    if target_raw:
-                        consume_chat = True
-                        assert session is not None
-                        resolved = _resolve_cap_ignore_target(target_raw)
-                        if resolved is None:
-                            cap_lines.append(
-                                f'[Cap] @{nick}: nobody matched "{target_raw}". '
-                                f"Use @username or a name from this session's leaderboard."
-                            )
-                        elif resolved == user_key:
-                            cap_lines.append(
-                                f"[Cap] @{nick}: pick someone else to sideline (not yourself)."
-                            )
-                        else:
-                            session.queue_ignore_next_round(resolved)
-                            cap_ignore_pending.pop(user_key, None)
-                            vp = session.players.get(resolved)
-                            vlab = (vp.display_name if vp else None) or resolved
-                            cap_lines.append(
-                                f"[Cap] @{nick} — {vlab} can't play the next word. Current word unchanged."
-                            )
-                            cap_popup_payload = {
-                                "from_name": nick,
-                                "from_user_key": user_key,
-                                "victim_name": vlab,
-                                "victim_user_key": resolved,
-                                "duration_ms": 8500,
-                            }
-                            print(
-                                f"[Hangman] Cap sideline queued for next word: victim={resolved!r} by {user_key!r}",
-                                flush=True,
-                            )
-
-            if not consume_chat:
-                drexp = car_drifting_pending.get(user_key)
-                if drexp is not None and drexp > now:
-                    target_raw = _parse_galaxy_target(text)
-                    if target_raw:
-                        consume_chat = True
-                        resolved = resolve_user_key_from_handle(target_raw, ALLTIME_PATH)
-                        trim_h = _car_drifting_trim_hours()
-                        if resolved is None:
-                            car_drift_lines.append(
-                                f'[Car Drifting] @{nick}: no all-time entry matched "{target_raw}". Try their @username.'
-                            )
-                        elif resolved == user_key:
-                            car_drift_lines.append(
-                                f"[Car Drifting] @{nick}: pick another player (not yourself)."
-                            )
-                        else:
-                            vlab = display_name_for_key(resolved, ALLTIME_PATH)
-                            outcome, new_exp = trim_shield_by_hours(resolved, trim_h, SHIELD_PATH)
-                            if outcome == "no_shield":
-                                car_drift_lines.append(
-                                    f"[Car Drifting] @{nick}: {vlab} has no active Racing Debut shield to trim."
-                                )
-                            elif outcome == "removed":
-                                car_drifting_pending.pop(user_key, None)
-                                grace_until = start_shield_drop_grace(resolved)
-                                gsec = max(0, int(grace_until - time.time()))
-                                car_drift_lines.append(
-                                    f"[Car Drifting] @{nick}: removed {trim_h:g}h from {vlab}'s shield — "
-                                    f"protection ended. Galaxy steals from them paused {gsec // 60}:{gsec % 60:02d} "
-                                    f"so they can send Racing Debut."
-                                )
-                                car_drift_popup_payload = {
-                                    "from_name": nick,
-                                    "from_user_key": user_key,
-                                    "victim_name": vlab,
-                                    "victim_user_key": resolved,
-                                    "hours_trimmed": trim_h,
-                                    "outcome": "removed",
-                                    "shield_until": None,
-                                    "grace_until": grace_until,
-                                    "detail": (
-                                        f"{vlab} — shield gone. Nobody can Galaxy-steal for "
-                                        f"{gsec // 60}:{gsec % 60:02d} — send Racing Debut to get protection again."
-                                    ),
-                                    "duration_ms": 8500,
-                                }
-                                print(
-                                    f"[Hangman] Car Drifting: shield removed for {resolved!r} by {user_key!r}",
-                                    flush=True,
-                                )
-                            else:
-                                car_drifting_pending.pop(user_key, None)
-                                new_exp_f = float(new_exp) if new_exp is not None else 0.0
-                                left = _fmt_shield_remaining(new_exp_f)
-                                detail_short = f"{vlab} still has Galaxy protection — ends in {left}."
-                                car_drift_lines.append(
-                                    f"[Car Drifting] @{nick}: removed {trim_h:g}h from {vlab}'s shield — "
-                                    f"protection now ends in {left}."
-                                )
-                                car_drift_popup_payload = {
-                                    "from_name": nick,
-                                    "from_user_key": user_key,
-                                    "victim_name": vlab,
-                                    "victim_user_key": resolved,
-                                    "hours_trimmed": trim_h,
-                                    "outcome": "shortened",
-                                    "shield_until": new_exp_f,
-                                    "detail": detail_short,
-                                    "duration_ms": 8500,
-                                }
-                                print(
-                                    f"[Hangman] Car Drifting: shield shortened for {resolved!r} by {user_key!r}",
-                                    flush=True,
-                                )
-
-            if not consume_chat:
-                scex = space_cat_pending.get(user_key)
-                if scex is not None and scex > now:
-                    target_raw = _parse_galaxy_target(text)
-                    if target_raw:
-                        consume_chat = True
-                        resolved = resolve_user_key_from_handle(target_raw, ALLTIME_PATH)
-                        if resolved is None:
-                            space_cat_lines.append(
-                                f'[Space Cat] @{nick}: no all-time entry matched "{target_raw}". Try their @username.'
-                            )
-                        elif resolved == user_key:
-                            space_cat_lines.append(
-                                f"[Space Cat] @{nick}: this gift shields someone else — type @theirname (not yourself)."
-                            )
-                        else:
-                            space_cat_pending.pop(user_key, None)
-                            exp = grant_shield(resolved, SHIELD_PATH)
-                            left = _fmt_shield_remaining(exp)
-                            vlab = display_name_for_key(resolved, ALLTIME_PATH)
-                            hrs = shield_duration_sec() / 3600.0
-                            space_cat_lines.append(
-                                f"[Space Cat] @{nick} — {vlab} now has ~{hrs:g}h Galaxy protection ({left})."
-                            )
-                            print(
-                                f"[Hangman] Space Cat: shield granted to {resolved!r} by {user_key!r}",
-                                flush=True,
-                            )
-
-        if galaxy_lines:
-            await push_state(galaxy_lines, galaxy_popup=galaxy_popup_payload)
-            if consume_chat:
-                return
-
-        if cap_lines:
-            await push_state(cap_lines, cap_popup=cap_popup_payload)
-            if consume_chat:
-                return
-
-        if car_drift_lines:
-            await push_state(car_drift_lines, shield_trim_popup=car_drift_popup_payload)
-            if consume_chat:
-                return
-
-        if space_cat_lines:
-            await push_state(space_cat_lines)
-            if consume_chat:
-                return
-
-        round_popup_out: dict[str, Any] | None = None
-        async with game_lock:
-            rid_before = session.round_id
-            (
-                lines,
-                _,
-                round_popup,
-                points_popup,
-                auto_next_delay_sec,
-                cmd_list_popup,
-                hangman_help_popup,
-                wager_intro_popup,
-            ) = process_chat_message(
-                session,
-                text=text,
-                uid=uid,
-                user_key=user_key,
-                nick=nick,
-                host_username=host_username,
-                auto_next=auto_next,
-                alltime_path=ALLTIME_PATH,
-            )
-            rid_after = session.round_id
-            snap_round = session.round_id
-            if rid_after != rid_before:
-                _cancel_auto_next_delay_task()
-            round_popup_out = dict(round_popup) if round_popup is not None else None
-            if round_popup_out and round_popup_out.get("wager_settlement"):
-                ws = round_popup_out["wager_settlement"]
-                ok, settle_err, transferred = try_wager_settle(
-                    str(ws.get("winner_key") or ""),
-                    str(ws.get("loser_key") or ""),
-                    int(ws.get("amount") or 0),
-                    str(ws.get("winner_name") or ""),
-                    ALLTIME_PATH,
-                )
-                round_popup_out["wager_alltime_settled"] = ok
-                ws["settled_amount"] = int(transferred)
-                if not ok and settle_err:
-                    ws["settlement_error"] = settle_err
-            if round_popup_out and round_popup_out.get("sealed_by"):
-                suk = str(round_popup_out["sealed_by"].get("user_key") or "")
-                if suk:
-                    wsnd = win_sound_payload_for_user(suk, ALLTIME_PATH)
-                    if wsnd:
-                        round_popup_out["win_sound"] = wsnd
-        if (
-            lines
-            or round_popup
-            or points_popup
-            or cmd_list_popup
-            or hangman_help_popup
-            or wager_intro_popup
-        ):
-            if lines and any("Session scores reset" in ln for ln in lines):
-                print("[Hangman] Session scores reset (host chat).", flush=True)
-            await push_state(
-                lines,
-                round_popup=round_popup_out,
-                points_popup=points_popup,
-                command_list_popup=cmd_list_popup,
-                hangman_help_popup=hangman_help_popup,
-                wager_intro_popup=wager_intro_popup,
-            )
-        if auto_next_delay_sec is not None and auto_next_delay_sec > 0:
-            _cancel_auto_next_delay_task()
-            global _auto_next_delay_task
-            _auto_next_delay_task = asyncio.create_task(
-                _run_delayed_auto_next(snap_round, float(auto_next_delay_sec))
-            )
+        await _dispatch_tiktok_comment(
+            text,
+            uid,
+            nick,
+            fan_club_member=comment_user_is_fan_club_member(event),
+        )
 
     @client.on(GiftEvent)
     async def on_gift(event: GiftEvent) -> None:
@@ -2521,16 +2558,36 @@ async def hangman_public_leaderboard(limit: int = Query(12, ge=1, le=50)) -> dic
     return {"ok": True, "top": rows[: int(limit)]}
 
 
+@app.get("/api/hangman/game-state")
+async def hangman_game_state() -> dict[str, Any]:
+    """Current masked word + keyboard for mobile apps (REST fallback when WS is unavailable)."""
+    if session is None:
+        return {"ok": False, "error": "game_not_ready"}
+    snap = _snapshot_with_cosmetics()
+    return {
+        "ok": True,
+        "tiktok": tiktok_username,
+        "tiktok_status": tiktok_status,
+        "state": snap,
+    }
+
+
 @app.get("/api/hangman/status")
 async def hangman_public_status() -> dict[str, Any]:
-    live = tiktok_status in ("connected", "connecting")
+    from nfg_platform import platform_tiktok_bridge_is_live
+
+    live_py = tiktok_status in ("connected", "connecting")
+    bridge_live = _tiktok_comments_via_platform() and platform_tiktok_bridge_is_live()
+    live = live_py or bridge_live
+    status_out = "connected" if (live_py or bridge_live) else tiktok_status
     return {
         "ok": True,
         "service": "nfg-hangman",
         "tiktok": tiktok_username,
-        "tiktok_status": tiktok_status,
+        "tiktok_status": status_out,
         "isLive": live,
         "has_session": session is not None,
+        "tiktok_comments_via_platform": _tiktok_comments_via_platform(),
     }
 
 
@@ -2555,8 +2612,33 @@ async def hangman_app_state() -> dict[str, Any]:
             "state": snap,
         }
     except Exception as exc:
-        print(f"[hangman app state] error: {exc!r}")
+        print(f"[hangman app state] error: {exc!r}", flush=True)
         return {"ok": False, "error": "state_failed", "message": str(exc)[:240]}
+
+
+@app.post("/api/hangman/tiktok/comment")
+async def hangman_tiktok_comment_from_platform(request: Request) -> dict[str, Any]:
+    """TikTok chat forwarded from the NFG Node bridge (same handler as LIVE CommentEvent)."""
+    if not _nfg_internal_ok(request):
+        raise HTTPException(status_code=403, detail="Forbidden")
+    if session is None:
+        raise HTTPException(status_code=503, detail="Game not ready")
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    message = str(body.get("message") or "").strip()
+    uid = str(body.get("userId") or body.get("user") or "").strip()
+    nick = str(body.get("displayName") or uid or "viewer").strip()
+    if not message or not uid:
+        raise HTTPException(status_code=400, detail="Missing userId or message")
+    fan = body.get("superFan") is True or body.get("fanClubMember") is True
+    try:
+        await _dispatch_tiktok_comment(message, uid, nick, fan_club_member=fan)
+    except Exception as e:
+        print(f"[Hangman] tiktok/comment dispatch error: {e!s}", flush=True)
+        raise HTTPException(status_code=500, detail="comment_dispatch_failed") from e
+    return {"ok": True}
 
 
 @app.post("/api/hangman/app/guess")
@@ -2619,15 +2701,14 @@ async def hangman_app_guess(request: Request) -> dict[str, Any]:
             )
             snap_round = session.round_id
 
-        if lines or round_popup or points_popup or cmd_pop or help_pop or wager_pop:
-            await push_state(
-                lines,
-                round_popup=round_popup,
-                points_popup=points_popup,
-                command_list_popup=cmd_pop,
-                hangman_help_popup=help_pop,
-                wager_intro_popup=wager_pop,
-            )
+        await push_state(
+            lines,
+            round_popup=round_popup,
+            points_popup=points_popup,
+            command_list_popup=cmd_pop,
+            hangman_help_popup=help_pop,
+            wager_intro_popup=wager_pop,
+        )
         if auto_next_delay_sec is not None and auto_next_delay_sec > 0:
             global _auto_next_delay_task
             _cancel_auto_next_delay_task()
@@ -2665,6 +2746,7 @@ async def hangman_app_guess(request: Request) -> dict[str, Any]:
             "guessed": guessed,
             "won": won,
             "correct": correct,
+            "wordTheme": snap.get("word_theme") or "",
         }
     except HTTPException:
         raise

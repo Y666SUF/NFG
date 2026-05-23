@@ -2,7 +2,7 @@
 node_modules/
 hangman v2/**/node_modules/
 hangman v2/iOS/app/ios/
-_import_Y666SUF_website/frontend/node_modules/
+_import_Y666SUF_website/frontend/node_modules/``
 
 # Secrets & local config
 .env
@@ -11,7 +11,12 @@ _import_Y666SUF_website/frontend/node_modules/
 !hangman v2/iOS/app/.env.example
 tiktok.config.json
 **/mobile-sessions.json
-**/.cursor/
+**/.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
+!.cursor/hooks.json
+!.cursor/hooks/
+!.cursor/hooks/**
 
 # Live runtime data (do not commit player balances)
 data/points*.json
@@ -35,10 +40,8 @@ dist/
 hangman v2/iOS/app/dist/
 _import_Y666SUF_website/frontend/build/
 
-# iOS / binaries (tracked release IPAs live in releases/ipa/)
+# iOS / binaries
 *.ipa
-!releases/ipa/
-!releases/ipa/*.ipa
 *.exe
 *.dmg
 
@@ -63,12 +66,3 @@ venv/
 
 # Electron
 out/
-
-# iOS / Xcode (NFG Crash — Mac)
-ios/DerivedData/
-ios/build/
-ios/archive/
-ios/export/*.ipa
-xcuserdata/
-*.xcuserstate
-*.xcarchive

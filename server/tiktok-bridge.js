@@ -3,6 +3,7 @@ const fs = require("fs");
 const path = require("path");
 const { getAppRoot } = require("./paths");
 const { giftDelta, flushStaleStreakCombos } = require("./gift-combo");
+const { forwardTikTokCommentToHangman } = require("./hangman-tiktok-forward");
 
 /** Exposed to mobile app via /api/mobile/status */
 let bridgeStatus = {
@@ -328,6 +329,9 @@ function startTikTokBridge(options) {
         if (/^!link\s+[A-Fa-f0-9]{6}\s*$/i.test(message)) {
           console.log(`[TikTok] Link attempt from @${userId}: ${message}`);
         }
+        forwardTikTokCommentToHangman({ userId, displayName, message, superFan }).catch((err) => {
+          console.error("[TikTok] Hangman comment forward:", err.message);
+        });
         postChat(port, { userId, displayName, message, superFan, superFanLevel })
           .then(async (j) => {
             const reply = j && j.tiktokChatReply;

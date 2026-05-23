@@ -509,11 +509,17 @@ function renderState(state) {
   placeSpotifyDock(state);
 }
 
+function normalizeKbLetters(list) {
+  return (Array.isArray(list) ? list : [])
+    .map((c) => String(c || "").trim().toUpperCase())
+    .filter((c) => /^[A-Z]$/.test(c));
+}
+
 function renderKeyboard(state) {
   if (!letterKeyboard) return;
   const kb = state.keyboard || {};
-  const correct = new Set(kb.correct || []);
-  const wrong = new Set(kb.wrong || []);
+  const correct = new Set(normalizeKbLetters(kb.correct));
+  const wrong = new Set(normalizeKbLetters(kb.wrong));
   letterKeyboard.innerHTML = "";
   KEYBOARD_ROWS.forEach((row) => {
     const rowEl = document.createElement("div");
@@ -1518,7 +1524,24 @@ function showFanGatePopup(pop) {
   fanGatePopupTimer = setTimeout(hideFanGatePopup, ms);
 }
 
-function renderLogs(_lines) {}
+const guessActivityLog = document.getElementById("guessActivityLog");
+
+function renderLogs(lines) {
+  if (!guessActivityLog || !Array.isArray(lines) || !lines.length) return;
+  guessActivityLog.innerHTML = "";
+  const tail = lines.slice(-40);
+  for (const line of tail) {
+    const li = document.createElement("li");
+    li.className = "guess-activity-line";
+    const text = String(line || "");
+    if (/is correct/i.test(text)) li.classList.add("guess-correct");
+    else if (/not in the word|you are out|wrong/i.test(text)) li.classList.add("guess-wrong");
+    else if (/already guessed/i.test(text)) li.classList.add("guess-dup");
+    li.textContent = text;
+    guessActivityLog.appendChild(li);
+  }
+  guessActivityLog.scrollTop = guessActivityLog.scrollHeight;
+}
 
 function connectWs() {
   const proto = location.protocol === "https:" ? "wss:" : "ws:";

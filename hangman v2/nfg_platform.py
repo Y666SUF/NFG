@@ -102,3 +102,16 @@ def forward_tiktok_link_to_platform(
         "tiktokChatReply": body.get("tiktokChatReply"),
         "ok": bool(body.get("ok")),
     }
+
+
+def platform_tiktok_bridge_is_live() -> bool:
+    """True when the Node TikTok bridge (Crash server) is connected to a LIVE room."""
+    base = nfg_platform_base()
+    req = urllib.request.Request(f"{base}/api/internal/tiktok-bridge", method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=2.5) as resp:
+            raw = resp.read().decode("utf-8", errors="replace")
+            body = json.loads(raw) if raw else {}
+    except Exception:
+        return False
+    return str(body.get("state") or "").strip().lower() == "live"

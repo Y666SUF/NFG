@@ -797,6 +797,17 @@ def process_chat_message(
             lines.append(f"[HOST] All-time for @{dn}: {sign}{delta} pts.")
             return lines, False, None, None, None, None, None, None
 
+        if cmd in ("resetalltime", "resetleaderboard", "resetall"):
+            if not broadcaster_check(uid, host_username):
+                return [], False, None, None, None, None, None, None
+            from alltime_leaderboard import reset_alltime_points_for_all_users
+
+            n = reset_alltime_points_for_all_users(alltime_path)
+            lines.append(
+                f"[HOST] All-time leaderboard reset — {n} viewer(s) set to 0 pts (cosmetics kept)."
+            )
+            return lines, False, None, None, None, None, None, None
+
         if cmd in ("setword", "set", "random", "skip", "resetsession", "resetscores"):
             if not broadcaster_check(uid, host_username):
                 return [], False, None, None, None, None, None, None

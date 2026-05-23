@@ -71,9 +71,11 @@ function hangmanGuessRequest(body, headers) {
 
 function sanitizeKeyboard(kb) {
   if (!kb || typeof kb !== "object" || Array.isArray(kb)) return undefined;
-  const correct = Array.isArray(kb.correct) ? kb.correct : [];
-  const wrong = Array.isArray(kb.wrong) ? kb.wrong : [];
-  return { correct, wrong };
+  const up = (list) =>
+    (Array.isArray(list) ? list : [])
+      .map((c) => String(c || "").trim().toUpperCase())
+      .filter((c) => /^[A-Z]$/.test(c));
+  return { correct: up(kb.correct), wrong: up(kb.wrong) };
 }
 
 /** Map Python app/guess payload → iOS companion shape. */
@@ -89,13 +91,30 @@ function mapHangmanGuessResponse(body) {
   const guessed = Array.isArray(body.guessed)
     ? body.guessed.map((c) => String(c).toLowerCase())
     : [];
+  const maskedWord = String(body.maskedWord || body.masked || "");
+  const slots = Array.isArray(body.slots) ? body.slots : undefined;
+  const keyboard = sanitizeKeyboard(body.keyboard);
+  const length = Number(body.length) || undefined;
+  const state =
+    maskedWord || slots || keyboard
+      ? {
+          mask: maskedWord,
+          maskedWord,
+          masked: maskedWord,
+          slots,
+          keyboard,
+          length,
+          guessed_letters: guessed,
+        }
+      : undefined;
   return {
     ok: true,
-    masked: body.masked || body.maskedWord || "",
-    maskedWord: body.maskedWord || body.masked || "",
-    slots: Array.isArray(body.slots) ? body.slots : undefined,
-    keyboard: sanitizeKeyboard(body.keyboard),
-    length: Number(body.length) || undefined,
+    masked: maskedWord,
+    maskedWord,
+    mask: maskedWord,
+    slots,
+    keyboard,
+    length,
     wrong: Number(body.wrong ?? body.wrongGuesses ?? 0),
     maxWrong: Number(body.maxWrong ?? 6),
     guessed,
@@ -103,6 +122,7 @@ function mapHangmanGuessResponse(body) {
     eliminated: !!body.eliminated,
     won: !!body.won,
     lines: Array.isArray(body.lines) ? body.lines.map((l) => String(l)) : [],
+    state,
   };
 }
 
@@ -117,6 +137,7 @@ function mapHangmanStateResponse(body, linkedSession) {
   }
   const snap = body.state && typeof body.state === "object" ? body.state : body;
   const keyboard = sanitizeKeyboard(body.keyboard || snap.keyboard) || { correct: [], wrong: [] };
+  const maskFromSnap = String(snap.mask || snap.maskedWord || snap.masked || "").trim();
   let wrongGuesses = 0;
   const maxWrong = 6;
   if (linkedSession && linkedSession.userId) {
@@ -125,22 +146,41 @@ function mapHangmanStateResponse(body, linkedSession) {
     const pl = players.find((p) => String(p.user_key || "").toLowerCase() === uk);
     if (pl) wrongGuesses = Number(pl.wrong) || 0;
   }
-  const maskedWord = String(body.maskedWord || body.masked || snap.mask || "");
+  const maskedWord = String(body.maskedWord || body.masked || maskFromSnap || "");
+  const slots = Array.isArray(body.slots) ? body.slots : snap.slots;
+  const length = Number(body.length || snap.length) || 0;
+  const guessed_letters = body.guessed_letters || snap.guessed_letters || [];
+  const word_theme = String(body.word_theme || snap.word_theme || "");
+  const phase = String(snap.phase || "");
+  /** Legacy iOS builds only read `body.state` on poll — keep in sync with top-level fields. */
+  const state = {
+    mask: maskedWord,
+    maskedWord,
+    masked: maskedWord,
+    slots,
+    keyboard,
+    length,
+    guessed_letters,
+    word_theme,
+    phase,
+  };
   return {
     ok: true,
     maskedWord,
     masked: maskedWord,
-    slots: Array.isArray(body.slots) ? body.slots : snap.slots,
+    mask: maskedWord,
+    slots,
     keyboard,
-    length: Number(body.length || snap.length) || 0,
-    guessed_letters: body.guessed_letters || snap.guessed_letters || [],
-    word_theme: String(body.word_theme || snap.word_theme || ""),
+    length,
+    guessed_letters,
+    word_theme,
     tiktok: String(body.tiktok || ""),
     tiktok_status: String(body.tiktok_status || ""),
     wrong: wrongGuesses,
     wrongGuesses,
     maxWrong,
-    phase: String(snap.phase || ""),
+    phase,
+    state,
   };
 }
 

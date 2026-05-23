@@ -26,6 +26,7 @@ const {
 const { registerHangmanHttpProxy, attachHangmanWebSocketProxy } = require("./hangman-proxy");
 const { startHangmanProcess, waitForHangman, HANGMAN_PORT } = require("./hangman-process");
 const { registerIpaDownloads, getIpaDownloadMeta, IPA_CATALOG } = require("./ipa-downloads");
+const { registerHangmanCompanionWeb } = require("./hangman-companion-web");
 
 const PORT = Number(process.env.PORT) || 3847;
 const STARTER_POINTS = Number(process.env.STARTER_POINTS) || 5000;
@@ -396,7 +397,15 @@ app.get("/api/state", (_req, res) => {
 });
 
 registerMobileApi(app, { game, pointStore, isLocalhost, broadcast });
+registerHangmanCompanionWeb(app);
 registerHangmanHttpProxy(app);
+
+app.get("/api/internal/tiktok-bridge", (req, res) => {
+  if (!isLocalhost(req)) {
+    return res.status(403).json({ ok: false, error: "local_only" });
+  }
+  res.json({ ok: true, ...getTikTokBridgeStatus() });
+});
 
 app.post("/api/chat", async (req, res) => {
   const source = String(req.body?.source || "").trim().toLowerCase();
@@ -1024,6 +1033,13 @@ app.post("/api/admin/reload-points", (req, res) => {
   pointStore.reloadFromDisk();
   pushState();
   res.json({ ok: true, reloaded: true });
+});
+
+app.get("/api/admin/data-health", (req, res) => {
+  if (!isLocalhost(req)) {
+    return res.status(403).json({ ok: false, error: "local only" });
+  }
+  res.json({ ok: true, ...pointStore.getDataHealth() });
 });
 
 app.get("/api/leaderboard", (req, res) => {

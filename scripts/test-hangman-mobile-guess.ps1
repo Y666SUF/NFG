@@ -64,7 +64,7 @@ Assert-Json $r "mobile/chat" | Out-Null
 $stateHeaders = @{ "X-Client-App" = "nfg-hangman" }
 $r = Invoke-NfgJson GET "/api/mobile/hangman/state" $stateHeaders
 if ($r.Status -eq 404) {
-  Write-Host "[FAIL] GET /api/mobile/hangman/state returned 404 — pull latest server and restart Electron"
+  Write-Host "[FAIL] GET /api/mobile/hangman/state returned 404 - pull latest server and restart Electron"
   $fail++
 } elseif (-not (Assert-Json $r "hangman/state")) {
   $fail++

@@ -3,6 +3,7 @@
  */
 const crypto = require("crypto");
 const { enrichChatMessage } = require("./mobile-app-labels");
+const { isUserMuted } = require("./mobile-chat-moderation");
 
 const MAX_MESSAGES = 120;
 const MAX_MESSAGE_LEN = 240;
@@ -19,6 +20,15 @@ function listMessages(limit = 50, pointStore) {
 function appendMessage(row) {
   messages.push(row);
   while (messages.length > MAX_MESSAGES) messages.shift();
+}
+
+function deleteMessageById(messageId) {
+  const id = String(messageId || "").trim();
+  if (!id) return false;
+  const idx = messages.findIndex((m) => String(m.id) === id);
+  if (idx < 0) return false;
+  messages.splice(idx, 1);
+  return true;
 }
 
 function registerMobileChatRoutes(app, ctx) {
@@ -51,6 +61,14 @@ function registerMobileChatRoutes(app, ctx) {
         ok: false,
         error: "commands_not_allowed",
         message: "Use the bet box for !commands. App chat is for messages only.",
+      });
+    }
+
+    if (isUserMuted(session.userId)) {
+      return res.status(403).json({
+        ok: false,
+        error: "chat_muted",
+        message: "You are muted from app chat.",
       });
     }
 
@@ -90,4 +108,4 @@ function registerMobileChatRoutes(app, ctx) {
   });
 }
 
-module.exports = { registerMobileChatRoutes, listMessages };
+module.exports = { registerMobileChatRoutes, listMessages, deleteMessageById };

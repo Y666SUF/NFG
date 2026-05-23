@@ -3,6 +3,7 @@
  */
 const { playerBadgesFromStore } = require("./mobile-player-badges");
 const { appLabelFromClientApp, chatDisplayName } = require("./mobile-app-labels");
+const { isUserMuted } = require("./mobile-chat-moderation");
 
 const PRESENCE_TTL_MS = 90_000;
 const presenceByKey = new Map();
@@ -12,7 +13,6 @@ function presenceKey(userId, deviceId) {
   if (deviceId) return `device:${String(deviceId).trim()}`;
   return null;
 }
-
 function guestDisplayName(deviceId) {
   const id = String(deviceId || "").trim();
   if (!id) return "Guest (not linked)";
@@ -67,6 +67,7 @@ function getActiveAppUserList(pointStore) {
     };
     if (linked) {
       Object.assign(entry, playerBadgesFromStore(pointStore, row.userId));
+      entry.chatMuted = isUserMuted(row.userId);
     } else {
       Object.assign(entry, {
         superFan: false,

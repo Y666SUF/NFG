@@ -52,6 +52,7 @@ if not defined HANGMAN_HOST set "HANGMAN_HOST=127.0.0.1"
 if not defined HANGMAN_BACKEND_URL set "HANGMAN_BACKEND_URL=http://127.0.0.1:%HANGMAN_PORT%"
 if not defined NFG_PLATFORM_URL set "NFG_PLATFORM_URL=http://127.0.0.1:%PORT%"
 if not defined NFG_INTERNAL_SECRET set "NFG_INTERNAL_SECRET=nfg-dev-internal"
+if not defined NFG_CHAT_ADMIN_USERS set "NFG_CHAT_ADMIN_USERS=y666.suf"
 if not defined NFG_START_HANGMAN set "NFG_START_HANGMAN=1"
 if not defined HANGMAN_PYTHON set "HANGMAN_PYTHON=py"
 if not defined NFG_HANGMAN_GUESS_TIMEOUT_MS set "NFG_HANGMAN_GUESS_TIMEOUT_MS=12000"
@@ -61,7 +62,7 @@ echo.
 
 if not exist "node_modules\" (
   echo First run: installing dependencies...
-  call "%NPM_CMD%" install
+  call "%NPM_CMD%" install --include=dev
   if errorlevel 1 (
     echo.
     echo npm install failed.
@@ -73,6 +74,7 @@ if not exist "node_modules\" (
 
 echo Platform port %PORT% ^| Hangman %HANGMAN_PORT% proxied on %PORT% ^| Hangman start: %NFG_START_HANGMAN%
 echo Mobile: GET /api/mobile/hangman/state  POST /api/mobile/hangman/guess  WS /hangman/ws
+set "PATH=%~dp0node_modules\.bin;%PATH%"
 echo Launching Electron ^(Crash + Hangman windows, shared Node server^)...
 echo.
 call "%NPM_CMD%" run start:electron

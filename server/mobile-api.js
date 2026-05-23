@@ -3,9 +3,11 @@
  */
 const { registerMobileAuthRoutes, validateBearer: validateBearerResult } = require("./mobile-auth");
 const { getTikTokBridgeStatus } = require("./tiktok-bridge");
-const { registerMobileChatRoutes } = require("./mobile-chat");
+const { registerMobileChatRoutes, deleteMessageById } = require("./mobile-chat");
+const { registerMobileChatModerationRoutes } = require("./mobile-chat-moderation");
 const { registerMobileRewardedAdRoutes } = require("./mobile-rewarded-ad");
 const { registerMobileStoreRoutes } = require("./mobile-store");
+const { registerMobileCosmeticsRoutes } = require("./mobile-cosmetics");
 const {
   registerMobilePresenceRoutes,
   getActiveAppUserCount,
@@ -27,9 +29,15 @@ function registerMobileApi(app, ctx) {
   registerMobileAuthRoutes(app, { isLocalhost });
   if (typeof broadcast === "function") {
     registerMobileChatRoutes(app, { broadcast, validateBearer, pointStore });
+    registerMobileChatModerationRoutes(app, {
+      broadcast,
+      validateBearer,
+      deleteMessageById,
+    });
   }
   registerMobileRewardedAdRoutes(app, { pointStore, validateBearer, broadcast });
   registerMobileStoreRoutes(app, { pointStore, validateBearer, broadcast });
+  registerMobileCosmeticsRoutes(app, { game, pointStore, validateBearer, broadcast });
   registerMobilePresenceRoutes(app, { validateBearer, pointStore, broadcast });
   registerMobilePlatformRoutes(app, { game, pointStore, validateBearer, broadcast });
   registerHangmanMobileRoutes(app, { validateBearer });

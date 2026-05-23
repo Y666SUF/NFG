@@ -1337,6 +1337,37 @@ html.portrait-mode .word-panel-gifts {
   color: var(--muted);
 }
 
+.guess-activity-log {
+  list-style: none;
+  margin: 0.45rem 0 0;
+  padding: 0.35rem 0.4rem;
+  max-height: 7.5rem;
+  overflow-y: auto;
+  font-size: 0.72rem;
+  line-height: 1.35;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+}
+
+.guess-activity-line {
+  padding: 0.12rem 0;
+  color: var(--muted);
+  word-break: break-word;
+}
+
+.guess-activity-line.guess-correct {
+  color: #5dffb0;
+}
+
+.guess-activity-line.guess-wrong {
+  color: #ff7b7b;
+}
+
+.guess-activity-line.guess-dup {
+  color: #c9b8ff;
+}
+
 .keyboard-panel .kb-key {
   min-width: 1.68rem;
   width: 1.68rem;

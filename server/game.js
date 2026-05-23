@@ -948,4 +948,4 @@ class CrashGame {
   }
 }
 
-module.exports = { CrashGame, PHASE, NAME_BADGE_SHOP, listNameBadgeShop };
+module.exports = { CrashGame, PHASE, NAME_STYLE_SHOP, NAME_BADGE_SHOP, listNameBadgeShop };

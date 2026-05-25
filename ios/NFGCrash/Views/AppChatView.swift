@@ -50,15 +50,13 @@ struct AppChatView: View {
                         .padding(.bottom, 4)
                 }
 
-                HStack(spacing: 8) {
+                HStack(spacing: NFGSpacing.sm) {
                     TextField("Message players…", text: $draft, axis: .vertical)
                         .lineLimit(1...4)
                         .textInputAutocapitalization(.sentences)
                         .autocorrectionDisabled(false)
-                        .padding(10)
-                        .background(NFGTheme.panel2)
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                        .foregroundStyle(NFGTheme.text)
+                        .font(.system(size: 14, weight: .medium))
+                        .nfgInputBackground(focused: inputFocused)
                         .focused($inputFocused)
 
                     Button {
@@ -67,15 +65,21 @@ struct AppChatView: View {
                         Task { await sync.sendAppChat(text) }
                     } label: {
                         Image(systemName: "paperplane.fill")
-                            .font(.system(size: 18))
+                            .font(.system(size: 17, weight: .heavy))
                             .foregroundStyle(.white)
-                            .frame(width: 44, height: 44)
-                            .background(NFGTheme.logoGradient)
-                            .clipShape(Circle())
+                            .frame(width: 46, height: 46)
+                            .background(
+                                Circle().fill(NFGTheme.logoGradient)
+                            )
+                            .overlay(
+                                Circle().stroke(Color.white.opacity(0.3), lineWidth: 1)
+                            )
+                            .shadow(color: Color(red: 236/255, green: 72/255, blue: 153/255).opacity(0.5), radius: 8, y: 3)
                     }
                     .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .opacity(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.55 : 1)
                 }
-                .padding(12)
+                .padding(NFGSpacing.md)
                 .background(NFGTheme.panel.opacity(0.95))
             }
             .background(NFGTheme.background.ignoresSafeArea())
@@ -134,7 +138,7 @@ struct AppChatView: View {
             VStack(alignment: msg.isMine ? .trailing : .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(msg.displayName)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
                         .foregroundStyle(msg.isMine ? NFGTheme.accent2 : NFGTheme.muted)
                     if !msg.resolvedAppLabel.isEmpty && !msg.isMine {
                         Text(msg.resolvedAppLabel)
@@ -144,16 +148,21 @@ struct AppChatView: View {
                     SuperFanBadgeView(badge: msg.badge, compact: true)
                 }
                 Text(msg.message)
-                    .font(.system(size: 14))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundStyle(NFGTheme.text)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(msg.isMine ? NFGTheme.accent.opacity(0.22) : NFGTheme.panel)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .stroke(msg.isMine ? NFGTheme.accent.opacity(0.4) : NFGTheme.border)
+                    .padding(.horizontal, NFGSpacing.md)
+                    .padding(.vertical, NFGSpacing.sm + 2)
+                    .background(
+                        RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                            .fill(msg.isMine
+                                ? AnyShapeStyle(LinearGradient(colors: [NFGTheme.accent.opacity(0.32), NFGTheme.accent.opacity(0.18)], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                : AnyShapeStyle(NFGTheme.panelGradient))
                     )
+                    .overlay(
+                        RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                            .stroke(msg.isMine ? NFGTheme.accent.opacity(0.45) : NFGTheme.border, lineWidth: 1)
+                    )
+                    .shadow(color: msg.isMine ? NFGTheme.accent.opacity(0.12) : .clear, radius: 6, y: 2)
             }
             if !msg.isMine { Spacer(minLength: 48) }
         }

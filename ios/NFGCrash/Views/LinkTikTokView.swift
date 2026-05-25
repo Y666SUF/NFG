@@ -14,10 +14,10 @@ struct LinkTikTokView: View {
 
     var body: some View {
         ZStack {
-            NFGTheme.background.ignoresSafeArea()
+            NFGSceneBackground(phase: .idle)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: NFGSpacing.xl) {
                     header
                     stepsCard
                     if !linkCode.isEmpty {
@@ -29,14 +29,18 @@ struct LinkTikTokView: View {
                     Button {
                         showLegal = true
                     } label: {
-                        Text("Legal & compliance")
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(NFGTheme.muted)
+                        HStack(spacing: 4) {
+                            Image(systemName: "shield.lefthalf.filled")
+                                .font(.system(size: 11, weight: .bold))
+                            Text("Legal & compliance")
+                                .font(.system(size: 12, weight: .semibold))
+                        }
+                        .foregroundStyle(NFGTheme.muted)
                     }
                     .frame(maxWidth: .infinity, alignment: .center)
                     .padding(.top, 4)
                 }
-                .padding(20)
+                .padding(NFGSpacing.xl)
             }
         }
         .preferredColorScheme(.dark)
@@ -49,89 +53,110 @@ struct LinkTikTokView: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Verify TikTok account")
-                .font(.title2.bold())
-                .foregroundStyle(NFGTheme.text)
-            Text("You cannot type someone else’s username. TikTok proves it’s you by sending a comment from your account while the stream is live.")
-                .font(.subheadline)
-                .foregroundStyle(NFGTheme.muted)
+        VStack(alignment: .leading, spacing: NFGSpacing.md) {
+            NFGCrashBrandLogo(height: 56)
+            VStack(alignment: .leading, spacing: NFGSpacing.sm) {
+                Text("Verify TikTok account")
+                    .font(.system(size: 24, weight: .black, design: .rounded))
+                    .foregroundStyle(NFGTheme.text)
+                Text("You can’t type someone else’s username. TikTok proves it’s you by sending a comment from your account while the stream is live.")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(NFGTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
     }
 
     private var stepsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: NFGSpacing.md) {
+            NFGSectionHeader(title: "How to link", icon: "list.number")
             stepRow(1, "Go live on TikTok (or join while you’re live).")
             stepRow(2, "Tap **Get link code** below.")
             stepRow(3, "On **your** @y666.suf **live**, comment **only** the command below (copy/paste).")
             stepRow(4, "This app detects the link automatically — no typing your name.")
         }
-        .padding(14)
-        .background(NFGTheme.panel)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(NFGTheme.border))
+        .nfgCard(radius: NFGRadius.lg, padding: NFGSpacing.md)
     }
 
     private func stepRow(_ n: Int, _ text: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: NFGSpacing.md) {
             Text("\(n)")
-                .font(.caption.bold())
-                .frame(width: 22, height: 22)
-                .background(NFGTheme.accent.opacity(0.2))
-                .clipShape(Circle())
+                .font(.system(size: 12, weight: .heavy, design: .rounded))
+                .frame(width: 24, height: 24)
+                .background(
+                    Circle().fill(
+                        LinearGradient(
+                            colors: [NFGTheme.accent.opacity(0.4), NFGTheme.accent.opacity(0.15)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                )
+                .overlay(Circle().stroke(NFGTheme.accent.opacity(0.5), lineWidth: 1))
                 .foregroundStyle(NFGTheme.accent)
             Text(LocalizedStringKey(text))
-                .font(.subheadline)
+                .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(NFGTheme.text)
         }
     }
 
     private var codeCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text("Your link command")
-                .font(.headline)
-                .foregroundStyle(NFGTheme.text)
+        VStack(alignment: .leading, spacing: NFGSpacing.md) {
+            NFGSectionHeader(title: "Your link command", icon: "terminal.fill")
             Text(tiktokCommand)
-                .font(.system(.title3, design: .monospaced))
-                .fontWeight(.bold)
+                .font(.system(size: 22, weight: .black, design: .monospaced))
                 .foregroundStyle(NFGTheme.accent2)
+                .shadow(color: NFGTheme.accent2.opacity(0.35), radius: 6)
                 .textSelection(.enabled)
+                .padding(.horizontal, NFGSpacing.md)
+                .padding(.vertical, NFGSpacing.sm + 2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: NFGRadius.md)
+                        .fill(Color.black.opacity(0.45))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: NFGRadius.md)
+                        .stroke(NFGTheme.accent2.opacity(0.3), lineWidth: 1)
+                )
 
             if secondsLeft > 0 {
-                Text("Expires in \(secondsLeft)s")
-                    .font(.caption)
-                    .foregroundStyle(NFGTheme.gold)
+                HStack(spacing: 4) {
+                    Image(systemName: "timer")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("Expires in \(secondsLeft)s")
+                        .font(.system(size: 12, weight: .heavy, design: .monospaced))
+                }
+                .foregroundStyle(NFGTheme.gold)
             }
 
             Button("Copy command") {
                 UIPasteboard.general.string = tiktokCommand
                 setStatus("Copied — paste into TikTok live chat.", isError: false)
             }
-            .font(.subheadline.weight(.semibold))
+            .buttonStyle(NFGSecondaryButtonStyle(tint: NFGTheme.accent2, compact: true))
         }
-        .padding(14)
-        .background(NFGTheme.panel2)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(NFGTheme.accent.opacity(0.35)))
+        .nfgCard(radius: NFGRadius.lg, padding: NFGSpacing.md, borderColor: NFGTheme.accent.opacity(0.35))
     }
 
     private var actionButtons: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: NFGSpacing.md) {
             Button {
                 Task { await startLink() }
             } label: {
-                HStack {
+                HStack(spacing: 6) {
                     if isLoading {
                         ProgressView()
-                            .tint(.white)
+                            .tint(.black)
+                    } else {
+                        Image(systemName: "link")
+                            .font(.system(size: 13, weight: .heavy))
                     }
-                    Text(linkCode.isEmpty ? "Get link code" : "New code")
+                    Text(linkCode.isEmpty ? "GET LINK CODE" : "NEW CODE")
+                        .tracking(1.2)
                 }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
             }
-            .buttonStyle(.borderedProminent)
-            .tint(NFGTheme.accent)
+            .buttonStyle(NFGPrimaryButtonStyle(isDisabled: isLoading))
             .disabled(isLoading)
 
             statusBanner
@@ -140,12 +165,13 @@ struct LinkTikTokView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(spacing: 8) {
                         ProgressView()
+                            .tint(NFGTheme.accent)
                         Text("Waiting for TikTok live comment…")
-                            .font(.caption)
+                            .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(NFGTheme.muted)
                     }
                     Text("Comment exactly \(tiktokCommand) on your @y666.suf live from your TikTok account.")
-                        .font(.caption2)
+                        .font(.system(size: 11))
                         .foregroundStyle(NFGTheme.gold)
                 }
             }

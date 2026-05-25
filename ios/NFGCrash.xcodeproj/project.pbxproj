@@ -17,6 +17,7 @@
 		A1B2C3D40000000000000008 /* PlayerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000019 /* PlayerSession.swift */; };
 		A1B2C3D40000000000000009 /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001A /* OfflineQueue.swift */; };
 		A1B2C3D4000000000000000A /* NFGTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001B /* NFGTheme.swift */; };
+		A1B2C3D40000000000000080 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000081 /* Components.swift */; };
 		A1B2C3D4000000000000000B /* CrashChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001C /* CrashChartView.swift */; };
 		A1B2C3D4000000000000000C /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001D /* LeaderboardView.swift */; };
 		A1B2C3D4000000000000000D /* AuthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001E /* AuthStore.swift */; };
@@ -54,6 +55,7 @@
 		A1B2C3D40000000000000019 /* PlayerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSession.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001A /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001B /* NFGTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFGTheme.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000081 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001C /* CrashChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashChartView.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001D /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001E /* AuthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthStore.swift; sourceTree = "<group>"; };
@@ -177,6 +179,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D4000000000000001B /* NFGTheme.swift */,
+				A1B2C3D40000000000000081 /* Components.swift */,
 			);
 			path = Theme;
 			sourceTree = "<group>";
@@ -277,6 +280,7 @@
 				A1B2C3D40000000000000008 /* PlayerSession.swift in Sources */,
 				A1B2C3D40000000000000009 /* OfflineQueue.swift in Sources */,
 				A1B2C3D4000000000000000A /* NFGTheme.swift in Sources */,
+				A1B2C3D40000000000000080 /* Components.swift in Sources */,
 				A1B2C3D4000000000000000B /* CrashChartView.swift in Sources */,
 				A1B2C3D4000000000000000C /* LeaderboardView.swift in Sources */,
 				A1B2C3D4000000000000000D /* AuthStore.swift in Sources */,

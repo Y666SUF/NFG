@@ -122,9 +122,15 @@ struct TopProfilesStrip: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("Top 5")
-                    .font(.system(size: compact ? 11 : 13, weight: .bold))
-                    .foregroundStyle(NFGTheme.text)
+                HStack(spacing: 5) {
+                    Image(systemName: "trophy.fill")
+                        .font(.system(size: compact ? 10 : 12, weight: .bold))
+                        .foregroundStyle(NFGTheme.gold)
+                    Text("TOP 5")
+                        .font(NFGFont.eyebrow(compact ? 11 : 12))
+                        .tracking(1.4)
+                        .foregroundStyle(NFGTheme.muted)
+                }
                 Spacer()
                 if onTap != nil {
                     Image(systemName: "chevron.right")
@@ -138,10 +144,14 @@ struct TopProfilesStrip: View {
                     if index < rows.count {
                         TopProfileCard(row: rows[index], position: index + 1, compact: compact)
                     } else {
-                        RoundedRectangle(cornerRadius: 8)
+                        RoundedRectangle(cornerRadius: NFGRadius.md)
                             .fill(NFGTheme.panel.opacity(0.35))
-                            .frame(height: compact ? 52 : 88)
+                            .frame(height: compact ? 56 : 92)
                             .frame(maxWidth: .infinity)
+                            .overlay(
+                                RoundedRectangle(cornerRadius: NFGRadius.md)
+                                    .stroke(NFGTheme.border.opacity(0.5), style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                            )
                     }
                 }
             }
@@ -158,12 +168,21 @@ struct TopProfileCard: View {
     let position: Int
     var compact: Bool = true
 
+    private var positionTint: Color {
+        switch position {
+        case 1: return NFGTheme.gold
+        case 2: return NFGTheme.accent
+        case 3: return NFGTheme.accent2
+        default: return NFGTheme.muted
+        }
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: compact ? 2 : 4) {
-            HStack {
+        VStack(alignment: .leading, spacing: compact ? 3 : 4) {
+            HStack(spacing: 4) {
                 Text("#\(position)")
-                    .font(.system(size: compact ? 9 : 10, weight: .bold, design: .monospaced))
-                    .foregroundStyle(NFGTheme.muted)
+                    .font(.system(size: compact ? 9 : 11, weight: .heavy, design: .rounded))
+                    .foregroundStyle(positionTint)
                 Spacer()
                 if row.superFan == true {
                     Text("★")
@@ -172,7 +191,7 @@ struct TopProfileCard: View {
                 }
             }
             Text(row.resolvedDisplayName)
-                .font(.system(size: compact ? 9 : 11, weight: .semibold))
+                .font(.system(size: compact ? 10 : 12, weight: .bold, design: .rounded))
                 .foregroundStyle(NFGTheme.text)
                 .lineLimit(1)
             if !compact {
@@ -186,19 +205,31 @@ struct TopProfileCard: View {
                     .lineLimit(1)
             }
             Text(row.balance.formatted())
-                .font(.system(size: compact ? 9 : 11, weight: .bold, design: .monospaced))
+                .font(.system(size: compact ? 10 : 12, weight: .heavy, design: .monospaced))
                 .foregroundStyle(balanceColor)
                 .lineLimit(1)
             if row.shieldActive == true {
                 Text("🛡")
-                    .font(.system(size: compact ? 8 : 10))
+                    .font(.system(size: compact ? 9 : 11))
             }
         }
-        .padding(compact ? 6 : 8)
-        .frame(maxWidth: .infinity, minHeight: compact ? 52 : 88, alignment: .topLeading)
-        .background(NFGTheme.panel.opacity(0.9))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
-        .overlay(RoundedRectangle(cornerRadius: 8).stroke(position == 1 ? NFGTheme.gold.opacity(0.5) : NFGTheme.border))
+        .padding(compact ? 7 : 9)
+        .frame(maxWidth: .infinity, minHeight: compact ? 56 : 92, alignment: .topLeading)
+        .background(
+            ZStack {
+                RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                    .fill(NFGTheme.panelGradient)
+                if position == 1 {
+                    RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                        .fill(NFGTheme.gold.opacity(0.06))
+                }
+            }
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                .stroke(position == 1 ? NFGTheme.gold.opacity(0.6) : NFGTheme.border, lineWidth: position == 1 ? 1.2 : 1)
+        )
+        .shadow(color: position == 1 ? NFGTheme.gold.opacity(0.2) : .clear, radius: 8)
     }
 
     private var balanceColor: Color {
@@ -213,17 +244,30 @@ struct LeaderboardRowView: View {
     let position: Int
     let isYou: Bool
 
+    private var positionColor: Color {
+        switch position {
+        case 1: return NFGTheme.gold
+        case 2: return NFGTheme.accent
+        case 3: return NFGTheme.accent2
+        default: return NFGTheme.muted
+        }
+    }
+
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: NFGSpacing.md) {
             Text("\(position)")
-                .font(.system(size: 13, weight: .medium, design: .monospaced))
-                .foregroundStyle(NFGTheme.muted)
-                .frame(width: 28, alignment: .leading)
+                .font(.system(size: 13, weight: .heavy, design: .rounded))
+                .foregroundStyle(positionColor)
+                .frame(width: 32, height: 32)
+                .background(
+                    Circle().fill(positionColor.opacity(position <= 3 ? 0.18 : 0.08))
+                )
+                .overlay(Circle().stroke(positionColor.opacity(position <= 3 ? 0.5 : 0.2), lineWidth: 1))
 
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
                     Text(row.resolvedDisplayName)
-                        .font(.system(size: 14, weight: isYou ? .bold : .semibold))
+                        .font(.system(size: 14, weight: isYou ? .bold : .semibold, design: .rounded))
                         .foregroundStyle(NFGTheme.text)
                         .lineLimit(1)
                     if row.shieldActive == true {
@@ -237,11 +281,12 @@ struct LeaderboardRowView: View {
                     }
                     if isYou {
                         Text("YOU")
-                            .font(.system(size: 9, weight: .bold))
-                            .padding(.horizontal, 5)
+                            .font(.system(size: 9, weight: .heavy, design: .rounded))
+                            .tracking(0.8)
+                            .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(NFGTheme.accent.opacity(0.25))
-                            .clipShape(Capsule())
+                            .background(Capsule().fill(NFGTheme.accent.opacity(0.22)))
+                            .overlay(Capsule().stroke(NFGTheme.accent.opacity(0.5)))
                             .foregroundStyle(NFGTheme.accent)
                     }
                 }
@@ -254,12 +299,18 @@ struct LeaderboardRowView: View {
             Spacer(minLength: 8)
 
             Text(row.balance.formatted())
-                .font(.system(size: 14, weight: .bold, design: .monospaced))
+                .font(NFGFont.numeric(14, weight: .heavy))
                 .foregroundStyle(NFGTheme.accent2)
         }
-        .padding(.vertical, 10)
-        .padding(.horizontal, 4)
-        .background(isYou ? NFGTheme.panel.opacity(0.65) : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(.vertical, NFGSpacing.sm + 2)
+        .padding(.horizontal, NFGSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: NFGRadius.md)
+                .fill(isYou ? NFGTheme.accent.opacity(0.06) : Color.clear)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: NFGRadius.md)
+                .stroke(isYou ? NFGTheme.accent.opacity(0.3) : Color.clear, lineWidth: 1)
+        )
     }
 }

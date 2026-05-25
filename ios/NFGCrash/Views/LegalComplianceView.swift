@@ -79,18 +79,17 @@ struct LegalComplianceView: View {
     }
 
     private func group(title: String, body: String) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.system(size: 14, weight: .bold))
-                .foregroundStyle(NFGTheme.text)
+        VStack(alignment: .leading, spacing: NFGSpacing.sm) {
+            Text(title.uppercased())
+                .font(NFGFont.eyebrow(11))
+                .tracking(1.4)
+                .foregroundStyle(NFGTheme.accent2)
             Text(body)
-                .font(.system(size: 13))
+                .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(NFGTheme.muted)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(NFGTheme.panel)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .nfgCard(radius: NFGRadius.lg, padding: NFGSpacing.md)
     }
 }

@@ -28,25 +28,16 @@ struct ContentView: View {
                 }
                 if PlayerSession.isLoggedIn {
                     ToolbarItem(placement: .topBarTrailing) {
-                        HStack(spacing: 16) {
-                            Button {
+                        HStack(spacing: 14) {
+                            toolbarIconButton(systemName: "wallet.pass.fill", label: "My wallet") {
                                 showWallet = true
-                            } label: {
-                                Image(systemName: "wallet.pass.fill")
                             }
-                            .accessibilityLabel("My wallet")
-                            Button {
+                            toolbarIconButton(systemName: "bubble.left.and.bubble.right.fill", label: "App chat") {
                                 showAppChat = true
-                            } label: {
-                                Image(systemName: "bubble.left.and.bubble.right.fill")
                             }
-                            .accessibilityLabel("App chat")
-                            Button {
+                            toolbarIconButton(systemName: "list.number", label: "Leaderboard") {
                                 showLeaderboard = true
-                            } label: {
-                                Image(systemName: "list.number")
                             }
-                            .accessibilityLabel("Leaderboard")
                         }
                     }
                 }
@@ -76,5 +67,21 @@ struct ContentView: View {
                 }
             }
         }
+    }
+
+    private func toolbarIconButton(systemName: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: systemName)
+                .font(.system(size: 16, weight: .heavy))
+                .foregroundStyle(NFGTheme.accent)
+                .frame(width: 32, height: 32)
+                .background(
+                    Circle().fill(NFGTheme.panel.opacity(0.9))
+                )
+                .overlay(
+                    Circle().stroke(NFGTheme.accent.opacity(0.25), lineWidth: 1)
+                )
+        }
+        .accessibilityLabel(label)
     }
 }

@@ -25,6 +25,7 @@ struct LeaderboardRow: Codable, Identifiable, Hashable {
     var level: Int?
     var rank: String?
     var nameStyle: String?
+    var nameBadge: String?
     var superFan: Bool?
     var shieldActive: Bool?
     var shieldMsLeft: Int?
@@ -40,7 +41,7 @@ struct LeaderboardRow: Codable, Identifiable, Hashable {
     var rankPosition: Int?
 
     enum CodingKeys: String, CodingKey {
-        case name, user, displayName, balance, allTime, level, rank, nameStyle, superFan
+        case name, user, displayName, balance, allTime, level, rank, nameStyle, nameBadge, superFan
         case shieldActive, shieldMsLeft, jetLockActive
     }
 }
@@ -52,6 +53,45 @@ struct OpenBet: Codable, Identifiable, Hashable {
     var cashout: Double
 
     var id: String { "\(user)-\(amount)-\(cashout)" }
+
+    init(user: String, displayName: String, amount: Int, cashout: Double) {
+        self.user = user
+        self.displayName = displayName
+        self.amount = amount
+        self.cashout = cashout
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        user = try c.decodeIfPresent(String.self, forKey: .user) ?? ""
+        if let dn = try c.decodeIfPresent(String.self, forKey: .displayName), !dn.isEmpty {
+            displayName = dn
+        } else if let n = try c.decodeIfPresent(String.self, forKey: .name), !n.isEmpty {
+            displayName = n
+        } else {
+            displayName = user
+        }
+        amount = try c.decodeIfPresent(Int.self, forKey: .amount) ?? 0
+        if let co = try c.decodeIfPresent(Double.self, forKey: .cashout) {
+            cashout = co
+        } else if let co = try c.decodeIfPresent(Int.self, forKey: .cashout) {
+            cashout = Double(co)
+        } else {
+            cashout = 0
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(user, forKey: .user)
+        try c.encode(displayName, forKey: .displayName)
+        try c.encode(amount, forKey: .amount)
+        try c.encode(cashout, forKey: .cashout)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case user, displayName, name, amount, cashout
+    }
 }
 
 struct RoundOutcome: Codable, Identifiable, Hashable {
@@ -110,6 +150,7 @@ struct CrashGameState: Codable, Equatable {
     var queuedBets: [OpenBet]
     var taxPot: TaxPotStatus?
     var lastResult: RoundLastResult?
+    var recentCrashes: [Double]
 
     static let empty = CrashGameState(
         phase: .idle,
@@ -121,12 +162,13 @@ struct CrashGameState: Codable, Equatable {
         openBets: [],
         queuedBets: [],
         taxPot: nil,
-        lastResult: nil
+        lastResult: nil,
+        recentCrashes: []
     )
 
     enum CodingKeys: String, CodingKey {
         case phase, roundId, multiplier, crashPoint, bettingEndsAt, nextRoundStartsAt
-        case openBets, queuedBets, taxPot, lastResult
+        case openBets, queuedBets, taxPot, lastResult, recentCrashes
     }
 
     init(
@@ -139,7 +181,8 @@ struct CrashGameState: Codable, Equatable {
         openBets: [OpenBet],
         queuedBets: [OpenBet],
         taxPot: TaxPotStatus?,
-        lastResult: RoundLastResult?
+        lastResult: RoundLastResult?,
+        recentCrashes: [Double] = []
     ) {
         self.phase = phase
         self.roundId = roundId
@@ -151,6 +194,7 @@ struct CrashGameState: Codable, Equatable {
         self.queuedBets = queuedBets
         self.taxPot = taxPot
         self.lastResult = lastResult
+        self.recentCrashes = recentCrashes
     }
 
     init(from decoder: Decoder) throws {
@@ -165,6 +209,7 @@ struct CrashGameState: Codable, Equatable {
         queuedBets = try c.decodeIfPresent([OpenBet].self, forKey: .queuedBets) ?? []
         taxPot = try c.decodeIfPresent(TaxPotStatus.self, forKey: .taxPot)
         lastResult = try c.decodeIfPresent(RoundLastResult.self, forKey: .lastResult)
+        recentCrashes = try c.decodeIfPresent([Double].self, forKey: .recentCrashes) ?? []
     }
 }
 
@@ -321,11 +366,16 @@ struct PlayerWallet: Codable, Equatable {
     var ok: Bool?
     var user: String
     var displayName: String
+    var displayNameLocked: Bool?
+    var displayNameMaxLength: Int?
     var balance: Int
     var allTime: Int
     var level: Int
     var rank: String
     var nameStyle: String
+    var nameBadge: String
+    var ownedNameStyles: [String]
+    var ownedBadges: [String]
     var superFan: Bool
     var shieldActive: Bool
     var shieldMsLeft: Int
@@ -335,7 +385,9 @@ struct PlayerWallet: Codable, Equatable {
 
     static let empty = PlayerWallet(
         ok: nil, user: "", displayName: "", balance: 0, allTime: 0,
-        level: 1, rank: "Rookie", nameStyle: "none", superFan: false,
+        level: 1, rank: "Rookie", nameStyle: "none", nameBadge: "none",
+        ownedNameStyles: [], ownedBadges: [],
+        superFan: false,
         shieldActive: false, shieldMsLeft: 0, jetLockActive: false,
         jetLockSecondsLeft: 0, inventory: .empty
     )
@@ -344,7 +396,9 @@ struct PlayerWallet: Codable, Equatable {
 
     init(
         ok: Bool?, user: String, displayName: String, balance: Int, allTime: Int,
-        level: Int, rank: String, nameStyle: String, superFan: Bool,
+        level: Int, rank: String, nameStyle: String, nameBadge: String,
+        ownedNameStyles: [String], ownedBadges: [String],
+        superFan: Bool,
         shieldActive: Bool, shieldMsLeft: Int, jetLockActive: Bool, jetLockSecondsLeft: Int,
         inventory: PowerupInventory
     ) {
@@ -356,6 +410,9 @@ struct PlayerWallet: Codable, Equatable {
         self.level = level
         self.rank = rank
         self.nameStyle = nameStyle
+        self.nameBadge = nameBadge
+        self.ownedNameStyles = ownedNameStyles
+        self.ownedBadges = ownedBadges
         self.superFan = superFan
         self.shieldActive = shieldActive
         self.shieldMsLeft = shieldMsLeft
@@ -369,11 +426,16 @@ struct PlayerWallet: Codable, Equatable {
         ok = try c.decodeIfPresent(Bool.self, forKey: .ok)
         user = try c.decodeIfPresent(String.self, forKey: .user) ?? ""
         displayName = try c.decodeIfPresent(String.self, forKey: .displayName) ?? user
+        displayNameLocked = try c.decodeIfPresent(Bool.self, forKey: .displayNameLocked)
+        displayNameMaxLength = try c.decodeIfPresent(Int.self, forKey: .displayNameMaxLength)
         balance = try c.decodeIfPresent(Int.self, forKey: .balance) ?? 0
         allTime = try c.decodeIfPresent(Int.self, forKey: .allTime) ?? 0
         level = try c.decodeIfPresent(Int.self, forKey: .level) ?? 1
         rank = try c.decodeIfPresent(String.self, forKey: .rank) ?? "Rookie"
         nameStyle = try c.decodeIfPresent(String.self, forKey: .nameStyle) ?? "none"
+        nameBadge = try c.decodeIfPresent(String.self, forKey: .nameBadge) ?? "none"
+        ownedNameStyles = try c.decodeIfPresent([String].self, forKey: .ownedNameStyles) ?? []
+        ownedBadges = try c.decodeIfPresent([String].self, forKey: .ownedBadges) ?? []
         superFan = try c.decodeIfPresent(Bool.self, forKey: .superFan) ?? false
         shieldActive = try c.decodeIfPresent(Bool.self, forKey: .shieldActive) ?? false
         shieldMsLeft = try c.decodeIfPresent(Int.self, forKey: .shieldMsLeft) ?? 0
@@ -383,8 +445,70 @@ struct PlayerWallet: Codable, Equatable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case ok, user, displayName, balance, allTime, level, rank, nameStyle, superFan
+        case ok, user, displayName, displayNameLocked, displayNameMaxLength, balance, allTime, level, rank, nameStyle, nameBadge
+        case ownedNameStyles, ownedBadges, superFan
         case shieldActive, shieldMsLeft, jetLockActive, jetLockSecondsLeft, inventory
+    }
+}
+
+struct NameStyleShopItem: Codable, Identifiable, Hashable {
+    var id: String
+    var icon: String?
+    var label: String?
+    var cost: Int
+
+    var resolvedLabel: String {
+        let t = label?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return t.isEmpty ? id.capitalized : t
+    }
+}
+
+struct NameBadgeShopItem: Codable, Identifiable, Hashable {
+    var id: String
+    var label: String
+    var short: String
+    var tier: Int
+    var cost: Int
+}
+
+struct CosmeticsShopCatalog: Codable, Equatable {
+    var ok: Bool?
+    var balance: Int?
+    var nameStyle: String?
+    var nameBadge: String?
+    var ownedNameStyles: [String]?
+    var ownedBadges: [String]?
+    var nameStyles: [NameStyleShopItem]?
+    var nameBadges: [NameBadgeShopItem]?
+
+    var equippedStyle: String { nameStyle ?? "none" }
+    var equippedBadge: String { nameBadge ?? "none" }
+    var ownedStyleSet: Set<String> {
+        Set((ownedNameStyles ?? []).map { $0.lowercased() })
+    }
+    var ownedBadgeSet: Set<String> {
+        Set((ownedBadges ?? []).map { $0.lowercased() })
+    }
+}
+
+struct CosmeticPurchaseDetails: Decodable {
+    var balance: Int?
+    var cost: Int?
+    var nameStyle: String?
+    var ownedNameStyles: [String]?
+}
+
+struct CosmeticsPurchaseResponse: Decodable {
+    var ok: Bool?
+    var message: String?
+    var reason: String?
+    var balance: Int?
+    var wallet: PlayerWallet?
+    var purchase: CosmeticPurchaseDetails?
+
+    /// Best available balance after a shop purchase (wallet payload preferred).
+    var resolvedBalance: Int? {
+        wallet?.balance ?? balance ?? purchase?.balance
     }
 }
 
@@ -422,6 +546,42 @@ struct AppChatMessage: Codable, Identifiable, Hashable {
 struct AppChatHistoryResponse: Decodable {
     var ok: Bool?
     var messages: [AppChatMessage]
+}
+
+struct MutedChatUser: Codable, Identifiable, Hashable {
+    var userId: String
+    var displayName: String?
+    var mutedAt: Int64?
+    var mutedBy: String?
+
+    var id: String { userId.lowercased() }
+
+    var resolvedName: String {
+        let n = displayName?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !n.isEmpty { return n }
+        return userId
+    }
+}
+
+struct ChatModerationStatusResponse: Decodable {
+    var ok: Bool?
+    var isAdmin: Bool?
+    var isMuted: Bool?
+    var mutedUsers: [MutedChatUser]?
+}
+
+struct ChatMuteStatePayload: Decodable {
+    var mutedUsers: [MutedChatUser]?
+}
+
+struct AppChatBannerNotification: Equatable, Identifiable {
+    var messageId: String
+    var displayName: String
+    var userId: String
+    var message: String
+    var appLabel: String
+
+    var id: String { messageId }
 }
 
 struct RewardedAdStatusResponse: Decodable {
@@ -531,6 +691,8 @@ struct StoreProduct: Identifiable, Decodable, Hashable {
 struct StoreProductsResponse: Decodable {
     var ok: Bool?
     var testMode: Bool?
+    var appleIAP: Bool?
+    var productIds: [String]?
     var message: String?
     var products: [StoreProduct]?
 }
@@ -538,6 +700,7 @@ struct StoreProductsResponse: Decodable {
 struct StorePurchaseResponse: Decodable {
     var ok: Bool?
     var testMode: Bool?
+    var alreadyProcessed: Bool?
     var productId: String?
     var gained: Int?
     var balance: Int?
@@ -561,8 +724,11 @@ struct ActiveAppUser: Identifiable, Hashable, Decodable {
     var displayName: String
     var username: String?
     var isGuest: Bool?
+    var chatMuted: Bool?
     var superFan: Bool?
     var superFanLevel: Int?
+    var nameStyle: String?
+    var nameBadge: String?
 
     var id: String { userId }
 
@@ -587,6 +753,29 @@ struct ActiveAppUser: Identifiable, Hashable, Decodable {
         return userId.lowercased() == me.lowercased()
             || username?.lowercased() == me.lowercased()
     }
+
+    /// TikTok-style @handle for presence join/leave toasts.
+    var presenceUsernameLabel: String {
+        if let raw = username?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty {
+            let clean = raw.replacingOccurrences(of: "@", with: "")
+            return "@\(clean)"
+        }
+        let trimmed = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty { return trimmed }
+        if isGuest == true { return "Guest" }
+        return userId
+    }
+}
+
+/// Brief header toast when someone opens or closes the app.
+struct PresenceActivityAnnouncement: Equatable {
+    enum Kind: Equatable {
+        case joined
+        case left
+    }
+
+    var username: String
+    var kind: Kind
 }
 
 struct MobileStatusResponse: Decodable {

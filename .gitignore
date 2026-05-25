@@ -41,6 +41,10 @@ hangman v2/iOS/app/dist/
 _import_Y666SUF_website/frontend/build/
 
 # iOS / binaries
+ios/.derivedData/
+ios/**/DerivedData/
+**/*.xcuserstate
+**/xcuserdata/
 *.ipa
 *.exe
 *.dmg

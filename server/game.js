@@ -97,6 +97,7 @@ class CrashGame {
     this.bettingEndsAt = 0;
     this.nextRoundStartsAt = null;
     this.lastResult = null;
+    this.recentCrashes = [];
     this.pendingSpins = [];
     this.spinPauseEndsAt = null;
     this.activeBounty = null;
@@ -241,13 +242,14 @@ class CrashGame {
       nextRoundStartsAt: this.nextRoundStartsAt,
       opts: { ...this.opts },
       lastResult: this.lastResult,
-      openBets: this.phase === PHASE.BETTING ? this.listOpenBets() : [],
+      openBets: this.bets.size > 0 ? this.listOpenBets() : [],
       queuedBets: this.listQueuedBets(),
       activeBounty: this.activeBounty,
       pinnedMessage: this.pinnedMessage,
       pendingSpinCount: this.pendingSpins.length,
       spinPauseEndsAt: this.spinPauseEndsAt,
       taxPot: this.store.getTaxPotStatus ? this.store.getTaxPotStatus() : null,
+      recentCrashes: [...this.recentCrashes],
     };
   }
 
@@ -381,6 +383,9 @@ class CrashGame {
     this.phase = PHASE.ENDED;
     this.crashPoint = resultCrash;
     this.multiplier = resultCrash;
+    const crashVal = Math.floor(resultCrash * 100) / 100;
+    this.recentCrashes.push(crashVal);
+    if (this.recentCrashes.length > 5) this.recentCrashes = this.recentCrashes.slice(-5);
     this.lastResult = { roundId: this.roundId, crashPoint: resultCrash, wins: [...this._winsThisRound], losses: lost };
     this._clearTimers();
     this.onUpdate();

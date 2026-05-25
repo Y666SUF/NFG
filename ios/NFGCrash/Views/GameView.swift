@@ -25,7 +25,6 @@ struct GameView: View {
 
                 VStack(spacing: 0) {
                     VStack(spacing: NFGSpacing.sm) {
-                        header
                         taxPotBanner
                         topProfilesSection
                         if !sync.sublineText.isEmpty {
@@ -39,9 +38,15 @@ struct GameView: View {
                         CrashChartView(
                             history: sync.multiplierHistory,
                             phase: sync.gameState.phase,
-                            multiplier: sync.gameState.multiplier
+                            multiplier: sync.gameState.multiplier,
+                            crashPoint: sync.gameState.crashPoint,
+                            bettingEndsAt: sync.gameState.bettingEndsAt,
+                            onCrashAnimationFinished: {
+                                sync.presentPendingRoundResultPopup()
+                            }
                         )
                         .frame(height: chartHeight)
+                        .clipped()
 
                         entriesPanel
                             .frame(maxHeight: entriesHeight)
@@ -100,27 +105,8 @@ struct GameView: View {
             Task {
                 await sync.refreshProfile()
                 await sync.refreshLeaderboard()
+                await sync.refreshWallet(force: true)
             }
-        }
-    }
-
-    // MARK: - Header
-
-    private var header: some View {
-        HStack(alignment: .center, spacing: NFGSpacing.md) {
-            NFGCrashBrandLogo(height: 52)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(alignment: .trailing, spacing: 4) {
-                NFGPhaseBadge(phase: sync.gameState.phase)
-                NFGMultiplierText(
-                    value: sync.gameState.multiplier,
-                    size: 32,
-                    phase: sync.gameState.phase
-                )
-                .animation(.spring(response: 0.35, dampingFraction: 0.75), value: sync.gameState.multiplier)
-            }
-            .fixedSize(horizontal: true, vertical: false)
         }
     }
 
@@ -161,38 +147,45 @@ struct GameView: View {
     }
 
     private var taxPotBanner: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 11, weight: .bold))
-                .foregroundStyle(NFGTheme.gold)
-            Text("Tax Pot")
-                .font(.system(size: 11, weight: .heavy, design: .rounded))
-                .tracking(1.2)
-                .foregroundStyle(NFGTheme.gold.opacity(0.9))
-            Spacer(minLength: 0)
-            Text("\(sync.taxPotAmount.formatted()) pts")
-                .font(NFGFont.numeric(13, weight: .heavy))
-                .foregroundStyle(NFGTheme.gold)
-        }
-        .padding(.horizontal, NFGSpacing.md)
-        .padding(.vertical, NFGSpacing.xs + 2)
-        .background(
-            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            NFGTheme.gold.opacity(0.18),
-                            NFGTheme.gold.opacity(0.04),
-                        ],
-                        startPoint: .leading,
-                        endPoint: .trailing
+        HStack(alignment: .center, spacing: 10) {
+            HStack(spacing: 6) {
+                Image(systemName: "sparkles")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(NFGTheme.gold)
+                Text("Tax Pot")
+                    .font(NFGFont.eyebrow(10))
+                    .foregroundStyle(NFGTheme.gold.opacity(0.9))
+                Text("\(sync.taxPotAmount.formatted()) pts")
+                    .font(NFGFont.numeric(12, weight: .heavy))
+                    .foregroundStyle(NFGTheme.gold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+            }
+            .fixedSize(horizontal: true, vertical: false)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [
+                                NFGTheme.gold.opacity(0.18),
+                                NFGTheme.gold.opacity(0.04),
+                            ],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
                     )
-                )
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
-                .stroke(NFGTheme.gold.opacity(0.4), lineWidth: 1)
-        )
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                    .stroke(NFGTheme.gold.opacity(0.4), lineWidth: 1)
+            )
+
+            RecentCrashesStrip(crashes: sync.gameState.recentCrashes, inline: true, showAllFive: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - Entries

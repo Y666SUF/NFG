@@ -2,9 +2,13 @@ import Foundation
 import Security
 
 enum AuthStore {
+    /// Server user id for App Store Review demo sessions (`linkedVia: app_review`).
+    static let appReviewUserId = "apple_app_review"
+
     private static let tokenKey = "nfg_session_token"
     private static let userKey = "nfg_verified_user"
     private static let displayNameKey = "nfg_verified_display_name"
+    private static let displayNameLockedKey = "nfg_display_name_locked"
     private static let deviceIdKey = "nfg_device_id"
 
     static var deviceId: String {
@@ -37,22 +41,64 @@ enum AuthStore {
         set { UserDefaults.standard.set(newValue, forKey: displayNameKey) }
     }
 
+    /// When true, TikTok / server nickname updates must not replace the app-chosen display name.
+    static var displayNameLocked: Bool {
+        get { UserDefaults.standard.bool(forKey: displayNameLockedKey) }
+        set { UserDefaults.standard.set(newValue, forKey: displayNameLockedKey) }
+    }
+
     static var isLinked: Bool {
         !(sessionToken ?? "").isEmpty && !verifiedUserId.isEmpty
+    }
+
+    static var isAppReviewDemo: Bool {
+        verifiedUserId == appReviewUserId
     }
 
     static func saveSession(token: String, userId: String, displayName: String) {
         sessionToken = token
         verifiedUserId = userId
-        verifiedDisplayName = displayName.isEmpty ? userId : displayName
         PlayerSession.tiktokUsername = userId
-        PlayerSession.displayName = verifiedDisplayName
+        adoptDisplayNameFromServer(displayName, userId: userId)
+        if verifiedDisplayName.isEmpty {
+            verifiedDisplayName = userId
+            PlayerSession.displayName = userId
+        }
+    }
+
+    /// Keeps the last real TikTok nickname; ignores bare username when we already have a better name.
+    static func applyCustomDisplayName(_ name: String) {
+        let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return }
+        verifiedDisplayName = cleaned
+        PlayerSession.displayName = cleaned
+        displayNameLocked = true
+    }
+
+    static func adoptDisplayNameFromServer(_ name: String, userId: String) {
+        if displayNameLocked { return }
+        let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !cleaned.isEmpty else { return }
+        let user = userId
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "@", with: "")
+            .lowercased()
+        let key = cleaned.lowercased().replacingOccurrences(of: "@", with: "")
+        if !user.isEmpty && key == user {
+            let existing = verifiedDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+            let existingKey = existing.lowercased().replacingOccurrences(of: "@", with: "")
+            if !existing.isEmpty && existingKey != user { return }
+        }
+        verifiedDisplayName = cleaned
+        PlayerSession.displayName = cleaned
     }
 
     static func clearSession() {
         sessionToken = nil
         verifiedUserId = ""
         verifiedDisplayName = ""
+        displayNameLocked = false
+        PlayerSession.clearLinkedProfile()
     }
 
     private static func readKeychain(_ key: String) -> String? {

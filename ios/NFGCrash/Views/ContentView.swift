@@ -9,27 +9,51 @@ struct ContentView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if PlayerSession.isLoggedIn {
-                    GameView(showLeaderboard: $showLeaderboard)
-                } else {
-                    LinkTikTokView()
+            ZStack(alignment: .top) {
+                Group {
+                    if PlayerSession.isLoggedIn {
+                        GameView(showLeaderboard: $showLeaderboard)
+                            .safeAreaInset(edge: .top, spacing: 0) {
+                                GameTopPresenceBar(
+                                    liveStatus: sync.tiktokLive,
+                                    activeAppUsers: sync.displayedActiveAppUsers,
+                                    showInAppCount: sync.showActiveAppUserCount,
+                                    activityAnnouncement: sync.presenceJoinAnnouncement,
+                                    phase: sync.gameState.phase
+                                )
+                                .background(NFGTheme.background.opacity(0.98))
+                            }
+                    } else {
+                        LinkTikTokView()
+                    }
+                }
+
+                if PlayerSession.isLoggedIn,
+                   !sync.suppressChatBanners,
+                   let banner = sync.activeChatBanner {
+                    InAppChatBannerView(
+                        notification: banner,
+                        onDismiss: { sync.dismissChatBanner() },
+                        onOpenChat: {
+                            sync.dismissChatBanner()
+                            showAppChat = true
+                        }
+                    )
+                    .padding(.horizontal, NFGSpacing.md)
+                    .padding(.top, NFGSpacing.xs)
+                    .zIndex(50)
+                    .transition(.move(edge: .top).combined(with: .opacity))
                 }
             }
+            .animation(.spring(response: 0.38, dampingFraction: 0.86), value: sync.activeChatBanner?.id)
+            .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(NFGTheme.background, for: .navigationBar)
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    TikTokLiveBadge(
-                        status: sync.tiktokLive,
-                        activeAppUsers: sync.displayedActiveAppUsers,
-                        showInAppCount: sync.showActiveAppUserCount
-                    )
-                }
                 if PlayerSession.isLoggedIn {
                     ToolbarItem(placement: .topBarTrailing) {
                         HStack(spacing: 14) {
-                            toolbarIconButton(systemName: "wallet.pass.fill", label: "My wallet") {
+                            toolbarIconButton(systemName: "wallet.pass.fill", label: "Profile and wallet") {
                                 showWallet = true
                             }
                             toolbarIconButton(systemName: "bubble.left.and.bubble.right.fill", label: "App chat") {
@@ -54,6 +78,12 @@ struct ContentView: View {
                 AppChatView()
                     .environmentObject(sync)
             }
+            .onChange(of: showAppChat) { _, isOpen in
+                sync.suppressChatBanners = isOpen
+                if isOpen {
+                    sync.dismissChatBanner()
+                }
+            }
             .onAppear {
                 if sync.connectionStatus == "Offline" {
                     sync.connect()
@@ -75,12 +105,8 @@ struct ContentView: View {
                 .font(.system(size: 16, weight: .heavy))
                 .foregroundStyle(NFGTheme.accent)
                 .frame(width: 32, height: 32)
-                .background(
-                    Circle().fill(NFGTheme.panel.opacity(0.9))
-                )
-                .overlay(
-                    Circle().stroke(NFGTheme.accent.opacity(0.25), lineWidth: 1)
-                )
+                .background(Circle().fill(NFGTheme.panel.opacity(0.9)))
+                .overlay(Circle().stroke(NFGTheme.accent.opacity(0.25), lineWidth: 1))
         }
         .accessibilityLabel(label)
     }

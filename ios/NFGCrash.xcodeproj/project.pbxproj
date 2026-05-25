@@ -17,7 +17,6 @@
 		A1B2C3D40000000000000008 /* PlayerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000019 /* PlayerSession.swift */; };
 		A1B2C3D40000000000000009 /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001A /* OfflineQueue.swift */; };
 		A1B2C3D4000000000000000A /* NFGTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001B /* NFGTheme.swift */; };
-		A1B2C3D40000000000000080 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000081 /* Components.swift */; };
 		A1B2C3D4000000000000000B /* CrashChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001C /* CrashChartView.swift */; };
 		A1B2C3D4000000000000000C /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001D /* LeaderboardView.swift */; };
 		A1B2C3D4000000000000000D /* AuthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001E /* AuthStore.swift */; };
@@ -40,6 +39,31 @@
 		A1B2C3D40000000000000078 /* PrivacyPolicyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000074 /* PrivacyPolicyView.swift */; };
 		A1B2C3D40000000000000079 /* ActiveAppUsersListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000007A /* ActiveAppUsersListView.swift */; };
 		A1B2C3D4000000000000006E /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000006D /* PrivacyInfo.xcprivacy */; };
+		A1B2C3D4000000000000007C /* StoreKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000007B /* StoreKitService.swift */; };
+		A1B2C3D4000000000000007E /* AdSetupDiagnosticsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000007D /* AdSetupDiagnosticsView.swift */; };
+		A1B2C3D40000000000000080 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000081 /* SettingsView.swift */; };
+		A1B2C3D40000000000000082 /* AppPreferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000083 /* AppPreferences.swift */; };
+		A1B2C3D40000000000000084 /* InAppChatBannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000085 /* InAppChatBannerView.swift */; };
+		A1B2C3D40000000000000086 /* ChatOwnerConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000087 /* ChatOwnerConfig.swift */; };
+		A1B2C3D40000000000000088 /* PlayerCosmeticViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000089 /* PlayerCosmeticViews.swift */; };
+		A1B2C3D4000000000000008A /* CosmeticsShopView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000008B /* CosmeticsShopView.swift */; };
+		A1B2C3D4000000000000008C /* VaultBadgeAssets.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000008D /* VaultBadgeAssets.swift */; };
+		A1B2C3D4000000000000008E /* ArcadeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000090 /* ArcadeModels.swift */; };
+		A1B2C3D4000000000000008F /* ArcadeViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000091 /* ArcadeViews.swift */; };
+		A1B2C3D40000000000000095 /* ArcadeUIKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000094 /* ArcadeUIKit.swift */; };
+		A1B2C3D40000000000000097 /* ArcadeGameViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000096 /* ArcadeGameViews.swift */; };
+		A1B2C3D4000000000000009A /* TermsOfServiceContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000098 /* TermsOfServiceContent.swift */; };
+		A1B2C3D4000000000000009B /* TermsOfServiceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000099 /* TermsOfServiceView.swift */; };
+		A1B2C3D4000000000000009D /* RecentCrashesStrip.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000009C /* RecentCrashesStrip.swift */; };
+		A1B2C3D4000000000000009F /* CrashRocketView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000009E /* CrashRocketView.swift */; };
+		A1B2C3D400000000000000A1 /* CrashSceneBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000000000000A0 /* CrashSceneBackground.swift */; };
+		A1B2C3D400000000000000A3 /* CrashExplosionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000000000000A2 /* CrashExplosionView.swift */; };
+		A1B2C3D400000000000000A5 /* CrashRocketParticles.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000000000000A4 /* CrashRocketParticles.swift */; };
+		A1B2C3D400000000000000A9 /* GameMultiplierBadge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000000000000A8 /* GameMultiplierBadge.swift */; };
+		A1B2C3D400000000000000AB /* InAppUsersStretchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000000000000AA /* InAppUsersStretchView.swift */; };
+		A1B2C3D400000000000000AD /* GameTopPresenceBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000000000000AC /* GameTopPresenceBar.swift */; };
+		A1B2C3D400000000000000A7 /* SpriteKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000000000000A6 /* SpriteKit.framework */; };
+		A1B2C3D400000000000000B0 /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D400000000000000B1 /* Components.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -55,7 +79,6 @@
 		A1B2C3D40000000000000019 /* PlayerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSession.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001A /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001B /* NFGTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFGTheme.swift; sourceTree = "<group>"; };
-		A1B2C3D40000000000000081 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001C /* CrashChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashChartView.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001D /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001E /* AuthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthStore.swift; sourceTree = "<group>"; };
@@ -77,6 +100,31 @@
 		A1B2C3D40000000000000074 /* PrivacyPolicyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivacyPolicyView.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000007A /* ActiveAppUsersListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveAppUsersListView.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000006D /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		A1B2C3D4000000000000007B /* StoreKitService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitService.swift; sourceTree = "<group>"; };
+		A1B2C3D4000000000000007D /* AdSetupDiagnosticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdSetupDiagnosticsView.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000081 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000083 /* AppPreferences.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppPreferences.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000085 /* InAppChatBannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppChatBannerView.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000087 /* ChatOwnerConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatOwnerConfig.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000089 /* PlayerCosmeticViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerCosmeticViews.swift; sourceTree = "<group>"; };
+		A1B2C3D4000000000000008B /* CosmeticsShopView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CosmeticsShopView.swift; sourceTree = "<group>"; };
+		A1B2C3D4000000000000008D /* VaultBadgeAssets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultBadgeAssets.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000090 /* ArcadeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeModels.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000091 /* ArcadeViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeViews.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000094 /* ArcadeUIKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeUIKit.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000096 /* ArcadeGameViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeGameViews.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000098 /* TermsOfServiceContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceContent.swift; sourceTree = "<group>"; };
+		A1B2C3D40000000000000099 /* TermsOfServiceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsOfServiceView.swift; sourceTree = "<group>"; };
+		A1B2C3D4000000000000009C /* RecentCrashesStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentCrashesStrip.swift; sourceTree = "<group>"; };
+		A1B2C3D4000000000000009E /* CrashRocketView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashRocketView.swift; sourceTree = "<group>"; };
+		A1B2C3D400000000000000A0 /* CrashSceneBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashSceneBackground.swift; sourceTree = "<group>"; };
+		A1B2C3D400000000000000A2 /* CrashExplosionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashExplosionView.swift; sourceTree = "<group>"; };
+		A1B2C3D400000000000000A4 /* CrashRocketParticles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashRocketParticles.swift; sourceTree = "<group>"; };
+		A1B2C3D400000000000000A8 /* GameMultiplierBadge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameMultiplierBadge.swift; sourceTree = "<group>"; };
+		A1B2C3D400000000000000AA /* InAppUsersStretchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppUsersStretchView.swift; sourceTree = "<group>"; };
+		A1B2C3D400000000000000AC /* GameTopPresenceBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameTopPresenceBar.swift; sourceTree = "<group>"; };
+		A1B2C3D400000000000000A6 /* SpriteKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SpriteKit.framework; path = System/Library/Frameworks/SpriteKit.framework; sourceTree = SDKROOT; };
+		A1B2C3D400000000000000B1 /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,6 +133,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1B2C3D40000000000000064 /* GoogleMobileAds in Frameworks */,
+				A1B2C3D400000000000000A7 /* SpriteKit.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -103,6 +152,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D40000000000000077 /* PrivacyPolicyContent.swift */,
+				A1B2C3D40000000000000098 /* TermsOfServiceContent.swift */,
 			);
 			path = Legal;
 			sourceTree = "<group>";
@@ -136,6 +186,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D40000000000000012 /* GameModels.swift */,
+				A1B2C3D40000000000000090 /* ArcadeModels.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -150,6 +201,7 @@
 				A1B2C3D4000000000000001E /* AuthStore.swift */,
 				A1B2C3D4000000000000005E /* RewardedAdService.swift */,
 				A1B2C3D40000000000000066 /* AdMobAppStartup.swift */,
+				A1B2C3D4000000000000007B /* StoreKitService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -170,7 +222,24 @@
 				A1B2C3D4000000000000004B /* AppChatView.swift */,
 				A1B2C3D4000000000000006C /* LegalComplianceView.swift */,
 				A1B2C3D40000000000000074 /* PrivacyPolicyView.swift */,
+				A1B2C3D40000000000000099 /* TermsOfServiceView.swift */,
 				A1B2C3D4000000000000007A /* ActiveAppUsersListView.swift */,
+				A1B2C3D4000000000000007D /* AdSetupDiagnosticsView.swift */,
+				A1B2C3D40000000000000081 /* SettingsView.swift */,
+				A1B2C3D40000000000000085 /* InAppChatBannerView.swift */,
+				A1B2C3D40000000000000089 /* PlayerCosmeticViews.swift */,
+				A1B2C3D4000000000000008B /* CosmeticsShopView.swift */,
+				A1B2C3D40000000000000091 /* ArcadeViews.swift */,
+				A1B2C3D40000000000000094 /* ArcadeUIKit.swift */,
+				A1B2C3D40000000000000096 /* ArcadeGameViews.swift */,
+				A1B2C3D4000000000000009C /* RecentCrashesStrip.swift */,
+				A1B2C3D4000000000000009E /* CrashRocketView.swift */,
+				A1B2C3D400000000000000A0 /* CrashSceneBackground.swift */,
+				A1B2C3D400000000000000A2 /* CrashExplosionView.swift */,
+				A1B2C3D400000000000000A4 /* CrashRocketParticles.swift */,
+				A1B2C3D400000000000000A8 /* GameMultiplierBadge.swift */,
+				A1B2C3D400000000000000AA /* InAppUsersStretchView.swift */,
+				A1B2C3D400000000000000AC /* GameTopPresenceBar.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -179,7 +248,8 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D4000000000000001B /* NFGTheme.swift */,
-				A1B2C3D40000000000000081 /* Components.swift */,
+				A1B2C3D400000000000000B1 /* Components.swift */,
+				A1B2C3D4000000000000008D /* VaultBadgeAssets.swift */,
 			);
 			path = Theme;
 			sourceTree = "<group>";
@@ -191,6 +261,8 @@
 				A1B2C3D4000000000000005C /* AdMobConfig.swift */,
 				A1B2C3D40000000000000062 /* StoreCatalog.swift */,
 				A1B2C3D4000000000000006A /* AppDistribution.swift */,
+				A1B2C3D40000000000000083 /* AppPreferences.swift */,
+				A1B2C3D40000000000000087 /* ChatOwnerConfig.swift */,
 			);
 			path = Config;
 			sourceTree = "<group>";
@@ -230,6 +302,8 @@
 				TargetAttributes = {
 					A1B2C3D40000000000000040 = {
 						CreatedOnToolsVersion = 26.0;
+						DevelopmentTeam = VM34N9485F;
+						ProvisioningStyle = Automatic;
 					};
 				};
 			};
@@ -280,7 +354,6 @@
 				A1B2C3D40000000000000008 /* PlayerSession.swift in Sources */,
 				A1B2C3D40000000000000009 /* OfflineQueue.swift in Sources */,
 				A1B2C3D4000000000000000A /* NFGTheme.swift in Sources */,
-				A1B2C3D40000000000000080 /* Components.swift in Sources */,
 				A1B2C3D4000000000000000B /* CrashChartView.swift in Sources */,
 				A1B2C3D4000000000000000C /* LeaderboardView.swift in Sources */,
 				A1B2C3D4000000000000000D /* AuthStore.swift in Sources */,
@@ -301,6 +374,30 @@
 				A1B2C3D40000000000000076 /* PrivacyPolicyContent.swift in Sources */,
 				A1B2C3D40000000000000078 /* PrivacyPolicyView.swift in Sources */,
 				A1B2C3D40000000000000079 /* ActiveAppUsersListView.swift in Sources */,
+				A1B2C3D4000000000000007C /* StoreKitService.swift in Sources */,
+				A1B2C3D4000000000000007E /* AdSetupDiagnosticsView.swift in Sources */,
+				A1B2C3D40000000000000080 /* SettingsView.swift in Sources */,
+				A1B2C3D40000000000000082 /* AppPreferences.swift in Sources */,
+				A1B2C3D40000000000000084 /* InAppChatBannerView.swift in Sources */,
+				A1B2C3D40000000000000086 /* ChatOwnerConfig.swift in Sources */,
+				A1B2C3D40000000000000088 /* PlayerCosmeticViews.swift in Sources */,
+				A1B2C3D4000000000000008A /* CosmeticsShopView.swift in Sources */,
+				A1B2C3D4000000000000008C /* VaultBadgeAssets.swift in Sources */,
+				A1B2C3D4000000000000008E /* ArcadeModels.swift in Sources */,
+				A1B2C3D4000000000000008F /* ArcadeViews.swift in Sources */,
+				A1B2C3D40000000000000095 /* ArcadeUIKit.swift in Sources */,
+				A1B2C3D40000000000000097 /* ArcadeGameViews.swift in Sources */,
+				A1B2C3D4000000000000009A /* TermsOfServiceContent.swift in Sources */,
+				A1B2C3D4000000000000009B /* TermsOfServiceView.swift in Sources */,
+				A1B2C3D4000000000000009D /* RecentCrashesStrip.swift in Sources */,
+				A1B2C3D4000000000000009F /* CrashRocketView.swift in Sources */,
+				A1B2C3D400000000000000A1 /* CrashSceneBackground.swift in Sources */,
+				A1B2C3D400000000000000A3 /* CrashExplosionView.swift in Sources */,
+				A1B2C3D400000000000000A5 /* CrashRocketParticles.swift in Sources */,
+				A1B2C3D400000000000000A9 /* GameMultiplierBadge.swift in Sources */,
+				A1B2C3D400000000000000AB /* InAppUsersStretchView.swift in Sources */,
+				A1B2C3D400000000000000AD /* GameTopPresenceBar.swift in Sources */,
+				A1B2C3D400000000000000B0 /* Components.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -429,11 +526,12 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = T6KK9EW9D6;
+				CURRENT_PROJECT_VERSION = 51;
+				DEVELOPMENT_TEAM = VM34N9485F;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NFGCrash/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "NFG Crash";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -441,7 +539,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nfg.crash;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yusufali.nfgcrash;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;
@@ -457,11 +555,12 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = T6KK9EW9D6;
+				CURRENT_PROJECT_VERSION = 51;
+				DEVELOPMENT_TEAM = VM34N9485F;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NFGCrash/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "NFG Crash";
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -469,7 +568,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.nfg.crash;
+				PRODUCT_BUNDLE_IDENTIFIER = com.yusufali.nfgcrash;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SUPPORTS_MACCATALYST = NO;

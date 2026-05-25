@@ -5,6 +5,7 @@ struct WalletView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var adCoordinator = RewardedAdCoordinator()
     @State private var showLegal = false
+    @State private var showAdSetup = false
 
     var body: some View {
         NavigationStack {
@@ -16,6 +17,7 @@ struct WalletView: View {
                     } else {
                         headerCard
                         balanceCard
+                        storeSection
                         rewardedAdCard
                         statusRow
                         inventorySection
@@ -29,6 +31,15 @@ struct WalletView: View {
                     }
 
                     Button {
+                        showAdSetup = true
+                    } label: {
+                        Text("Ads & IAP setup (diagnostics)")
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(NFGTheme.accent2)
+                            .frame(maxWidth: .infinity)
+                    }
+
+                    Button {
                         showLegal = true
                     } label: {
                         Text("Legal & compliance")
@@ -36,7 +47,7 @@ struct WalletView: View {
                             .foregroundStyle(NFGTheme.muted)
                             .frame(maxWidth: .infinity)
                     }
-                    .padding(.top, 8)
+                    .padding(.top, 4)
                 }
                 .padding(16)
             }
@@ -67,12 +78,89 @@ struct WalletView: View {
                         sync.connect()
                     }
                     await sync.refreshRewardedAdStatus()
+                    await sync.refreshStoreProducts()
                 }
             }
             .sheet(isPresented: $showLegal) {
                 LegalComplianceView()
+                    .environmentObject(sync)
+            }
+            .navigationDestination(isPresented: $showAdSetup) {
+                AdSetupDiagnosticsView()
+                    .environmentObject(sync)
             }
         }
+    }
+
+    private var storeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "bag.fill")
+                    .foregroundStyle(NFGTheme.accent2)
+                Text("Buy points")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(NFGTheme.text)
+            }
+
+            Text("Virtual play credits for the live crash game. Apple In-App Purchase only.")
+                .font(.system(size: 11))
+                .foregroundStyle(NFGTheme.muted)
+
+            if sync.storeIsTestMode && AppDistribution.allowsDevTestStore {
+                Text("Dev test mode — no real charge. Set NFG_ALLOW_TEST_STORE=1 on server.")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(NFGTheme.gold)
+            }
+
+            if let skErr = StoreKitService.shared.loadError, !sync.storeIsTestMode {
+                Text(skErr)
+                    .font(.system(size: 10))
+                    .foregroundStyle(NFGTheme.danger)
+            }
+
+            ForEach(sync.storeProducts) { product in
+                Button {
+                    Task { await sync.purchaseStoreProduct(product) }
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(product.displayTitle)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(NFGTheme.text)
+                            Text(
+                                StoreKitService.shared.displayPrice(
+                                    for: product.id,
+                                    fallback: product.priceLabel
+                                )
+                            )
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(NFGTheme.muted)
+                        }
+                        Spacer()
+                        if sync.isPurchasingStore {
+                            ProgressView()
+                        } else {
+                            Text("Buy")
+                                .font(.system(size: 13, weight: .bold))
+                        }
+                    }
+                    .padding(12)
+                    .background(NFGTheme.panel2)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .disabled(!PlayerSession.isLoggedIn || sync.isPurchasingStore)
+            }
+
+            if let msg = sync.storePurchaseMessage {
+                Text(msg)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(msg.contains("+") ? NFGTheme.accent2 : NFGTheme.danger)
+            }
+        }
+        .padding(14)
+        .background(NFGTheme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(NFGTheme.accent2.opacity(0.35)))
     }
 
     private var rewardedAdCard: some View {

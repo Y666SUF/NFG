@@ -225,6 +225,62 @@ struct GameAPI {
         return resp.products ?? StoreCatalog.fallbackProducts
     }
 
+    func fetchStoreProductsResponse() async throws -> StoreProductsResponse {
+        let (data, response) = try await GameHTTP.data(from: baseURL.appending(path: "/api/mobile/store/products"))
+        guard let http = response as? HTTPURLResponse else {
+            throw GameAPIError.serverError("No response")
+        }
+        if http.statusCode == 404 {
+            return StoreProductsResponse(
+                ok: true,
+                testMode: false,
+                appleIAP: true,
+                productIds: StoreCatalog.fallbackProducts.map(\.id),
+                message: nil,
+                products: StoreCatalog.fallbackProducts
+            )
+        }
+        guard http.statusCode == 200 else {
+            throw GameAPIError.serverError("Could not load store.")
+        }
+        return try JSONDecoder().decode(StoreProductsResponse.self, from: data)
+    }
+
+    func verifyPurchase(
+        productId: String,
+        transactionId: String,
+        signedTransactionInfo: String
+    ) async throws -> StorePurchaseResponse {
+        guard authToken != nil else { throw GameAPIError.notLoggedIn }
+        let req = try authorizedRequest(
+            url: baseURL.appending(path: "/api/mobile/store/verify-purchase"),
+            method: "POST",
+            jsonBody: [
+                "productId": productId,
+                "transactionId": transactionId,
+                "signedTransactionInfo": signedTransactionInfo,
+            ]
+        )
+        let (data, response) = try await GameHTTP.data(for: req)
+        guard let http = response as? HTTPURLResponse else {
+            throw GameAPIError.serverError("No response")
+        }
+        if http.statusCode == 401 {
+            AuthStore.clearSession()
+            throw GameAPIError.notLoggedIn
+        }
+        if http.statusCode == 404 {
+            throw GameAPIError.serverError(
+                "Purchase verify API not on server yet. git pull on PC and restart Node."
+            )
+        }
+        if http.statusCode >= 400 {
+            let err = try? JSONDecoder().decode(StorePurchaseResponse.self, from: data)
+            throw GameAPIError.serverError(err?.message ?? "Purchase verification failed.")
+        }
+        return try JSONDecoder().decode(StorePurchaseResponse.self, from: data)
+    }
+
     func testPurchase(productId: String) async throws -> StorePurchaseResponse {
         guard authToken != nil else { throw GameAPIError.notLoggedIn }
         let req = try authorizedRequest(

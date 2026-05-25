@@ -531,6 +531,8 @@ struct StoreProduct: Identifiable, Decodable, Hashable {
 struct StoreProductsResponse: Decodable {
     var ok: Bool?
     var testMode: Bool?
+    var appleIAP: Bool?
+    var productIds: [String]?
     var message: String?
     var products: [StoreProduct]?
 }
@@ -538,6 +540,7 @@ struct StoreProductsResponse: Decodable {
 struct StorePurchaseResponse: Decodable {
     var ok: Bool?
     var testMode: Bool?
+    var alreadyProcessed: Bool?
     var productId: String?
     var gained: Int?
     var balance: Int?

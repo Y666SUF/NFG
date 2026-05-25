@@ -42,6 +42,7 @@ struct LinkTikTokView: View {
         .preferredColorScheme(.dark)
         .sheet(isPresented: $showLegal) {
             LegalComplianceView()
+                .environmentObject(sync)
         }
         .onDisappear {
             pollTask?.cancel()

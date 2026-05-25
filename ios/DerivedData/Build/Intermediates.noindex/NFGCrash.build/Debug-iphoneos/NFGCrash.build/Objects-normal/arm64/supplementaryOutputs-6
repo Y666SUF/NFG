@@ -1,0 +1,30 @@
+{
+  "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Config/AppDistribution.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/AdMobAppStartup.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/LegalComplianceView.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView.swiftdeps"
+  }
+}

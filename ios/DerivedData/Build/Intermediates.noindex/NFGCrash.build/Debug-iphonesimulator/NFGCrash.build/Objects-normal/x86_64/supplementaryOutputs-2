@@ -1,0 +1,30 @@
+{
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/GameAPI.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameAPI.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameAPI.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameAPI.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameAPI.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameAPI.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/OfflineQueue.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/OfflineQueue.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/OfflineQueue.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/OfflineQueue.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/OfflineQueue.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/OfflineQueue.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/PlayerSession.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/PlayerSession.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/PlayerSession.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/PlayerSession.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/PlayerSession.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/PlayerSession.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/GameView.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameView.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameView.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameView.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameView.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameView.swiftdeps"
+  }
+}

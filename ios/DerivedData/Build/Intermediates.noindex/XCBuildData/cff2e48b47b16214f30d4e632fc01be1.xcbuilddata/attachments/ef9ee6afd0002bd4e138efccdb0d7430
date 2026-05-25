@@ -1,0 +1,279 @@
+{
+  "" : {
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash-primary.dia",
+    "emit-module-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash-primary-emit-module.dia",
+    "pch" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash-primary.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/DerivedSources/GeneratedAssetSymbols.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GeneratedAssetSymbols~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Config/AdMobConfig.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Config/AppDistribution.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppDistribution~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Config/GameServerConfig.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameServerConfig.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameServerConfig.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameServerConfig.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameServerConfig.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameServerConfig.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameServerConfig.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameServerConfig.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameServerConfig~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Config/StoreCatalog.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Models/GameModels.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameModels.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameModels.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameModels.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameModels.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameModels.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameModels.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameModels.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameModels~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/NFGCrashApp.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashApp.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashApp.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashApp.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashApp.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashApp.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashApp.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashApp.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashApp~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/AdMobAppStartup.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobAppStartup~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/AuthStore.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AuthStore.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AuthStore.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AuthStore.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AuthStore.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AuthStore.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AuthStore.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AuthStore.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AuthStore~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/GameAPI.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameAPI.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameAPI.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameAPI.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameAPI.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameAPI.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameAPI.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameAPI.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameAPI~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/OfflineQueue.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/OfflineQueue.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/OfflineQueue.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/OfflineQueue.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/OfflineQueue.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/OfflineQueue.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/OfflineQueue.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/OfflineQueue.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/OfflineQueue~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/PlayerSession.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/PlayerSession.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/PlayerSession.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/PlayerSession.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/PlayerSession.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/PlayerSession.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/PlayerSession.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/PlayerSession.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/PlayerSession~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/RewardedAdService.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/SyncClient.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/SyncClient.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/SyncClient.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/SyncClient.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/SyncClient.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/SyncClient.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/SyncClient.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/SyncClient.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/SyncClient~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Theme/NFGTheme.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGTheme.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGTheme.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGTheme.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGTheme.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGTheme.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGTheme.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGTheme.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGTheme~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/AppChatView.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppChatView.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppChatView.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppChatView.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppChatView.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppChatView.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppChatView.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppChatView.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AppChatView~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/ContentView.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/ContentView.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/ContentView.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/ContentView.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/ContentView.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/ContentView.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/ContentView.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/ContentView.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/ContentView~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/CrashChartView.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/CrashChartView.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/CrashChartView.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/CrashChartView.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/CrashChartView.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/CrashChartView.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/CrashChartView.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/CrashChartView.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/CrashChartView~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/GameView.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameView.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameView.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameView.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameView.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameView.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameView.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameView.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/GameView~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/KeyboardLiftObserver.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/LeaderboardView.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LeaderboardView.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LeaderboardView.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LeaderboardView.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LeaderboardView.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LeaderboardView.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LeaderboardView.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LeaderboardView.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LeaderboardView~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/LegalComplianceView.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LegalComplianceView~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/LinkTikTokView.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LinkTikTokView.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LinkTikTokView.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LinkTikTokView.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LinkTikTokView.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LinkTikTokView.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LinkTikTokView.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LinkTikTokView.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/LinkTikTokView~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/NFGCrashBrandLogo.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashBrandLogo.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashBrandLogo.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashBrandLogo.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashBrandLogo.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashBrandLogo.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashBrandLogo.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashBrandLogo.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrashBrandLogo~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/RoundResultPopupView.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RoundResultPopupView.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RoundResultPopupView.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RoundResultPopupView.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RoundResultPopupView.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RoundResultPopupView.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RoundResultPopupView.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RoundResultPopupView.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RoundResultPopupView~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/TikTokLiveBadge.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/TikTokLiveBadge.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/TikTokLiveBadge.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/TikTokLiveBadge.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/TikTokLiveBadge.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/TikTokLiveBadge.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/TikTokLiveBadge.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/TikTokLiveBadge.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/TikTokLiveBadge~partial.swiftmodule"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/WalletView.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/WalletView.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/WalletView.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/WalletView.dia",
+    "index-unit-output-path" : "/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/WalletView.o",
+    "llvm-bc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/WalletView.bc",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/WalletView.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/WalletView.swiftdeps",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/WalletView~partial.swiftmodule"
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "source": "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/ActiveAppUsersListView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "In the app",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 78
+        }
+      },
+      {
+        "comment": "",
+        "key": "No one else detected in the app right now.",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 15
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your game server may need the latest presence update.",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 20
+        }
+      },
+      {
+        "comment": "",
+        "key": "@%@",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 51
+        }
+      },
+      {
+        "comment": "",
+        "key": "Not linked to TikTok",
+        "location": {
+          "startingColumn": 50,
+          "startingLine": 55
+        }
+      },
+      {
+        "comment": "",
+        "key": "You",
+        "location": {
+          "startingColumn": 54,
+          "startingLine": 41
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld in app now",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 68
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 28,
+          "startingLine": 82
+        }
+      }
+    ]
+  },
+  "version": 1
+}

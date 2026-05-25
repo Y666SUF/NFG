@@ -1,0 +1,136 @@
+{
+  "source": "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/GameView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 92
+        }
+      },
+      {
+        "comment": "",
+        "key": "View full leaderboard",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 138
+        }
+      },
+      {
+        "comment": "",
+        "key": "Tax Pot",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 168
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@ pts",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 173
+        }
+      },
+      {
+        "comment": "",
+        "key": "No entries this round",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 249
+        }
+      },
+      {
+        "comment": "",
+        "key": "%@",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 266
+        }
+      },
+      {
+        "comment": "",
+        "key": "PLACE A BET",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 305
+        }
+      },
+      {
+        "comment": "",
+        "key": "Link TikTok to bet",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 311
+        }
+      },
+      {
+        "comment": "",
+        "key": "Amount",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 319
+        }
+      },
+      {
+        "comment": "",
+        "key": "!100 or 30k",
+        "location": {
+          "startingColumn": 31,
+          "startingLine": 323
+        }
+      },
+      {
+        "comment": "",
+        "key": "Cash out",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 337
+        }
+      },
+      {
+        "comment": "",
+        "key": "×",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 347
+        }
+      },
+      {
+        "comment": "",
+        "key": "2.00",
+        "location": {
+          "startingColumn": 35,
+          "startingLine": 342
+        }
+      },
+      {
+        "comment": "",
+        "key": "PLACE BET",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 365
+        }
+      },
+      {
+        "comment": "",
+        "key": "!bal",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 378
+        }
+      },
+      {
+        "comment": "",
+        "key": "All-in @ 2× (!all 2)",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 390
+        }
+      }
+    ]
+  },
+  "version": 1
+}

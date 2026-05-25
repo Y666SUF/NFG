@@ -1,0 +1,48 @@
+{
+  "source": "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Theme/NFGTheme.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Super Fan level %lld",
+        "location": {
+          "startingColumn": 51,
+          "startingLine": 185
+        }
+      },
+      {
+        "comment": "",
+        "key": "Super Fan",
+        "location": {
+          "startingColumn": 86,
+          "startingLine": 185
+        }
+      },
+      {
+        "comment": "",
+        "key": "★",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 168
+        }
+      },
+      {
+        "comment": "",
+        "key": "SUPER FAN",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 171
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 174
+        }
+      }
+    ]
+  },
+  "version": 1
+}

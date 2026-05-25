@@ -1,0 +1,40 @@
+{
+  "source": "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/ContentView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "My wallet",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 38
+        }
+      },
+      {
+        "comment": "",
+        "key": "App chat",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 44
+        }
+      },
+      {
+        "comment": "",
+        "key": "Leaderboard",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 50
+        }
+      },
+      {
+        "comment": "",
+        "key": "Legal and compliance",
+        "location": {
+          "startingColumn": 49,
+          "startingLine": 56
+        }
+      }
+    ]
+  },
+  "version": 1
+}

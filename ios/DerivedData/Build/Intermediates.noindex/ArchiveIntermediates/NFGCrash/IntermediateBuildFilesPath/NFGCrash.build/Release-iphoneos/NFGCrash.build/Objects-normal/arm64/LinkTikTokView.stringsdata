@@ -1,0 +1,104 @@
+{
+  "source": "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/LinkTikTokView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Why this is safe: only TikTok Live can confirm your username. The app never trusts a name typed on the phone. Impersonators cannot bet as you without your TikTok account.",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 166
+        }
+      },
+      {
+        "comment": "",
+        "key": "Legal & compliance",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 32
+        }
+      },
+      {
+        "comment": "",
+        "key": "Verify TikTok account",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 53
+        }
+      },
+      {
+        "comment": "",
+        "key": "You cannot type someone else’s username. TikTok proves it’s you by sending a comment from your account while the stream is live.",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 56
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 77
+        }
+      },
+      {
+        "comment": "",
+        "key": "Your link command",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "Expires in %llds",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 101
+        }
+      },
+      {
+        "comment": "",
+        "key": "Copy command",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 106
+        }
+      },
+      {
+        "comment": "",
+        "key": "Get link code",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "New code",
+        "location": {
+          "startingColumn": 63,
+          "startingLine": 128
+        }
+      },
+      {
+        "comment": "",
+        "key": "Comment exactly %@ on your @y666.suf live from your TikTok account.",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 147
+        }
+      },
+      {
+        "comment": "",
+        "key": "Waiting for TikTok live comment…",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 143
+        }
+      }
+    ]
+  },
+  "version": 1
+}

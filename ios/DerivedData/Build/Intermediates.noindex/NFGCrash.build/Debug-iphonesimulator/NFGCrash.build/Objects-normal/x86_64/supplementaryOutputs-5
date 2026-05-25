@@ -1,0 +1,30 @@
+{
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Config/GameServerConfig.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameServerConfig.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameServerConfig.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameServerConfig.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameServerConfig.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/GameServerConfig.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/AppChatView.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/AppChatView.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/AppChatView.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/AppChatView.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/AppChatView.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/AppChatView.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/KeyboardLiftObserver.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/KeyboardLiftObserver.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/KeyboardLiftObserver.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/KeyboardLiftObserver.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/KeyboardLiftObserver.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/KeyboardLiftObserver.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/NFGCrashBrandLogo.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/NFGCrashBrandLogo.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/NFGCrashBrandLogo.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/NFGCrashBrandLogo.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/NFGCrashBrandLogo.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphonesimulator/NFGCrash.build/Objects-normal/x86_64/NFGCrashBrandLogo.swiftdeps"
+  }
+}

@@ -1,0 +1,40 @@
+{
+  "source": "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/RewardedAdService.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Rewarded ad (test)",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 83
+        }
+      },
+      {
+        "comment": "",
+        "key": "Add Google Mobile Ads SDK for real ads.\nSee ADMOB-SETUP.md in the project.",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 86
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 91
+        }
+      },
+      {
+        "comment": "",
+        "key": "Skip",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 94
+        }
+      }
+    ]
+  },
+  "version": 1
+}

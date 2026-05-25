@@ -1,0 +1,30 @@
+{
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Config/AdMobConfig.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/AdMobConfig.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Config/StoreCatalog.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/StoreCatalog.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Services/RewardedAdService.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/RewardedAdService.swiftdeps"
+  },
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/KeyboardLiftObserver.swift" : {
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver.dia",
+    "object" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver.o",
+    "swift-dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Debug-iphoneos/NFGCrash.build/Objects-normal/arm64/KeyboardLiftObserver.swiftdeps"
+  }
+}

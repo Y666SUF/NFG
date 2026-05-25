@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>logFormatVersion</key>
+	<integer>12</integer>
+	<key>logs</key>
+	<dict>
+		<key>5ED9D403-0F3C-42CD-A636-4BE428FCA3B0</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>5ED9D403-0F3C-42CD-A636-4BE428FCA3B0.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>W</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>3</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>NFGCrash project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>NFGCrash</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Archiving project NFGCrash with scheme NFGCrash</string>
+			<key>timeStartedRecording</key>
+			<real>800995568.31440902</real>
+			<key>timeStoppedRecording</key>
+			<real>800995585.80593503</real>
+			<key>title</key>
+			<string>Archiving project NFGCrash with scheme NFGCrash</string>
+			<key>uniqueIdentifier</key>
+			<string>5ED9D403-0F3C-42CD-A636-4BE428FCA3B0</string>
+		</dict>
+		<key>CA3DFDCE-79E2-41E2-B565-C9D1A2AD585C</key>
+		<dict>
+			<key>className</key>
+			<string>IDECommandLineBuildLog</string>
+			<key>documentTypeString</key>
+			<string>&lt;nil&gt;</string>
+			<key>domainType</key>
+			<string>Xcode.IDEActivityLogDomainType.BuildLog</string>
+			<key>fileName</key>
+			<string>CA3DFDCE-79E2-41E2-B565-C9D1A2AD585C.xcactivitylog</string>
+			<key>hasPrimaryLog</key>
+			<true/>
+			<key>primaryObservable</key>
+			<dict>
+				<key>highLevelStatus</key>
+				<string>W</string>
+				<key>totalNumberOfAnalyzerIssues</key>
+				<integer>0</integer>
+				<key>totalNumberOfErrors</key>
+				<integer>0</integer>
+				<key>totalNumberOfTestFailures</key>
+				<integer>0</integer>
+				<key>totalNumberOfWarnings</key>
+				<integer>3</integer>
+			</dict>
+			<key>schemeIdentifier-containerName</key>
+			<string>NFGCrash project</string>
+			<key>schemeIdentifier-schemeName</key>
+			<string>NFGCrash</string>
+			<key>schemeIdentifier-sharedScheme</key>
+			<integer>1</integer>
+			<key>signature</key>
+			<string>Archiving project NFGCrash with scheme NFGCrash</string>
+			<key>timeStartedRecording</key>
+			<real>801003237.88945305</real>
+			<key>timeStoppedRecording</key>
+			<real>801003257.52914798</real>
+			<key>title</key>
+			<string>Archiving project NFGCrash with scheme NFGCrash</string>
+			<key>uniqueIdentifier</key>
+			<string>CA3DFDCE-79E2-41E2-B565-C9D1A2AD585C</string>
+		</dict>
+	</dict>
+</dict>
+</plist>

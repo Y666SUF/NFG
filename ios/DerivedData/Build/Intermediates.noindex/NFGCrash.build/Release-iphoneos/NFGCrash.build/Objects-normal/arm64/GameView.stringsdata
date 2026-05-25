@@ -1,0 +1,112 @@
+{
+  "source": "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/GameView.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "Tax Pot: %@ pts",
+        "location": {
+          "startingColumn": 14,
+          "startingLine": 171
+        }
+      },
+      {
+        "comment": "",
+        "key": "Done",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 81
+        }
+      },
+      {
+        "comment": "",
+        "key": "View full leaderboard",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 146
+        }
+      },
+      {
+        "comment": "",
+        "key": "Entries",
+        "location": {
+          "startingColumn": 22,
+          "startingLine": 186
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld pts",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 191
+        }
+      },
+      {
+        "comment": "",
+        "key": "No entries this round",
+        "location": {
+          "startingColumn": 30,
+          "startingLine": 202
+        }
+      },
+      {
+        "comment": "",
+        "key": "Queued — next round",
+        "location": {
+          "startingColumn": 34,
+          "startingLine": 210
+        }
+      },
+      {
+        "comment": "",
+        "key": "%lld → %@×",
+        "location": {
+          "startingColumn": 18,
+          "startingLine": 239
+        }
+      },
+      {
+        "comment": "",
+        "key": "All-in @ 2×  (!all 2)",
+        "location": {
+          "startingColumn": 20,
+          "startingLine": 310
+        }
+      },
+      {
+        "comment": "",
+        "key": "!100 or 30k",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 258
+        }
+      },
+      {
+        "comment": "",
+        "key": "×",
+        "location": {
+          "startingColumn": 27,
+          "startingLine": 272
+        }
+      },
+      {
+        "comment": "",
+        "key": "!bal",
+        "location": {
+          "startingColumn": 24,
+          "startingLine": 297
+        }
+      },
+      {
+        "comment": "",
+        "key": "PLACE BET",
+        "location": {
+          "startingColumn": 26,
+          "startingLine": 288
+        }
+      }
+    ]
+  },
+  "version": 1
+}

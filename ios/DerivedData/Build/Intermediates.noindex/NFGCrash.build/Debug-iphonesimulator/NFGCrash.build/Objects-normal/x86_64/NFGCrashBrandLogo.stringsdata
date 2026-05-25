@@ -1,0 +1,16 @@
+{
+  "source": "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/NFGCrashBrandLogo.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "NFG Crash",
+        "location": {
+          "startingColumn": 29,
+          "startingLine": 26
+        }
+      }
+    ]
+  },
+  "version": 1
+}

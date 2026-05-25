@@ -1,0 +1,40 @@
+{
+  "source": "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/Views/TikTokLiveBadge.swift",
+  "tables": {
+    "Localizable": [
+      {
+        "comment": "",
+        "key": "TikTok stream is live",
+        "location": {
+          "startingColumn": 47,
+          "startingLine": 22
+        }
+      },
+      {
+        "comment": "",
+        "key": "TikTok stream is not live",
+        "location": {
+          "startingColumn": 73,
+          "startingLine": 22
+        }
+      },
+      {
+        "comment": "",
+        "key": "LIVE",
+        "location": {
+          "startingColumn": 36,
+          "startingLine": 13
+        }
+      },
+      {
+        "comment": "",
+        "key": "NOT LIVE",
+        "location": {
+          "startingColumn": 45,
+          "startingLine": 13
+        }
+      }
+    ]
+  },
+  "version": 1
+}

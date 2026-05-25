@@ -1,0 +1,12 @@
+{
+  "/Users/y666suf/Documents/nfg-crash/ios/NFGCrash/NFGCrashApp.swift" : {
+    "abi-baseline-json" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Release-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash.abi.json",
+    "const-values" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Release-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash-primary.swiftconstvalues",
+    "dependencies" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Release-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash-primary.d",
+    "diagnostics" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Release-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash-primary.dia",
+    "objc-header" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Release-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash-Swift.h",
+    "swiftdoc" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Release-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash.swiftdoc",
+    "swiftmodule" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Release-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash.swiftmodule",
+    "swiftsourceinfo" : "/Users/y666suf/Documents/nfg-crash/ios/DerivedData/Build/Intermediates.noindex/NFGCrash.build/Release-iphoneos/NFGCrash.build/Objects-normal/arm64/NFGCrash.swiftsourceinfo"
+  }
+}

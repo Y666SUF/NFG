@@ -697,6 +697,11 @@ final class SyncClient: ObservableObject {
             lastActionMessage = "Enter amount (e.g. 100, 30k) and cashout ≥ 1.05"
             return
         }
+        guard let amount = BetAmountParser.parse(trimmed) else {
+            lastActionMessage = "Enter a valid amount (e.g. 100, 30k, 3m)"
+            return
+        }
+        rememberPlacedBet(amount: amount, cashout: cashout)
         await sendCommand("!\(trimmed) \(cashout)")
     }
 
@@ -749,6 +754,7 @@ final class SyncClient: ObservableObject {
                 lastActionMessage = "Bet placed: \(amt) @ \(co)×"
                 rememberPlacedBet(amount: amt, cashout: co)
             } else {
+                removeCachedBetForCurrentUser()
                 lastActionMessage = betErrorMessage(parsed.reason)
             }
         case "balance_shout":
@@ -1129,23 +1135,24 @@ final class SyncClient: ObservableObject {
         return out
     }
 
-    /// Server on y666suf.com may still clear `openBets` during running/ended — cache + merge last result.
+    /// Live server may omit `openBets` after betting — keep local entries for the whole round.
     private func enrichOpenBets(_ s: CrashGameState) -> CrashGameState {
         var out = s
 
-        if out.roundId != cachedOpenBetsRoundId, out.phase == .betting {
-            cachedOpenBets = []
+        if out.roundId != cachedOpenBetsRoundId {
             cachedOpenBetsRoundId = out.roundId
+            if out.phase == .betting {
+                cachedOpenBets = []
+            }
         }
 
         if !out.openBets.isEmpty {
-            cachedOpenBets = out.openBets
-            cachedOpenBetsRoundId = out.roundId
+            cachedOpenBets = mergeOpenBets(server: out.openBets, cached: cachedOpenBets)
+            out.openBets = cachedOpenBets
             return out
         }
 
-        if out.roundId == cachedOpenBetsRoundId, !cachedOpenBets.isEmpty,
-           out.phase == .running || out.phase == .ended {
+        if !cachedOpenBets.isEmpty, out.roundId == cachedOpenBetsRoundId {
             out.openBets = cachedOpenBets
             return out
         }
@@ -1155,13 +1162,34 @@ final class SyncClient: ObservableObject {
            result.roundId == out.roundId {
             let fromResult = openBets(from: result)
             if !fromResult.isEmpty {
-                out.openBets = fromResult
                 cachedOpenBets = fromResult
-                cachedOpenBetsRoundId = out.roundId
+                out.openBets = fromResult
             }
         }
 
         return out
+    }
+
+    private func mergeOpenBets(server: [OpenBet], cached: [OpenBet]) -> [OpenBet] {
+        var byUser: [String: OpenBet] = [:]
+        for bet in server {
+            byUser[normalizeBetUser(bet.user)] = bet
+        }
+        for bet in cached {
+            let key = normalizeBetUser(bet.user)
+            if byUser[key] == nil {
+                byUser[key] = bet
+            }
+        }
+        return byUser.values.sorted {
+            $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+        }
+    }
+
+    private func normalizeBetUser(_ raw: String) -> String {
+        raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "@", with: "")
+            .lowercased()
     }
 
     private func openBets(from result: RoundLastResult) -> [OpenBet] {
@@ -1181,21 +1209,45 @@ final class SyncClient: ObservableObject {
 
     private func rememberPlacedBet(amount: Int, cashout: Double) {
         guard amount > 0, cashout >= 1.05 else { return }
-        let user = PlayerSession.tiktokUsername
+        let user = resolvedBetUserId()
         guard !user.isEmpty else { return }
-        let name = PlayerSession.displayName
-        let bet = OpenBet(user: user, displayName: name.isEmpty ? user : name, amount: amount, cashout: cashout)
+        let name = resolvedBetDisplayName()
+        let bet = OpenBet(user: user, displayName: name, amount: amount, cashout: cashout)
         if cachedOpenBetsRoundId != gameState.roundId {
             cachedOpenBetsRoundId = gameState.roundId
             cachedOpenBets = []
         }
-        cachedOpenBets.removeAll { $0.user == user }
+        cachedOpenBets.removeAll { normalizeBetUser($0.user) == normalizeBetUser(user) }
         cachedOpenBets.append(bet)
+        applyCachedOpenBetsToPublishedState()
+    }
+
+    private func removeCachedBetForCurrentUser() {
+        let user = resolvedBetUserId()
+        guard !user.isEmpty else { return }
+        cachedOpenBets.removeAll { normalizeBetUser($0.user) == normalizeBetUser(user) }
+        applyCachedOpenBetsToPublishedState()
+    }
+
+    private func resolvedBetUserId() -> String {
+        let linked = AuthStore.verifiedUserId.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !linked.isEmpty { return linked }
+        return PlayerSession.tiktokUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func resolvedBetDisplayName() -> String {
+        let linked = AuthStore.verifiedDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !linked.isEmpty { return linked }
+        let session = PlayerSession.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !session.isEmpty { return session }
+        return resolvedBetUserId()
+    }
+
+    private func applyCachedOpenBetsToPublishedState() {
         var state = gameState
-        if state.roundId == cachedOpenBetsRoundId {
-            state.openBets = cachedOpenBets
-            gameState = enrichState(state)
-        }
+        guard state.roundId == cachedOpenBetsRoundId else { return }
+        state.openBets = cachedOpenBets
+        gameState = enrichState(state)
     }
 
     private func applyStateSideEffects(_ s: CrashGameState) {

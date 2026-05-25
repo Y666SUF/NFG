@@ -262,6 +262,35 @@ struct PlayerProfile: Codable, Equatable {
     }
 }
 
+/// Matches server `bet-amount.js` for optimistic entries before chat round-trips.
+enum BetAmountParser {
+    static func parse(_ raw: String) -> Int? {
+        var s = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: ",", with: "")
+            .lowercased()
+        s = s.filter { !$0.isWhitespace }
+        guard !s.isEmpty else { return nil }
+
+        guard let regex = try? NSRegularExpression(pattern: "^([0-9]+(?:\\.[0-9]+)?)([kmb])?$", options: .caseInsensitive),
+              let match = regex.firstMatch(in: s, range: NSRange(s.startIndex..., in: s)),
+              match.numberOfRanges >= 2,
+              let numRange = Range(match.range(at: 1), in: s),
+              let num = Double(s[numRange]) else { return nil }
+
+        var n = num
+        if match.numberOfRanges >= 3, let suffixRange = Range(match.range(at: 2), in: s), !suffixRange.isEmpty {
+            switch s[suffixRange].lowercased() {
+            case "k": n *= 1_000
+            case "m": n *= 1_000_000
+            case "b": n *= 1_000_000_000
+            default: break
+            }
+        }
+        guard n.isFinite, n > 0 else { return nil }
+        return Int(n.rounded(.down))
+    }
+}
+
 struct ChatActionResult: Codable {
     var ok: Bool?
     var parsed: ParsedChat?

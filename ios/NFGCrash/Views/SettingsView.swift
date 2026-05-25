@@ -167,7 +167,7 @@ struct SettingsView: View {
             Text("Server: \(PlayerSession.serverBaseURL)")
                 .font(.caption2)
                 .foregroundStyle(NFGTheme.muted)
-            Text("App build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?") — entries fix")
+            Text("App build \(Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "?") — UI + entries fix")
                 .font(.caption2)
                 .foregroundStyle(NFGTheme.accent2.opacity(0.85))
         }

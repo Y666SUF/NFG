@@ -66,3 +66,10 @@ venv/
 
 # Electron
 out/
+
+# iOS build output & Xcode local state (NFG Live app)
+ios-live/.build/
+ios-live/build/
+ios-live/.derivedData*/
+**/xcuserdata/
+**/*.xcuserstate

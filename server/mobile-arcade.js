@@ -158,13 +158,16 @@ function ensureUser(state, user) {
       dayKey: "",
       stats: { rounds: 0, wins: 0, lost: 0 },
       games: {},
+      claimedMissions: [],
     };
   }
   const dayKey = ukDayKey();
   if (state.users[u].dayKey !== dayKey) {
     state.users[u].dayKey = dayKey;
     state.users[u].stats = { rounds: 0, wins: 0, lost: 0 };
+    state.users[u].claimedMissions = [];
   }
+  if (!Array.isArray(state.users[u].claimedMissions)) state.users[u].claimedMissions = [];
   return state.users[u];
 }
 
@@ -325,34 +328,61 @@ function outcome(pointStore, user, userRec, { stake, payout, won, gameId }) {
   };
 }
 
+const MISSION_DEFS = [
+  { id: "win_5", title: "Win 5 arcade rounds today", goal: 5, reward: 2000, stat: "wins" },
+  { id: "play_10", title: "Play 10 staked rounds today", goal: 10, reward: 1500, stat: "rounds" },
+  { id: "live_win", title: "Win a round while LIVE", goal: 1, reward: 3000, stat: "liveWin" },
+];
+
 function buildMissions(userRec) {
   const s = userRec.stats || {};
-  return [
-    {
-      id: "win_5",
-      title: "Win 5 arcade rounds today",
-      goal: 5,
-      progress: s.wins || 0,
-      done: (s.wins || 0) >= 5,
-      claimed: false,
-    },
-    {
-      id: "play_10",
-      title: "Play 10 staked rounds today",
-      goal: 10,
-      progress: s.rounds || 0,
-      done: (s.rounds || 0) >= 10,
-      claimed: false,
-    },
-    {
-      id: "live_win",
-      title: "Win a round while LIVE",
-      goal: 1,
-      progress: s.liveWin || 0,
-      done: (s.liveWin || 0) >= 1,
-      claimed: false,
-    },
-  ];
+  const claimed = Array.isArray(userRec.claimedMissions) ? userRec.claimedMissions : [];
+  return MISSION_DEFS.map((def) => {
+    const progress = s[def.stat] || 0;
+    return {
+      id: def.id,
+      title: def.title,
+      goal: def.goal,
+      reward: def.reward,
+      progress,
+      done: progress >= def.goal,
+      claimed: claimed.includes(def.id),
+    };
+  });
+}
+
+function claimMission(pointStore, game, user, missionId) {
+  const state = loadState();
+  const userRec = ensureUser(state, user);
+  if (!userRec) return { ok: false, reason: "invalid_user", message: "Invalid user." };
+
+  const id = String(missionId || "").trim();
+  const def = MISSION_DEFS.find((m) => m.id === id);
+  if (!def) return { ok: false, reason: "invalid_mission", message: "Unknown mission." };
+
+  if (!Array.isArray(userRec.claimedMissions)) userRec.claimedMissions = [];
+  const progress = (userRec.stats || {})[def.stat] || 0;
+  if (progress < def.goal) {
+    return { ok: false, reason: "not_done", message: "Mission not complete yet." };
+  }
+  if (userRec.claimedMissions.includes(id)) {
+    return { ok: false, reason: "already_claimed", message: "Reward already claimed." };
+  }
+
+  userRec.claimedMissions.push(id);
+  pointStore.credit(user, def.reward, { countAsEarned: true });
+  saveState(state);
+
+  const catalog = buildCatalog(pointStore, user);
+  return {
+    ok: true,
+    claimed: id,
+    reward: def.reward,
+    message: `Claimed ${def.reward.toLocaleString()} pts!`,
+    arcade: catalog,
+    missions: catalog.missions,
+    wallet: buildWalletPayload(user, pointStore, game),
+  };
 }
 
 function catalogGames(userRec, pointStore, user) {
@@ -1820,6 +1850,22 @@ function registerMobileArcadeRoutes(app, ctx) {
     if (!session) return res.status(401).json({ ok: false, error: "auth_required" });
     try {
       return res.json(buildCatalog(pointStore, session.userId));
+    } catch (e) {
+      return res.status(500).json({ ok: false, message: e.message || "arcade_error" });
+    }
+  });
+
+  app.post("/api/mobile/arcade/mission/claim", (req, res) => {
+    const session = validateBearer(req);
+    if (!session) return res.status(401).json({ ok: false, error: "auth_required" });
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const missionId = String(body.missionId || body.id || "").trim();
+    if (!missionId) {
+      return res.status(400).json({ ok: false, reason: "invalid_mission", message: "Missing missionId." });
+    }
+    try {
+      const result = claimMission(pointStore, game, session.userId, missionId);
+      return res.status(result.ok === false ? 400 : 200).json(result);
     } catch (e) {
       return res.status(500).json({ ok: false, message: e.message || "arcade_error" });
     }

@@ -11,7 +11,9 @@ const { getTikTokBridgeStatus } = require("./tiktok-bridge");
 const {
   TOWER_SLOTS,
   TOWER_GEAR,
+  TOWER_CONSUMABLES,
   getTowerGear,
+  getTowerConsumable,
   defaultTowerEquipment,
   migrateTowerHeroGear,
   towerHeroVisuals,
@@ -967,6 +969,16 @@ const TOWER_BOSSES = [
   { id: "house_dragon", name: "House Edge Dragon", emoji: "🐉", theme: "boss" },
   { id: "jackpot_hydra", name: "Jackpot Hydra", emoji: "💎", theme: "slots" },
   { id: "void_dealer", name: "Void Dealer", emoji: "🃏", theme: "cards" },
+  { id: "roulette_colossus", name: "Roulette Colossus", emoji: "🎡", theme: "roulette" },
+  { id: "ace_overlord", name: "Ace Overlord", emoji: "♠️", theme: "cards" },
+  { id: "fortune_leviathan", name: "Fortune Leviathan", emoji: "🐲", theme: "boss" },
+  { id: "chip_behemoth", name: "Chip Behemoth", emoji: "🪙", theme: "money" },
+];
+
+// Higher floor bands give bosses a tougher epithet + enhanced look (client uses `tier`).
+const TOWER_BOSS_EPITHETS = [
+  "", "Greater ", "Elder ", "Ancient ", "Mythic ",
+  "Astral ", "Cosmic ", "Eternal ", "Omega ", "Apex ",
 ];
 
 function defaultTowerAppearance() {
@@ -1050,13 +1062,17 @@ function spawnTowerMonster(floor) {
   const isBoss = f % 10 === 0;
   const pool = isBoss ? TOWER_BOSSES : TOWER_MONSTERS;
   const base = pool[(isBoss ? Math.floor(f / 10) - 1 : f - 1) % pool.length];
+  // Visual/difficulty rank that grows every ~30 floors (0..9).
+  const tier = Math.min(9, Math.floor(f / 30));
   const scale = isBoss ? 2.8 : 1;
-  const hp = Math.floor((35 + f * 12) * scale);
-  const atk = Math.floor((4 + f * 1.6) * (isBoss ? 1.45 : 1));
-  const def = Math.floor((1 + f * 0.5) * (isBoss ? 1.3 : 1));
+  // Mild quadratic term so deeper floors get progressively harder.
+  const hp = Math.floor((35 + f * 12 + f * f * 0.08) * scale);
+  const atk = Math.floor((4 + f * 1.7) * (isBoss ? 1.5 : 1));
+  const def = Math.floor((1 + f * 0.55) * (isBoss ? 1.35 : 1));
+  const name = isBoss ? `${TOWER_BOSS_EPITHETS[tier] || ""}${base.name}` : base.name;
   return {
     id: base.id,
-    name: base.name,
+    name,
     emoji: base.emoji,
     theme: base.theme,
     hp,
@@ -1065,6 +1081,7 @@ function spawnTowerMonster(floor) {
     def,
     floor: f,
     isBoss,
+    tier,
   };
 }
 
@@ -1134,6 +1151,7 @@ function towerPayload(hero, session, stats, extra = {}) {
         bySlot: shopBySlot,
         weapons: shopBySlot.weapon,
         armors: shopBySlot.body,
+        consumables: TOWER_CONSUMABLES,
       },
       combat: session
         ? {
@@ -1299,6 +1317,24 @@ function handleTower(user, userRec, action, payload, pointStore) {
       };
     }
     const itemId = String(payload.itemId || payload.id || "").trim();
+
+    // Consumables (potions) — bought with gold, add to potion stock.
+    const consumable = getTowerConsumable(itemId);
+    if (consumable) {
+      if ((hero.gold || 0) < consumable.cost) {
+        return { ok: false, reason: "insufficient_gold", message: `Need ${consumable.cost} tower gold (have ${hero.gold || 0}).`, ...fields, ...towerPayload(hero, null, stats) };
+      }
+      hero.gold -= consumable.cost;
+      hero.potions = Math.max(0, Math.floor(Number(hero.potions) || 0)) + (consumable.potions || 0);
+      userRec.games.nfg_tower = gRec;
+      return {
+        ok: true,
+        ...fields,
+        ...towerPayload(hero, null, towerHeroStats(hero)),
+        message: `Bought ${consumable.name} (+${consumable.potions} potion${consumable.potions === 1 ? "" : "s"}).`,
+      };
+    }
+
     const item = getTowerGear(itemId);
     if (!item || !TOWER_GEAR.some((g) => g.id === itemId)) {
       return { ok: false, reason: "invalid_item", message: "Unknown item.", ...fields, ...towerPayload(hero, null, stats) };
@@ -1434,7 +1470,8 @@ function handleTower(user, userRec, action, payload, pointStore) {
         towerPushLog(session, `Victory! +${goldGain} gold, +${killXp} bonus XP.`);
 
         if (m.isBoss && session.floor >= 10) {
-          const bonusPts = Math.floor(50 + session.floor * 8);
+          // 10k at floor 10, scaling ~+54/floor to a 25k cap (~floor 290).
+          const bonusPts = Math.min(25000, Math.floor(10000 + (session.floor - 10) * 54));
           pointStore.credit(user, bonusPts, { countAsEarned: true });
           towerPushLog(session, `Boss bonus: ${bonusPts.toLocaleString()} pts credited!`);
         }

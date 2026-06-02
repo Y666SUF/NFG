@@ -57,6 +57,67 @@ const STARTER_GEAR = {
   cape: "novice_cloak",
 };
 
+// ---- Procedurally generated higher tiers (deep-grind content) ----
+// Each slot keeps its hand-made low tiers above, then gains many more
+// progressively pricier tiers. `visual` encodes a tier band the iOS
+// renderer turns into a colour ramp (bronze → celestial).
+const GEN_MATERIALS = [
+  "Bronze", "Iron", "Steel", "Obsidian", "Golden",
+  "Platinum", "Crystal", "Dragonbone", "Void", "Celestial",
+];
+const GEN_SLOT_NOUN = {
+  head: "Helm", body: "Plate", legs: "Greaves",
+  shield: "Aegis", weapon: "Blade", cape: "Mantle",
+};
+const GEN_ROMAN = ["I", "II", "III"];
+const GEN_TIERS_PER_SLOT = 30;
+
+function genGearStats(slot, t) {
+  switch (slot) {
+    case "weapon": return { atk: 32 + t * 6, def: 0, hp: 0 };
+    case "head": return { atk: t >= 18 ? 2 : 0, def: 13 + t * 2, hp: 36 + t * 5 };
+    case "body": return { atk: t >= 22 ? 3 : 0, def: 20 + t * 3, hp: 95 + t * 11 };
+    case "legs": return { atk: 0, def: 13 + t * 2, hp: 52 + t * 7 };
+    case "shield": return { atk: 0, def: 20 + t * 3, hp: 44 + t * 5 };
+    case "cape": return { atk: 2 + Math.floor(t / 6), def: 10 + t * 2, hp: 40 + t * 5 };
+    default: return { atk: 0, def: t, hp: t };
+  }
+}
+
+for (const slot of TOWER_SLOTS) {
+  for (let t = 1; t <= GEN_TIERS_PER_SLOT; t++) {
+    const band = Math.min(GEN_MATERIALS.length - 1, Math.floor((t - 1) / 3));
+    const material = GEN_MATERIALS[band];
+    const noun = GEN_SLOT_NOUN[slot] || "Relic";
+    const roman = GEN_ROMAN[(t - 1) % GEN_ROMAN.length];
+    const stats = genGearStats(slot, t);
+    const cost = Math.round((1200 * Math.pow(1.18, t - 1)) / 50) * 50;
+    TOWER_GEAR.push({
+      id: `${slot}_gen_${t}`,
+      slot,
+      name: `${material} ${noun} ${roman}`,
+      cost,
+      minLevel: 18 + (t - 1) * 3,
+      atk: stats.atk,
+      def: stats.def,
+      hp: stats.hp,
+      visual: `gen_${slot}_b${band}`,
+    });
+  }
+}
+
+// ---- Consumables (potions / healing), bought with tower gold ----
+const TOWER_CONSUMABLES = [
+  { id: "potion_1", name: "Health Potion", cost: 60, potions: 1, desc: "Heals 40% of max HP when used in battle." },
+  { id: "potion_5", name: "Potion Bundle", cost: 260, potions: 5, desc: "Five health potions at a bulk discount." },
+  { id: "potion_15", name: "Potion Crate", cost: 700, potions: 15, desc: "Fifteen potions — stock up for deep runs." },
+];
+const CONSUMABLE_BY_ID = Object.fromEntries(TOWER_CONSUMABLES.map((c) => [c.id, c]));
+
+function getTowerConsumable(id) {
+  return CONSUMABLE_BY_ID[String(id || "").trim()] || null;
+}
+
 const GEAR_BY_ID = Object.fromEntries(TOWER_GEAR.map((g) => [g.id, g]));
 
 function getTowerGear(id) {
@@ -161,8 +222,10 @@ function towerShopBySlot(level) {
 module.exports = {
   TOWER_SLOTS,
   TOWER_GEAR,
+  TOWER_CONSUMABLES,
   STARTER_GEAR,
   getTowerGear,
+  getTowerConsumable,
   getTowerGearBySlot,
   defaultTowerEquipment,
   normalizeTowerEquipment,

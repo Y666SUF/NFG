@@ -6,6 +6,7 @@ const http = require("http");
 const https = require("https");
 const { URL } = require("url");
 const WebSocket = require("ws");
+const { tryTowerWorldUpgrade } = require("./tower-world");
 
 const HANGMAN_BACKEND_URL = String(process.env.HANGMAN_BACKEND_URL || "http://127.0.0.1:19876").replace(
   /\/$/,
@@ -72,6 +73,10 @@ function attachHangmanWebSocketProxy(httpServer, crashWss) {
       pathname = new URL(request.url || "/", "http://localhost").pathname;
     } catch {
       pathname = String(request.url || "/").split("?")[0] || "/";
+    }
+
+    if (tryTowerWorldUpgrade(request, socket, head)) {
+      return;
     }
 
     if (pathname === "/hangman/ws" || pathname === "/api/hangman/ws") {

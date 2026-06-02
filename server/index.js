@@ -1231,6 +1231,7 @@ server.listen(PORT, SERVER_HOST, () => {
     for (const lan of lanUrls) console.log("  ", lan);
   }
   console.log(`Hangman backend port: ${HANGMAN_PORT} (WebSocket proxy: /hangman/ws)`);
+  console.log("Tower World: /api/mobile/tower/world/profile + WebSocket /api/mobile/tower/world/ws");
   startHangmanProcess();
   waitForHangman()
     .then(() => console.log("[Hangman] Ready (proxied through this server)."))

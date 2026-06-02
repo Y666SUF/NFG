@@ -938,10 +938,10 @@ function handleWheel(user, userRec, action, payload, pointStore) {
   if (!debit.ok) return { ...debit, ...fields };
 
   const picked = pickWheelSegment();
-  const seg = picked.seg;
+  const segmentIndex = picked.index;
+  const seg = WHEEL_SEGMENTS[segmentIndex] || picked.seg;
   const grossPayout =
     seg.mult === 0 ? 0 : applyArcadeEdge(Math.floor(stake * seg.mult));
-  const segmentIndex = picked.index;
 
   let res;
   if (grossPayout === 0) {

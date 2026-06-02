@@ -7,45 +7,45 @@ const TOWER_SLOTS = ["head", "body", "legs", "shield", "weapon", "cape"];
 const TOWER_GEAR = [
   // HEAD (5)
   { id: "cloth_hood", slot: "head", name: "Cloth Hood", cost: 0, minLevel: 1, atk: 0, def: 1, hp: 0, visual: "cloth_hood" },
-  { id: "dealer_cap", slot: "head", name: "Dealer Cap", cost: 45, minLevel: 2, atk: 0, def: 2, hp: 5, visual: "dealer_cap" },
-  { id: "chip_crown", slot: "head", name: "Chip Crown", cost: 120, minLevel: 5, atk: 0, def: 4, hp: 12, visual: "chip_crown" },
-  { id: "lucky_helmet", slot: "head", name: "Lucky Helmet", cost: 280, minLevel: 9, atk: 1, def: 7, hp: 22, visual: "lucky_helmet" },
-  { id: "dragon_mask", slot: "head", name: "Dragon Mask", cost: 620, minLevel: 14, atk: 2, def: 11, hp: 35, visual: "dragon_mask" },
+  { id: "dealer_cap", slot: "head", name: "Dealer Cap", cost: 2200, minLevel: 2, atk: 0, def: 3, hp: 8, visual: "dealer_cap", casino: true },
+  { id: "chip_crown", slot: "head", name: "Chip Crown", cost: 4800, minLevel: 5, atk: 1, def: 6, hp: 18, visual: "chip_crown", casino: true },
+  { id: "lucky_helmet", slot: "head", name: "Lucky Helmet", cost: 7200, minLevel: 9, atk: 2, def: 10, hp: 30, visual: "lucky_helmet", casino: true },
+  { id: "dragon_mask", slot: "head", name: "Dragon Mask", cost: 11000, minLevel: 14, atk: 3, def: 14, hp: 48, visual: "dragon_mask", casino: true },
 
   // BODY (5)
   { id: "gambler_tunic", slot: "body", name: "Gambler's Tunic", cost: 0, minLevel: 1, atk: 0, def: 0, hp: 0, visual: "gambler_tunic" },
-  { id: "felt_vest", slot: "body", name: "Felt Vest", cost: 65, minLevel: 3, atk: 0, def: 4, hp: 18, visual: "felt_vest" },
-  { id: "chip_mail", slot: "body", name: "Chip Mail", cost: 160, minLevel: 6, atk: 0, def: 8, hp: 38, visual: "chip_mail" },
-  { id: "high_roller_plate", slot: "body", name: "High Roller Plate", cost: 380, minLevel: 10, atk: 1, def: 14, hp: 65, visual: "high_roller_plate" },
-  { id: "royal_jacket", slot: "body", name: "Royal Jacket", cost: 750, minLevel: 15, atk: 2, def: 20, hp: 95, visual: "royal_jacket" },
+  { id: "felt_vest", slot: "body", name: "Felt Vest", cost: 1400, minLevel: 3, atk: 0, def: 5, hp: 22, visual: "felt_vest" },
+  { id: "chip_mail", slot: "body", name: "Chip Mail", cost: 5200, minLevel: 6, atk: 1, def: 11, hp: 48, visual: "chip_mail", casino: true },
+  { id: "high_roller_plate", slot: "body", name: "High Roller Plate", cost: 8800, minLevel: 10, atk: 2, def: 18, hp: 82, visual: "high_roller_plate", casino: true },
+  { id: "royal_jacket", slot: "body", name: "Royal Jacket", cost: 12500, minLevel: 15, atk: 3, def: 24, hp: 115, visual: "royal_jacket", casino: true },
 
   // LEGS (5)
   { id: "worn_trousers", slot: "legs", name: "Worn Trousers", cost: 0, minLevel: 1, atk: 0, def: 0, hp: 0, visual: "worn_trousers" },
-  { id: "chip_greaves", slot: "legs", name: "Chip Greaves", cost: 55, minLevel: 3, atk: 0, def: 3, hp: 10, visual: "chip_greaves" },
-  { id: "ace_boots", slot: "legs", name: "Ace Boots", cost: 140, minLevel: 6, atk: 0, def: 5, hp: 20, visual: "ace_boots" },
-  { id: "roller_chaps", slot: "legs", name: "Roller Chaps", cost: 320, minLevel: 10, atk: 0, def: 9, hp: 40, visual: "roller_chaps" },
-  { id: "dragon_greaves", slot: "legs", name: "Dragon Greaves", cost: 680, minLevel: 14, atk: 1, def: 13, hp: 55, visual: "dragon_greaves" },
+  { id: "chip_greaves", slot: "legs", name: "Chip Greaves", cost: 3800, minLevel: 3, atk: 0, def: 4, hp: 14, visual: "chip_greaves", casino: true },
+  { id: "ace_boots", slot: "legs", name: "Ace Boots", cost: 5600, minLevel: 6, atk: 0, def: 7, hp: 28, visual: "ace_boots", casino: true },
+  { id: "roller_chaps", slot: "legs", name: "Roller Chaps", cost: 8200, minLevel: 10, atk: 1, def: 11, hp: 50, visual: "roller_chaps", casino: true },
+  { id: "dragon_greaves", slot: "legs", name: "Dragon Greaves", cost: 11800, minLevel: 14, atk: 2, def: 16, hp: 68, visual: "dragon_greaves", casino: true },
 
   // SHIELD (5)
   { id: "chip_buckler", slot: "shield", name: "Chip Buckler", cost: 0, minLevel: 1, atk: 0, def: 2, hp: 0, visual: "chip_buckler" },
-  { id: "bronze_guard", slot: "shield", name: "Bronze Guard", cost: 70, minLevel: 4, atk: 0, def: 5, hp: 8, visual: "bronze_guard" },
-  { id: "ace_tower", slot: "shield", name: "Ace Tower Shield", cost: 175, minLevel: 7, atk: 0, def: 9, hp: 15, visual: "ace_tower" },
-  { id: "jackpot_barrier", slot: "shield", name: "Jackpot Barrier", cost: 400, minLevel: 11, atk: 0, def: 14, hp: 28, visual: "jackpot_barrier" },
-  { id: "house_wall", slot: "shield", name: "House Wall", cost: 820, minLevel: 16, atk: 0, def: 20, hp: 45, visual: "house_wall" },
+  { id: "bronze_guard", slot: "shield", name: "Bronze Guard", cost: 1600, minLevel: 4, atk: 0, def: 6, hp: 10, visual: "bronze_guard" },
+  { id: "ace_tower", slot: "shield", name: "Ace Tower Shield", cost: 6000, minLevel: 7, atk: 0, def: 11, hp: 20, visual: "ace_tower", casino: true },
+  { id: "jackpot_barrier", slot: "shield", name: "Jackpot Barrier", cost: 9500, minLevel: 11, atk: 0, def: 17, hp: 36, visual: "jackpot_barrier", casino: true },
+  { id: "house_wall", slot: "shield", name: "House Wall", cost: 13200, minLevel: 16, atk: 0, def: 24, hp: 55, visual: "house_wall", casino: true },
 
   // WEAPON (5)
   { id: "rusty_dagger", slot: "weapon", name: "Rusty Dagger", cost: 0, minLevel: 1, atk: 0, def: 0, hp: 0, visual: "rusty_dagger" },
-  { id: "chip_blade", slot: "weapon", name: "Chip Blade", cost: 75, minLevel: 3, atk: 5, def: 0, hp: 0, visual: "chip_blade" },
-  { id: "dice_saber", slot: "weapon", name: "Dice Saber", cost: 180, minLevel: 6, atk: 10, def: 0, hp: 0, visual: "dice_saber" },
-  { id: "ace_cutlass", slot: "weapon", name: "Ace Cutlass", cost: 400, minLevel: 10, atk: 18, def: 0, hp: 0, visual: "ace_cutlass" },
-  { id: "jackpot_lance", slot: "weapon", name: "Jackpot Lance", cost: 850, minLevel: 15, atk: 28, def: 0, hp: 0, visual: "jackpot_lance" },
+  { id: "chip_blade", slot: "weapon", name: "Chip Blade", cost: 4200, minLevel: 3, atk: 8, def: 0, hp: 0, visual: "chip_blade", casino: true },
+  { id: "dice_saber", slot: "weapon", name: "Dice Saber", cost: 6800, minLevel: 6, atk: 14, def: 0, hp: 0, visual: "dice_saber", casino: true },
+  { id: "ace_cutlass", slot: "weapon", name: "Ace Cutlass", cost: 9800, minLevel: 10, atk: 24, def: 0, hp: 0, visual: "ace_cutlass", casino: true },
+  { id: "jackpot_lance", slot: "weapon", name: "Jackpot Lance", cost: 14500, minLevel: 15, atk: 38, def: 0, hp: 0, visual: "jackpot_lance", casino: true },
 
   // CAPE (5)
   { id: "novice_cloak", slot: "cape", name: "Novice Cloak", cost: 0, minLevel: 1, atk: 0, def: 1, hp: 0, visual: "novice_cloak" },
-  { id: "velvet_cape", slot: "cape", name: "Velvet Cape", cost: 50, minLevel: 2, atk: 0, def: 2, hp: 5, visual: "velvet_cape" },
-  { id: "chip_mantle", slot: "cape", name: "Chip Mantle", cost: 130, minLevel: 5, atk: 0, def: 4, hp: 12, visual: "chip_mantle" },
-  { id: "high_roller_cape", slot: "cape", name: "High Roller Cape", cost: 300, minLevel: 9, atk: 1, def: 6, hp: 25, visual: "high_roller_cape" },
-  { id: "dragon_wings", slot: "cape", name: "Dragon Wings", cost: 700, minLevel: 14, atk: 2, def: 10, hp: 40, visual: "dragon_wings" },
+  { id: "velvet_cape", slot: "cape", name: "Velvet Cape", cost: 1800, minLevel: 2, atk: 0, def: 3, hp: 8, visual: "velvet_cape" },
+  { id: "chip_mantle", slot: "cape", name: "Chip Mantle", cost: 4500, minLevel: 5, atk: 1, def: 5, hp: 16, visual: "chip_mantle", casino: true },
+  { id: "high_roller_cape", slot: "cape", name: "High Roller Cape", cost: 7800, minLevel: 9, atk: 2, def: 8, hp: 32, visual: "high_roller_cape", casino: true },
+  { id: "dragon_wings", slot: "cape", name: "Dragon Wings", cost: 12800, minLevel: 14, atk: 3, def: 12, hp: 52, visual: "dragon_wings", casino: true },
 ];
 
 const STARTER_GEAR = {
@@ -91,17 +91,20 @@ for (const slot of TOWER_SLOTS) {
     const noun = GEN_SLOT_NOUN[slot] || "Relic";
     const roman = GEN_ROMAN[(t - 1) % GEN_ROMAN.length];
     const stats = genGearStats(slot, t);
-    const cost = Math.round((1200 * Math.pow(1.18, t - 1)) / 50) * 50;
+    // Generated tiers: cheap early grind gear; mid tiers stay below casino; late tiers exceed it.
+    const cost = t <= 12
+      ? Math.round((320 * Math.pow(1.24, t - 1)) / 25) * 25
+      : Math.round((14000 * Math.pow(1.16, t - 12)) / 50) * 50;
     TOWER_GEAR.push({
       id: `${slot}_gen_${t}`,
       slot,
       name: `${material} ${noun} ${roman}`,
       cost,
-      minLevel: 18 + (t - 1) * 3,
+      minLevel: 12 + (t - 1) * 3,
       atk: stats.atk,
       def: stats.def,
       hp: stats.hp,
-      visual: `gen_${slot}_b${band}`,
+      visual: `gen_${slot}_t${t}_b${band}`,
     });
   }
 }

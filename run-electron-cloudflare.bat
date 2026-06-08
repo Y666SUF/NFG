@@ -19,6 +19,11 @@ set "HOST=0.0.0.0"
 set "HANGMAN_PORT=19876"
 set "HANGMAN_HOST=127.0.0.1"
 set "HANGMAN_BACKEND_URL=http://127.0.0.1:19876"
+set "WORD_GAMES_PORT=19877"
+set "WORD_GAMES_HOST=127.0.0.1"
+set "WORD_GAMES_BACKEND_URL=http://127.0.0.1:19877"
+set "NFG_START_WORD_GAMES=1"
+if "%WORD_GAMES_PYTHON%"=="" set "WORD_GAMES_PYTHON=%HANGMAN_PYTHON%"
 set "NFG_PLATFORM_URL=http://127.0.0.1:3847"
 set "NFG_INTERNAL_SECRET=nfg-dev-internal"
 set "NFG_CHAT_ADMIN_USERS=y666.suf"
@@ -132,6 +137,12 @@ echo   iOS word UI: needs NFG-Hangman.ipa with mask display fix - rebuild on Mac
 echo   Link/chat:   /api/mobile/link/*  /api/mobile/chat
 echo   Python API:  GET  /api/hangman/app/state  ^(proxied on %PORT%^)
 echo.
+echo --- NFG Words mobile ^(NFG Words iOS^) ---
+echo   Health:      GET  https://y666suf.com/api/word-games/health
+echo   Login:       POST https://y666suf.com/api/word-games/players/login
+echo   Leaderboard: GET  https://y666suf.com/api/word-games/leaderboard
+echo   Source repo: %USERPROFILE%\Documents\nfg-word-games
+echo.
 echo --- Shared APIs ---
 echo   App chat:    https://y666suf.com/api/mobile/chat
 echo   Presence:    https://y666suf.com/api/mobile/platform/status
@@ -150,6 +161,12 @@ if errorlevel 1 (
     set "NFG_START_HANGMAN=0"
   ) else (
     echo Hangman source: %~dp0hangman v2
+  )
+  if exist "%USERPROFILE%\Documents\nfg-word-games\server.py" (
+    echo Word Games source: %USERPROFILE%\Documents\nfg-word-games
+  ) else (
+    echo WARNING: nfg-word-games\server.py not found in Documents - Word Games disabled.
+    set "NFG_START_WORD_GAMES=0"
   )
   echo.
 )

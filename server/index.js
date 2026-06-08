@@ -25,6 +25,8 @@ const {
 } = require("./spotify");
 const { registerHangmanHttpProxy, attachHangmanWebSocketProxy } = require("./hangman-proxy");
 const { startHangmanProcess, waitForHangman, HANGMAN_PORT } = require("./hangman-process");
+const { registerWordGamesHttpProxy } = require("./word-games-proxy");
+const { startWordGamesProcess, waitForWordGames, WORD_GAMES_PORT } = require("./word-games-process");
 const { registerIpaDownloads, getIpaDownloadMeta, IPA_CATALOG } = require("./ipa-downloads");
 const { registerHangmanCompanionWeb } = require("./hangman-companion-web");
 
@@ -399,6 +401,7 @@ app.get("/api/state", (_req, res) => {
 registerMobileApi(app, { game, pointStore, isLocalhost, broadcast });
 registerHangmanCompanionWeb(app);
 registerHangmanHttpProxy(app);
+registerWordGamesHttpProxy(app);
 
 app.get("/api/internal/tiktok-bridge", (req, res) => {
   if (!isLocalhost(req)) {
@@ -1231,11 +1234,16 @@ server.listen(PORT, SERVER_HOST, () => {
     for (const lan of lanUrls) console.log("  ", lan);
   }
   console.log(`Hangman backend port: ${HANGMAN_PORT} (WebSocket proxy: /hangman/ws)`);
+  console.log(`Word Games backend port: ${WORD_GAMES_PORT} (HTTP proxy: /api/word-games/*)`);
   console.log("Tower World: /api/mobile/tower/world/profile + WebSocket /api/mobile/tower/world/ws");
   startHangmanProcess();
+  startWordGamesProcess();
   waitForHangman()
     .then(() => console.log("[Hangman] Ready (proxied through this server)."))
     .catch((e) => console.warn("[Hangman] Not ready yet:", e.message));
+  waitForWordGames()
+    .then(() => console.log("[WordGames] Ready (proxied through this server)."))
+    .catch((e) => console.warn("[WordGames] Not ready yet:", e.message));
 
   openBrowser(url);
   startTikTokBridge({ port: PORT });

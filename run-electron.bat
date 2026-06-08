@@ -50,6 +50,11 @@ set "MAX_BET=unlimited"
 if not defined HANGMAN_PORT set "HANGMAN_PORT=19876"
 if not defined HANGMAN_HOST set "HANGMAN_HOST=127.0.0.1"
 if not defined HANGMAN_BACKEND_URL set "HANGMAN_BACKEND_URL=http://127.0.0.1:%HANGMAN_PORT%"
+if not defined WORD_GAMES_PORT set "WORD_GAMES_PORT=19877"
+if not defined WORD_GAMES_HOST set "WORD_GAMES_HOST=127.0.0.1"
+if not defined WORD_GAMES_BACKEND_URL set "WORD_GAMES_BACKEND_URL=http://127.0.0.1:%WORD_GAMES_PORT%"
+if not defined NFG_START_WORD_GAMES set "NFG_START_WORD_GAMES=1"
+if not defined WORD_GAMES_PYTHON set "WORD_GAMES_PYTHON=%HANGMAN_PYTHON%"
 if not defined NFG_PLATFORM_URL set "NFG_PLATFORM_URL=http://127.0.0.1:%PORT%"
 if not defined NFG_INTERNAL_SECRET set "NFG_INTERNAL_SECRET=nfg-dev-internal"
 if not defined NFG_START_HANGMAN set "NFG_START_HANGMAN=1"
@@ -71,8 +76,9 @@ if not exist "node_modules\" (
   echo.
 )
 
-echo Platform port %PORT% ^| Hangman %HANGMAN_PORT% proxied on %PORT% ^| Hangman start: %NFG_START_HANGMAN%
-echo Mobile: GET /api/mobile/hangman/state  POST /api/mobile/hangman/guess  WS /hangman/ws
+echo Platform port %PORT% ^| Hangman %HANGMAN_PORT% proxied on %PORT% ^| Word Games %WORD_GAMES_PORT% proxied on %PORT%
+echo Mobile Hangman: GET /api/mobile/hangman/state  POST /api/mobile/hangman/guess  WS /hangman/ws
+echo Mobile Words:  GET https://y666suf.com/api/word-games/health  POST /api/word-games/players/login
 echo Launching Electron ^(Crash + Hangman windows, shared Node server^)...
 echo.
 call "%NPM_CMD%" run start:electron

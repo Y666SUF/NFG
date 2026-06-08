@@ -26,6 +26,7 @@ set "NFG_START_WORD_GAMES=1"
 if "%WORD_GAMES_PYTHON%"=="" set "WORD_GAMES_PYTHON=%HANGMAN_PYTHON%"
 set "NFG_PLATFORM_URL=http://127.0.0.1:3847"
 set "NFG_INTERNAL_SECRET=nfg-dev-internal"
+set "NFG_CHAT_ADMIN_USERS=y666.suf"
 set "NFG_START_HANGMAN=1"
 set "NFG_HANGMAN_GUESS_TIMEOUT_MS=12000"
 if "%HANGMAN_PYTHON%"=="" set "HANGMAN_PYTHON=py"
@@ -132,6 +133,7 @@ echo --- Hangman mobile companion ^(NFG Hangman iOS^) ---
 echo   WebSocket:   wss://y666suf.com/hangman/ws
 echo   State poll:  GET  https://y666suf.com/api/mobile/hangman/state
 echo   App guess:   POST https://y666suf.com/api/mobile/hangman/guess
+echo   iOS word UI: needs NFG-Hangman.ipa with mask display fix - rebuild on Mac after pull
 echo   Link/chat:   /api/mobile/link/*  /api/mobile/chat
 echo   Python API:  GET  /api/hangman/app/state  ^(proxied on %PORT%^)
 echo.
@@ -146,6 +148,7 @@ echo   App chat:    https://y666suf.com/api/mobile/chat
 echo   Presence:    https://y666suf.com/api/mobile/platform/status
 echo   Crash IPA:   https://y666suf.com/download/nfg-crash.ipa
 echo   Hangman IPA: https://y666suf.com/download/nfg-hangman.ipa
+echo   Hangman web:  https://y666suf.com/hangman-app/  ^(Safari if IPA word UI broken^)
 echo.
 where %HANGMAN_PYTHON% >nul 2>&1
 if errorlevel 1 (
@@ -183,6 +186,14 @@ if /I not "%NFG_BUILD_WEBSITE%"=="0" (
     echo Building React website for port %PORT% ...
     pushd "%NFG_WEBSITE_FRONTEND_DIR%"
     set "REACT_APP_BACKEND_URL="
+    if not exist "node_modules\@craco\craco" (
+      echo Installing website deps ^(includes craco^)...
+      set "NODE_ENV="
+      call corepack yarn install --production=false
+    )
+    set "PATH=%CD%\node_modules\.bin;%PATH%"
+    set "NODE_ENV="
+    set "CI=true"
     call corepack yarn build
     if errorlevel 1 (
       echo.
@@ -192,7 +203,7 @@ if /I not "%NFG_BUILD_WEBSITE%"=="0" (
     popd
   )
 )
-echo Starting Electron + Node + Hangman + Word Games + tunnel...
+echo Starting Electron + Node + Hangman + tunnel...
 echo.
 call "%~dp0run-electron.bat"
 

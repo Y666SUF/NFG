@@ -57,6 +57,7 @@ if not defined NFG_START_WORD_GAMES set "NFG_START_WORD_GAMES=1"
 if not defined WORD_GAMES_PYTHON set "WORD_GAMES_PYTHON=%HANGMAN_PYTHON%"
 if not defined NFG_PLATFORM_URL set "NFG_PLATFORM_URL=http://127.0.0.1:%PORT%"
 if not defined NFG_INTERNAL_SECRET set "NFG_INTERNAL_SECRET=nfg-dev-internal"
+if not defined NFG_CHAT_ADMIN_USERS set "NFG_CHAT_ADMIN_USERS=y666.suf"
 if not defined NFG_START_HANGMAN set "NFG_START_HANGMAN=1"
 if not defined HANGMAN_PYTHON set "HANGMAN_PYTHON=py"
 if not defined NFG_HANGMAN_GUESS_TIMEOUT_MS set "NFG_HANGMAN_GUESS_TIMEOUT_MS=12000"
@@ -66,7 +67,7 @@ echo.
 
 if not exist "node_modules\" (
   echo First run: installing dependencies...
-  call "%NPM_CMD%" install
+  call "%NPM_CMD%" install --include=dev
   if errorlevel 1 (
     echo.
     echo npm install failed.
@@ -79,6 +80,7 @@ if not exist "node_modules\" (
 echo Platform port %PORT% ^| Hangman %HANGMAN_PORT% proxied on %PORT% ^| Word Games %WORD_GAMES_PORT% proxied on %PORT%
 echo Mobile Hangman: GET /api/mobile/hangman/state  POST /api/mobile/hangman/guess  WS /hangman/ws
 echo Mobile Words:  GET https://y666suf.com/api/word-games/health  POST /api/word-games/players/login
+set "PATH=%~dp0node_modules\.bin;%PATH%"
 echo Launching Electron ^(Crash + Hangman windows, shared Node server^)...
 echo.
 call "%NPM_CMD%" run start:electron

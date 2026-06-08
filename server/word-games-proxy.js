@@ -21,6 +21,13 @@ function proxyHttpRequest(req, res) {
   const lib = targetUrl.protocol === "https:" ? https : http;
   const headers = { ...req.headers, host: targetUrl.host };
   delete headers.connection;
+  delete headers["content-length"];
+
+  const hasParsedBody =
+    req.body &&
+    typeof req.body === "object" &&
+    !Buffer.isBuffer(req.body) &&
+    ["POST", "PUT", "PATCH"].includes(String(req.method || "GET").toUpperCase());
 
   const proxyReq = lib.request(
     targetUrl,
@@ -47,11 +54,24 @@ function proxyHttpRequest(req, res) {
     }
   });
 
+  if (hasParsedBody) {
+    const bodyData = JSON.stringify(req.body);
+    proxyReq.setHeader("Content-Type", "application/json");
+    proxyReq.setHeader("Content-Length", Buffer.byteLength(bodyData));
+    proxyReq.write(bodyData);
+    proxyReq.end();
+    return;
+  }
+
   req.pipe(proxyReq);
 }
 
 function registerWordGamesHttpProxy(app) {
   app.use("/api/word-games", (req, res, next) => {
+    if (req.method === "OPTIONS") return next();
+    proxyHttpRequest(req, res);
+  });
+  app.use("/api/wordwich", (req, res, next) => {
     if (req.method === "OPTIONS") return next();
     proxyHttpRequest(req, res);
   });

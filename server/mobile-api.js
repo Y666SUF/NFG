@@ -17,7 +17,10 @@ const { buildWalletPayload } = require("./mobile-wallet");
 const { buildPlatformStatus, registerMobilePlatformRoutes } = require("./mobile-platform");
 const { registerHangmanMobileRoutes } = require("./mobile-hangman");
 const { registerMobileArcadeRoutes } = require("./mobile-arcade");
+const { registerMobileGameAdminRoutes } = require("./mobile-game-admin");
+const { isGameHost } = require("./host-config");
 const { registerTowerWorldRoutes } = require("./tower-world");
+const { registerJumpVsRoutes } = require("./jump-vs-lobby");
 
 /** Session object for route handlers (validateBearer in auth returns { ok, session }). */
 function validateBearer(req) {
@@ -26,7 +29,7 @@ function validateBearer(req) {
 }
 
 function registerMobileApi(app, ctx) {
-  const { game, pointStore, isLocalhost, broadcast } = ctx;
+  const { game, pointStore, isLocalhost, broadcast, pushState } = ctx;
 
   registerMobileAuthRoutes(app, { isLocalhost });
   if (typeof broadcast === "function") {
@@ -44,7 +47,9 @@ function registerMobileApi(app, ctx) {
   registerMobilePlatformRoutes(app, { game, pointStore, validateBearer, broadcast });
   registerHangmanMobileRoutes(app, { validateBearer });
   registerMobileArcadeRoutes(app, { validateBearer, pointStore, game });
+  registerMobileGameAdminRoutes(app, { validateBearer, pointStore, game, broadcast, pushState });
   registerTowerWorldRoutes(app, { validateBearer, pointStore, game });
+  registerJumpVsRoutes(app, { validateBearer, pointStore, game });
 
   app.get("/api/mobile/status", async (_req, res) => {
     const platform = await buildPlatformStatus(game, pointStore);
@@ -91,7 +96,10 @@ function registerMobileApi(app, ctx) {
         message: "Link your TikTok account on live first.",
       });
     }
-    res.json(buildWalletPayload(session.userId, pointStore, game));
+    res.json({
+      ...buildWalletPayload(session.userId, pointStore, game),
+      isGameHost: isGameHost(session.userId),
+    });
   });
 }
 

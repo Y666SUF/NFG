@@ -1,4 +1,4 @@
-import { formatMaskFromSlots, parseMaskToSlots, placeholderMask } from "../lib/hangmanState";
+import { parseMaskToSlots, placeholderMask } from "../lib/hangmanState";
 
 /** Render mask like Windows: "_ _ _ _ S _ _" with visible letters and underscores. */
 function MaskText({ text }) {
@@ -27,17 +27,7 @@ function MaskText({ text }) {
 }
 
 export default function WordDisplay({ slots, length, maskedWord }) {
-  let maskStr = String(maskedWord || "").trim();
-  const slotMask = formatMaskFromSlots(
-    Array.isArray(slots) && slots.length ? slots : null
-  );
-  if (slotMask && /[A-Za-z]/.test(slotMask)) {
-    const maskLetters = (maskStr.match(/[A-Za-z]/g) || []).length;
-    const slotLetters = (slotMask.match(/[A-Za-z]/g) || []).length;
-    if (!maskStr || !maskStr.includes("_") || slotLetters > maskLetters) {
-      maskStr = slotMask;
-    }
-  }
+  const maskStr = String(maskedWord || "").trim();
   const hasLettersInMask = /[A-Za-z]/.test(maskStr);
 
   if (maskStr && (hasLettersInMask || maskStr.includes("_"))) {

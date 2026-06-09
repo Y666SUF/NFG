@@ -15,6 +15,7 @@ const { isDuplicateGiftPayout, isDuplicateStreakSettlement } = require("./gift-d
 const { startTikTokBridge, getTikTokBridgeStatus } = require("./tiktok-bridge");
 const { recordCashoutWin, buildFeaturedPayload } = require("./website-stats");
 const { registerMobileApi } = require("./mobile-api");
+const { resolvePowerupInventory } = require("./mobile-wallet");
 const { completeLinkFromTikTok, validateBearer } = require("./mobile-auth");
 const {
   spotifyConfigured,
@@ -398,7 +399,7 @@ app.get("/api/state", (_req, res) => {
   res.json(game.getState());
 });
 
-registerMobileApi(app, { game, pointStore, isLocalhost, broadcast });
+registerMobileApi(app, { game, pointStore, isLocalhost, broadcast, pushState });
 registerHangmanCompanionWeb(app);
 registerHangmanHttpProxy(app);
 registerWordGamesHttpProxy(app);
@@ -953,10 +954,7 @@ app.get("/api/economy/lookup/:user", (req, res) => {
   const view = pointStore.getUserPresentation(user);
   const economy = pointStore.getEconomyProfile(user);
   const shield = pointStore.getShieldStatus(user);
-  const inventory =
-    typeof pointStore.getPowerupInventory === "function"
-      ? pointStore.getPowerupInventory(user)
-      : { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 };
+  const inventory = resolvePowerupInventory(user, pointStore, game);
   const reset = pointStore.getMissionResetInfo();
   const jetLock = typeof game.getJetLockStatus === "function" ? game.getJetLockStatus(user) : null;
   res.json({
@@ -1149,7 +1147,7 @@ wss.on("connection", (ws) => {
   ws.on("close", () => clients.delete(ws));
 });
 
-attachHangmanWebSocketProxy(server, wss);
+attachHangmanWebSocketProxy(server, wss, { pointStore });
 
 function openBrowser(url) {
   if (process.env.NO_BROWSER === "1") return;

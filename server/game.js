@@ -191,6 +191,47 @@ class CrashGame {
     return { active: true, msLeft: lock.msLeft, secondsLeft: lock.secondsLeft, blockedUntil: lock.blockedUntil };
   }
 
+  adminSetJetLock(user, durationMs) {
+    const result = this._setJetLock(user, durationMs);
+    this.onUpdate();
+    return result;
+  }
+
+  adminClearJetLock(user) {
+    const u = this._normUser(user);
+    this._jetLocks.delete(u);
+    this.onUpdate();
+    return { ok: true, user: u, cleared: true };
+  }
+
+  getEffectivePowerupInventory(user) {
+    const u = this._normUser(user);
+    if (!u) return { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 };
+    const fromStore =
+      typeof this.store.getPowerupInventory === "function"
+        ? this.store.getPowerupInventory(u)
+        : { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 };
+    const stealCharges = Math.max(
+      0,
+      Number(fromStore.stealCharges) || 0,
+      Number(this._armedSteals.get(u) || 0)
+    );
+    const shieldBreakCharges = Math.max(
+      0,
+      Number(fromStore.shieldBreakCharges) || 0,
+      Number(this._armedShieldBreaks.get(u) || 0)
+    );
+    const jetLockCharges = Math.max(
+      0,
+      Number(fromStore.jetLockCharges) || 0,
+      Number(this._armedJetLocks.get(u) || 0)
+    );
+    if (this._isHostUnlimitedStealUser(user)) {
+      return { stealCharges: HOST_UNLIMITED_STEAL_VISIBLE, shieldBreakCharges, jetLockCharges };
+    }
+    return { stealCharges, shieldBreakCharges, jetLockCharges };
+  }
+
   listOpenBets() {
     const out = [];
     for (const [user, bet] of this.bets) {

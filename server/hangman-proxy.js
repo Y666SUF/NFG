@@ -7,6 +7,7 @@ const https = require("https");
 const { URL } = require("url");
 const WebSocket = require("ws");
 const { tryTowerWorldUpgrade } = require("./tower-world");
+const { tryJumpVsUpgrade } = require("./jump-vs-lobby");
 
 const HANGMAN_BACKEND_URL = String(process.env.HANGMAN_BACKEND_URL || "http://127.0.0.1:19876").replace(
   /\/$/,
@@ -64,7 +65,7 @@ function registerHangmanHttpProxy(app) {
   });
 }
 
-function attachHangmanWebSocketProxy(httpServer, crashWss) {
+function attachHangmanWebSocketProxy(httpServer, crashWss, ctx = {}) {
   const hangmanWss = new WebSocket.Server({ noServer: true });
 
   httpServer.on("upgrade", (request, socket, head) => {
@@ -73,10 +74,6 @@ function attachHangmanWebSocketProxy(httpServer, crashWss) {
       pathname = new URL(request.url || "/", "http://localhost").pathname;
     } catch {
       pathname = String(request.url || "/").split("?")[0] || "/";
-    }
-
-    if (tryTowerWorldUpgrade(request, socket, head)) {
-      return;
     }
 
     if (pathname === "/hangman/ws" || pathname === "/api/hangman/ws") {
@@ -129,6 +126,9 @@ function attachHangmanWebSocketProxy(httpServer, crashWss) {
       });
       return;
     }
+
+    if (tryTowerWorldUpgrade(request, socket, head)) return;
+    if (tryJumpVsUpgrade(request, socket, head, ctx)) return;
 
     crashWss.handleUpgrade(request, socket, head, (ws) => {
       crashWss.emit("connection", ws, request);

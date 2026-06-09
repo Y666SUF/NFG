@@ -1,15 +1,22 @@
 /**
  * Full wallet payload for mobile (balance + inventory from same data as !balance).
  */
+function resolvePowerupInventory(user, pointStore, game) {
+  if (game && typeof game.getEffectivePowerupInventory === "function") {
+    return game.getEffectivePowerupInventory(user);
+  }
+  if (typeof pointStore.getPowerupInventory === "function") {
+    return pointStore.getPowerupInventory(user);
+  }
+  return { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 };
+}
+
 function buildWalletPayload(user, pointStore, game) {
   pointStore.ensureAccount(user);
   const view = pointStore.getUserPresentation(user);
   const economy = pointStore.getEconomyProfile(user);
   const shield = pointStore.getShieldStatus(user);
-  const inventory =
-    typeof pointStore.getPowerupInventory === "function"
-      ? pointStore.getPowerupInventory(user)
-      : { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 };
+  const inventory = resolvePowerupInventory(user, pointStore, game);
   const reset = pointStore.getMissionResetInfo();
   const jetLock = typeof game.getJetLockStatus === "function" ? game.getJetLockStatus(user) : null;
 
@@ -43,4 +50,4 @@ function buildWalletPayload(user, pointStore, game) {
   };
 }
 
-module.exports = { buildWalletPayload };
+module.exports = { buildWalletPayload, resolvePowerupInventory };

@@ -1,0 +1,79 @@
+Fix NFG Crash host admin on my Windows live server so I can manage player steals, shield breaks, jet locks, shields, balance, and all-time from the iPhone app (linked @y666.suf account).
+
+Repo: %USERPROFILE%\Documents\nfg-crash
+NEVER delete data\points.live.json, data\points.json, or data\shields.json — player data lives only on this PC.
+
+---
+
+## STEP 1 — Pull latest from GitHub
+
+PowerShell:
+cd $env:USERPROFILE\Documents\nfg-crash
+git stash push -m "pc-local" 2>$null
+git pull origin main
+
+Confirm these files exist after pull:
+Test-Path server\mobile-game-admin.js
+Test-Path server\host-config.js
+Test-Path docs\WINDOWS_HOST_ADMIN_PROMPT.txt
+
+---
+
+## STEP 2 — Recover data if players look wiped (do this BEFORE restart)
+
+Get-ChildItem data\points*.json
+Get-ChildItem data\shields.json -ErrorAction SilentlyContinue
+Get-ChildItem data\backups -Recurse -Filter points*.json | Sort-Object LastWriteTime -Descending | Select-Object -First 5 FullName, LastWriteTime
+
+With server running:
+curl http://127.0.0.1:3847/api/admin/data-health
+
+If user counts are wrong/zero, restore from newest data\backups\YYYY-MM-DD\HH-MM-SS\:
+Copy-Item data\points.live.json data\points.live.json.before-restore -ErrorAction SilentlyContinue
+# copy points.live.json + shields.json from backup into data\
+# then after restart:
+curl -X POST http://127.0.0.1:3847/api/admin/reload-points
+
+---
+
+## STEP 3 — Verify admin wiring (all patterns must match)
+
+Select-String -Path server\store.js -Pattern "_normalizePowerupInventory|setPowerupInventory|setAllTime|clearShield|wipeLeaderboardUser"
+Select-String -Path server\game.js -Pattern "getEffectivePowerupInventory|adminSetJetLock|adminClearJetLock"
+Select-String -Path server\mobile-wallet.js -Pattern "resolvePowerupInventory"
+Select-String -Path server\mobile-game-admin.js -Pattern "registerMobileGameAdminRoutes|admin/player|update-player"
+Select-String -Path server\mobile-api.js -Pattern "registerMobileGameAdminRoutes"
+Select-String -Path server\index.js -Pattern "registerMobileApi\(app, \{ game, pointStore, isLocalhost, broadcast, pushState"
+
+If ANY pattern is missing, open docs\WINDOWS_HOST_ADMIN_PROMPT.txt and apply the missing tasks in place. Do not duplicate route registrations.
+
+---
+
+## STEP 4 — Restart ONE server instance
+
+Close ALL old Electron/Node windows, then:
+.\run-electron-cloudflare.bat
+
+Wait for startup. Check console for errors.
+
+---
+
+## STEP 5 — Smoke tests
+
+# 401 = route exists (good). 404 = still broken:
+curl -s -o NUL -w "%{http_code}" http://127.0.0.1:3847/api/mobile/admin/player?userId=testuser
+
+curl http://127.0.0.1:3847/api/admin/data-health
+
+curl http://127.0.0.1:3847/api/economy/lookup/testuser
+
+Economy lookup should include inventory with stealCharges / shieldBreakCharges / jetLockCharges.
+
+---
+
+## STEP 6 — iPhone test (@y666.suf)
+
+Leaderboard → tap a player → Host admin panel should show real balance/inventory (not all zeros).
+Change stealCharges → Save → verify persists after server restart.
+
+Report: git pull result, any files you had to patch manually, data-health output, curl status codes, iPhone test result.

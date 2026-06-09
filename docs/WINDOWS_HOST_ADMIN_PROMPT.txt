@@ -1,0 +1,191 @@
+You are updating the NFG Crash Node.js server on Windows so the iOS host admin panel (build 104+) shows correct balance, all-time, and inventory (steals / shield breaks / jet locks). Edit in place in the repo root (folder with server\ and data\). Do NOT wipe data\points.json.
+
+iOS already pre-fills points from the leaderboard and only saves fields the host changes — your job is to return real numbers from the API.
+
+---
+
+## BACKUP (PowerShell)
+
+Copy-Item server\store.js server\store.js.bak -ErrorAction SilentlyContinue
+Copy-Item server\game.js server\game.js.bak -ErrorAction SilentlyContinue
+Copy-Item server\mobile-wallet.js server\mobile-wallet.js.bak -ErrorAction SilentlyContinue
+Copy-Item server\mobile-game-admin.js server\mobile-game-admin.js.bak -ErrorAction SilentlyContinue
+Copy-Item server\mobile-api.js server\mobile-api.js.bak -ErrorAction SilentlyContinue
+
+---
+
+## QUICK VERIFY (run first — if all pass, restart Node only)
+
+Select-String -Path server\store.js -Pattern "_normalizePowerupInventory"
+Select-String -Path server\game.js -Pattern "getEffectivePowerupInventory"
+Select-String -Path server\mobile-wallet.js -Pattern "getEffectivePowerupInventory"
+Select-String -Path server\mobile-game-admin.js -Pattern "admin/player"
+Select-String -Path server\mobile-api.js -Pattern "registerMobileGameAdminRoutes\(app, \{ validateBearer, pointStore, game"
+
+Expected: every pattern found. mobile-api must pass game into registerMobileGameAdminRoutes.
+
+---
+
+## TASK 1 — server\store.js
+
+Add method _normalizePowerupInventory(raw) on the PointStore class (before getPowerupInventory):
+
+  _normalizePowerupInventory(raw) {
+    const p = raw && typeof raw === "object" ? raw : {};
+    const stealCharges = Math.max(
+      0,
+      Math.floor(Number(p.stealCharges) || 0),
+      Math.floor(Number(p.steals) || 0),
+      Math.floor(Number(p.stealsReady) || 0),
+      Math.floor(Number(p.galaxy) || 0),
+      Math.floor(Number(p.galaxyCharges) || 0)
+    );
+    const shieldBreakCharges = Math.max(
+      0,
+      Math.floor(Number(p.shieldBreakCharges) || 0),
+      Math.floor(Number(p.shieldBreaks) || 0),
+      Math.floor(Number(p.shieldBreaksReady) || 0),
+      Math.floor(Number(p.carDrifting) || 0),
+      Math.floor(Number(p.carDriftingCharges) || 0)
+    );
+    const jetLockCharges = Math.max(
+      0,
+      Math.floor(Number(p.jetLockCharges) || 0),
+      Math.floor(Number(p.jetLocks) || 0),
+      Math.floor(Number(p.jetLocksReady) || 0),
+      Math.floor(Number(p.flyingJet) || 0),
+      Math.floor(Number(p.flyingJetCharges) || 0)
+    );
+    return { stealCharges, shieldBreakCharges, jetLockCharges };
+  }
+
+Change getPowerupInventory to:
+
+  getPowerupInventory(user) {
+    const u = normalizeUser(user);
+    if (!u) return { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 };
+    this.ensureAccount(u);
+    const p = this._ensureProfileShape(u);
+    return this._normalizePowerupInventory(p.powerups);
+  }
+
+In _ensureProfileShape, where powerups is merged from current.powerups, use:
+  this._normalizePowerupInventory(current.powerups)
+instead of only reading stealCharges/shieldBreakCharges/jetLockCharges directly.
+
+Ensure setPowerupInventory and setAllTime exist (admin panel uses them).
+
+---
+
+## TASK 2 — server\game.js
+
+Add or verify getEffectivePowerupInventory(user) on the Game class:
+
+  getEffectivePowerupInventory(user) {
+    const u = this._normUser(user);
+    if (!u) return { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 };
+    const fromStore =
+      typeof this.store.getPowerupInventory === "function"
+        ? this.store.getPowerupInventory(u)
+        : { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 };
+    const stealCharges = Math.max(
+      0,
+      Number(fromStore.stealCharges) || 0,
+      Number(this._armedSteals.get(u) || 0)
+    );
+    const shieldBreakCharges = Math.max(
+      0,
+      Number(fromStore.shieldBreakCharges) || 0,
+      Number(this._armedShieldBreaks.get(u) || 0)
+    );
+    const jetLockCharges = Math.max(
+      0,
+      Number(fromStore.jetLockCharges) || 0,
+      Number(this._armedJetLocks.get(u) || 0)
+    );
+    if (this._isHostUnlimitedStealUser && this._isHostUnlimitedStealUser(u)) {
+      return { stealCharges: HOST_UNLIMITED_STEAL_VISIBLE, shieldBreakCharges, jetLockCharges };
+    }
+    return { stealCharges, shieldBreakCharges, jetLockCharges };
+  }
+
+Also ensure adminSetJetLock / adminClearJetLock exist for host admin jet lock buttons.
+
+---
+
+## TASK 3 — server\mobile-wallet.js
+
+resolvePowerupInventory must prefer game.getEffectivePowerupInventory:
+
+  function resolvePowerupInventory(user, pointStore, game) {
+    if (game && typeof game.getEffectivePowerupInventory === "function") {
+      return game.getEffectivePowerupInventory(user);
+    }
+    if (typeof pointStore.getPowerupInventory === "function") {
+      return pointStore.getPowerupInventory(user);
+    }
+    return { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 };
+  }
+
+buildWalletPayload(user, pointStore, game) must call resolvePowerupInventory(user, pointStore, game) and include balance, allTime, inventory, shield*, jetLock* in the returned object.
+
+module.exports = { buildWalletPayload, resolvePowerupInventory };
+
+---
+
+## TASK 4 — server\mobile-game-admin.js
+
+File must exist with registerMobileGameAdminRoutes(app, ctx).
+
+GET /api/mobile/admin/player?userId=USERNAME
+- require host session (y666.suf — see host-config.js isGameHost)
+- pointStore.ensureAccount(target)
+- res.json({ ok: true, ...buildWalletPayload(target, pointStore, game) })
+
+POST /api/mobile/admin/update-player
+- body: userId, optional balance, allTime, stealCharges, shieldBreakCharges, jetLockCharges, shieldAction, jetLockAction
+- patch inventory via pointStore.setPowerupInventory (merge with current)
+- return updated wallet via buildWalletPayload
+
+POST /api/mobile/admin/wipe-player — zero balance for fake accounts (existing behavior)
+
+ctx must include: validateBearer, pointStore, game, broadcast, pushState
+
+---
+
+## TASK 5 — server\mobile-api.js
+
+Exactly one call (must include game):
+
+  registerMobileGameAdminRoutes(app, { validateBearer, pointStore, game, broadcast, pushState });
+
+GET /api/mobile/me should expose isGameHost for the linked y666.suf account.
+
+---
+
+## TASK 6 — server\index.js economy lookup (inventory in public API)
+
+GET /api/economy/lookup/:user should use resolvePowerupInventory from mobile-wallet.js (same as !balance) so iOS fallback also gets inventory if admin route is old.
+
+---
+
+## AFTER RESTART — smoke tests
+
+1. From iOS as @y666.suf: Leaderboard → tap a player with known balance → host panel shows same balance/all-time as board, not 0.
+
+2. For a user who has galaxy/steal charges in data\points.json profiles.*.powerups:
+   GET /api/mobile/admin/player?userId=THEIRNAME
+   (Bearer token as y666.suf)
+   → inventory.stealCharges > 0 (or shield/jet as applicable)
+
+3. POST /api/mobile/admin/update-player
+   { "userId": "testuser", "stealCharges": 3 }
+   → response inventory.stealCharges === 3, balance unchanged if not sent
+
+4. Economy lookup:
+   GET /api/economy/lookup/testuser
+   → includes inventory object with same charge counts
+
+Report files changed, backup paths, and tell me to restart Node.
+
+Do NOT change mobile-arcade.js payouts in this task unless verify shows Jump/Blocks are still wrong.

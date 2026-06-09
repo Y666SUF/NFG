@@ -809,14 +809,7 @@ class PointStore {
       totalRakebackClaimed: Math.max(0, Number(current.totalRakebackClaimed) || 0),
       challengeState: current.challengeState && typeof current.challengeState === "object" ? { ...current.challengeState } : null,
       challengeLog: Array.isArray(current.challengeLog) ? current.challengeLog.slice(-400) : [],
-      powerups:
-        current.powerups && typeof current.powerups === "object"
-          ? {
-              stealCharges: Math.max(0, Math.floor(Number(current.powerups.stealCharges) || 0)),
-              shieldBreakCharges: Math.max(0, Math.floor(Number(current.powerups.shieldBreakCharges) || 0)),
-              jetLockCharges: Math.max(0, Math.floor(Number(current.powerups.jetLockCharges) || 0)),
-            }
-          : { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 },
+      powerups: this._normalizePowerupInventory(current.powerups),
     };
     merged.level = getLevelFromXp(merged.xp);
     merged.rank = getRankFromLevel(merged.level);
@@ -880,16 +873,41 @@ class PointStore {
     };
   }
 
+  _normalizePowerupInventory(raw) {
+    const p = raw && typeof raw === "object" ? raw : {};
+    const stealCharges = Math.max(
+      0,
+      Math.floor(Number(p.stealCharges) || 0),
+      Math.floor(Number(p.steals) || 0),
+      Math.floor(Number(p.stealsReady) || 0),
+      Math.floor(Number(p.galaxy) || 0),
+      Math.floor(Number(p.galaxyCharges) || 0)
+    );
+    const shieldBreakCharges = Math.max(
+      0,
+      Math.floor(Number(p.shieldBreakCharges) || 0),
+      Math.floor(Number(p.shieldBreaks) || 0),
+      Math.floor(Number(p.shieldBreaksReady) || 0),
+      Math.floor(Number(p.carDrifting) || 0),
+      Math.floor(Number(p.carDriftingCharges) || 0)
+    );
+    const jetLockCharges = Math.max(
+      0,
+      Math.floor(Number(p.jetLockCharges) || 0),
+      Math.floor(Number(p.jetLocks) || 0),
+      Math.floor(Number(p.jetLocksReady) || 0),
+      Math.floor(Number(p.flyingJet) || 0),
+      Math.floor(Number(p.flyingJetCharges) || 0)
+    );
+    return { stealCharges, shieldBreakCharges, jetLockCharges };
+  }
+
   getPowerupInventory(user) {
     const u = normalizeUser(user);
     if (!u) return { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 };
     this.ensureAccount(u);
     const p = this._ensureProfileShape(u);
-    return {
-      stealCharges: Math.max(0, Math.floor(Number(p.powerups?.stealCharges) || 0)),
-      shieldBreakCharges: Math.max(0, Math.floor(Number(p.powerups?.shieldBreakCharges) || 0)),
-      jetLockCharges: Math.max(0, Math.floor(Number(p.powerups?.jetLockCharges) || 0)),
-    };
+    return this._normalizePowerupInventory(p.powerups);
   }
 
   _challengeGoalFor(def, level) {
@@ -1741,6 +1759,64 @@ class PointStore {
     this.ensureAccount(u);
     this.points.balances[u] = Math.max(0, Math.floor(Number(amount) || 0));
     this._savePoints();
+  }
+
+  setAllTime(user, amount) {
+    const u = normalizeUser(user);
+    if (!u) return;
+    this.ensureAccount(u);
+    this.points.allTime[u] = Math.max(0, Math.floor(Number(amount) || 0));
+    this._savePoints();
+  }
+
+  setPowerupInventory(user, inventory) {
+    const u = normalizeUser(user);
+    if (!u) return { ok: false, reason: "invalid_user" };
+    this.ensureAccount(u);
+    const profile = this._ensureProfileShape(u);
+    const next = this._normalizePowerupInventory({ ...profile.powerups, ...(inventory || {}) });
+    profile.powerups = next;
+    this.points.profiles[u] = profile;
+    this._savePoints();
+    return { ok: true, user: u, inventory: { ...next } };
+  }
+
+  clearShield(user) {
+    const u = normalizeUser(user);
+    if (!u) return { ok: false, reason: "invalid_user" };
+    this._pruneExpiredShields();
+    if (this.shields[u]) {
+      delete this.shields[u];
+      this._saveShields();
+    }
+    return { ok: true, user: u, cleared: true };
+  }
+
+  wipeLeaderboardUser(user) {
+    const u = normalizeUser(user);
+    if (!u) return { ok: false, error: "invalid_user" };
+    const hadBalance = this.getBalance(u) > 0 || this.getAllTime(u) > 0;
+    const hadProfile = !!(this.points.profiles && this.points.profiles[u]);
+    if (!hadBalance && !hadProfile && !this.points.balances[u]) {
+      return { ok: false, error: "user_not_found", user: u };
+    }
+    const previousBalance = this.getBalance(u);
+    const previousAllTime = this.getAllTime(u);
+    this.ensureAccount(u);
+    this.points.balances[u] = 0;
+    this.points.allTime[u] = 0;
+    this.setPowerupInventory(u, { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 });
+    this.clearShield(u);
+    this._savePoints();
+    return {
+      ok: true,
+      user: u,
+      wiped: true,
+      previousBalance,
+      previousAllTime,
+      balance: 0,
+      allTime: 0,
+    };
   }
 
   add(user, delta, options = {}) {

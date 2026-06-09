@@ -83,6 +83,14 @@ const GAME_DEFS = [
     icon: "🧱",
     helpText: "Place blocks on the 8×8 grid. Clear enough lines to finish each level. Session streak increases payouts.",
   },
+  {
+    id: "nfg_snake_jump",
+    title: "NFG Jump",
+    subtitle: "Bounce higher — skill climber + VS",
+    icon: "⬆️",
+    helpText:
+      "Bounce higher on platforms. +3,000 pts every 2,500m. Jump VS: 2+ players race — fall more than one milestone behind and you're out; winner takes the pot.",
+  },
 ];
 
 const STAKE_BASE = {
@@ -93,7 +101,12 @@ const STAKE_BASE = {
   nfg_wheel: 2500,
   nfg_tower: 1200,
   nfg_blocks: 0,
+  nfg_snake_jump: 0,
 };
+
+const ARCADE_NO_COOLDOWN_GAMES = new Set(["nfg_blocks", "nfg_snake_jump"]);
+const LEADERBOARD_GAME_IDS = ["nfg_blocks", "nfg_snake_jump"];
+const LEADERBOARD_MAX = 200;
 
 /** Weights — higher mult = much rarer. Total 1000 → ~4% EV after ARCADE_EDGE. */
 const WHEEL_SEGMENTS = [
@@ -140,6 +153,74 @@ function saveState(state) {
   const dir = path.dirname(DATA_FILE);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(DATA_FILE, JSON.stringify(state, null, 2));
+}
+
+function ensureLeaderboards(state) {
+  if (!state.leaderboards || typeof state.leaderboards !== "object") {
+    state.leaderboards = {};
+  }
+  for (const id of LEADERBOARD_GAME_IDS) {
+    if (!Array.isArray(state.leaderboards[id])) state.leaderboards[id] = [];
+  }
+}
+
+function arcadeDisplayName(userId, pointStore) {
+  const u = normUser(userId);
+  if (!u) return "";
+  if (pointStore?.getUserPresentation) {
+    const p = pointStore.getUserPresentation(u);
+    const name = String(p?.displayName || "").trim();
+    if (name) return name.slice(0, 40);
+  }
+  return u;
+}
+
+function recordArcadeLeaderboard(state, gameId, userId, score, pointStore) {
+  ensureLeaderboards(state);
+  const uid = normUser(userId);
+  const pts = Math.max(0, Math.floor(Number(score) || 0));
+  if (!uid || pts <= 0) return;
+  const board = state.leaderboards[gameId];
+  const idx = board.findIndex((e) => e.userId === uid);
+  const row = {
+    userId: uid,
+    displayName: arcadeDisplayName(uid, pointStore),
+    points: pts,
+    updatedAt: Date.now(),
+    ...jumpLeaderboardExtras(state, uid),
+  };
+  if (idx >= 0) {
+    if (pts > board[idx].points) board[idx] = { ...board[idx], ...row };
+    else board[idx].displayName = row.displayName;
+  } else {
+    board.push(row);
+  }
+  board.sort((a, b) => (b.points || 0) - (a.points || 0));
+  state.leaderboards[gameId] = board.slice(0, LEADERBOARD_MAX);
+}
+
+function getArcadeLeaderboard(state, gameId, limit = 25) {
+  ensureLeaderboards(state);
+  const board = state.leaderboards[gameId] || [];
+  return board.slice(0, Math.max(1, Math.min(50, limit))).map((e, i) => ({
+    rank: i + 1,
+    userId: e.userId,
+    displayName: e.displayName || e.userId,
+    points: e.points || 0,
+    jumpSkinId: e.jumpSkinId,
+    jumpSkinName: e.jumpSkinName,
+    jumpSkinFill: e.jumpSkinFill,
+    jumpSkinRing: e.jumpSkinRing,
+  }));
+}
+
+function userRecBest(state, userId, gameId) {
+  if (!userId || !state.users?.[userId]) return 0;
+  const g = state.users[userId].games?.[gameId];
+  if (!g) return 0;
+  if (gameId === "nfg_snake_jump") return g.bestHeight || 0;
+  if (gameId === "nfg_blocks") return g.bestLevel || 0;
+  return 0;
 }
 
 function normUser(user) {
@@ -1734,6 +1815,415 @@ function handleBlockBlast(user, userRec, action, payload, pointStore) {
   };
 }
 
+// ========== Snake Jump (vertical bounce skill game) ==========
+
+const SNAKE_JUMP_MILESTONE_STEP = 2500;
+const SNAKE_JUMP_REWARD = 3000;
+const SNAKE_JUMP_MAX_MILESTONES = 40;
+const SNAKE_JUMP_DEFAULT_SKIN = "classic";
+
+const SNAKE_JUMP_SKINS = [
+  { id: "classic", name: "Classic", cost: 0, fill: "#596ff2", ring: "#f2c733", desc: "Default blue & gold" },
+  { id: "neon_cyan", name: "Neon Dynasty", cost: 1_000_000, fill: "#22d3ee", ring: "#06b6d4", desc: "Radiant cyan prestige" },
+  { id: "solar_gold", name: "Solar Sovereign", cost: 3_500_000, fill: "#fbbf24", ring: "#fef08a", desc: "Golden sun royalty" },
+  { id: "violet_void", name: "Violet Voidlord", cost: 6_000_000, fill: "#a855f7", ring: "#e879f9", desc: "Purple nebula lord" },
+  { id: "emerald", name: "Emerald Elite", cost: 8_500_000, fill: "#34d399", ring: "#a7f3d0", desc: "Jungle elite rank" },
+  { id: "crimson", name: "Crimson Overlord", cost: 11_000_000, fill: "#ef4444", ring: "#fca5a5", desc: "Red-hot overlord" },
+  { id: "ghost", name: "Ghost Phantom", cost: 13_500_000, fill: "#f8fafc", ring: "#94a3b8", desc: "Minimal phantom" },
+  { id: "nfg_fire", name: "NFG Inferno", cost: 15_000_000, fill: "#ff6b35", ring: "#ffd700", desc: "Official NFG flame" },
+];
+
+function snakeJumpReward() {
+  return SNAKE_JUMP_REWARD;
+}
+
+function getSnakeJumpSkin(id) {
+  const sid = String(id || SNAKE_JUMP_DEFAULT_SKIN).trim();
+  return SNAKE_JUMP_SKINS.find((s) => s.id === sid) || SNAKE_JUMP_SKINS[0];
+}
+
+function ensureSnakeJumpCosmetics(gRec) {
+  if (!Array.isArray(gRec.ownedSkins)) gRec.ownedSkins = [SNAKE_JUMP_DEFAULT_SKIN];
+  if (!gRec.ownedSkins.includes(SNAKE_JUMP_DEFAULT_SKIN)) {
+    gRec.ownedSkins.unshift(SNAKE_JUMP_DEFAULT_SKIN);
+  }
+  const equipped = String(gRec.equippedSkin || SNAKE_JUMP_DEFAULT_SKIN);
+  if (!gRec.ownedSkins.includes(equipped)) {
+    gRec.equippedSkin = SNAKE_JUMP_DEFAULT_SKIN;
+  } else {
+    gRec.equippedSkin = equipped;
+  }
+}
+
+function snakeJumpShopPayload(gRec) {
+  ensureSnakeJumpCosmetics(gRec);
+  const equipped = getSnakeJumpSkin(gRec.equippedSkin);
+  const owned = new Set(gRec.ownedSkins || [SNAKE_JUMP_DEFAULT_SKIN]);
+  return {
+    jumpShop: SNAKE_JUMP_SKINS.map((skin) => ({
+      ...skin,
+      owned: owned.has(skin.id) || skin.cost === 0,
+      equipped: skin.id === equipped.id,
+    })),
+    equippedSkin: equipped.id,
+    ownedSkins: [...owned],
+    skinFill: equipped.fill,
+    skinRing: equipped.ring,
+    skinName: equipped.name,
+  };
+}
+
+function jumpLeaderboardExtras(state, userId) {
+  const g = state.users?.[userId]?.games?.nfg_snake_jump;
+  if (!g) return {};
+  ensureSnakeJumpCosmetics(g);
+  const skin = getSnakeJumpSkin(g.equippedSkin);
+  if (!skin || skin.id === SNAKE_JUMP_DEFAULT_SKIN) return {};
+  return {
+    jumpSkinId: skin.id,
+    jumpSkinName: skin.name,
+    jumpSkinFill: skin.fill,
+    jumpSkinRing: skin.ring,
+  };
+}
+
+function syncJumpLeaderboardEntry(state, userId, pointStore) {
+  const uid = normUser(userId);
+  if (!uid) return;
+  ensureLeaderboards(state);
+  const board = state.leaderboards.nfg_snake_jump || [];
+  const idx = board.findIndex((e) => e.userId === uid);
+  if (idx < 0) return;
+  const extras = jumpLeaderboardExtras(state, uid);
+  board[idx] = {
+    ...board[idx],
+    displayName: arcadeDisplayName(uid, pointStore),
+    ...extras,
+  };
+  state.leaderboards.nfg_snake_jump = board;
+}
+
+function defaultSnakeJumpSession() {
+  return {
+    active: false,
+    milestones: 0,
+    sessionPoints: 0,
+    lastMilestoneHeight: 0,
+    lastMilestoneAt: 0,
+    peakHeight: 0,
+    vsMatchId: null,
+    vsDeferred: false,
+  };
+}
+
+function snakeJumpPayload(gRec) {
+  const s = gRec.session || defaultSnakeJumpSession();
+  const next = (s.milestones || 0) + 1;
+  return {
+    runActive: !!s.active,
+    sessionActive: !!s.active,
+    sessionPoints: s.sessionPoints || 0,
+    score: s.peakHeight || 0,
+    sessionMilestones: s.milestones || 0,
+    sessionLevels: s.milestones || 0,
+    bestLevel: gRec.bestHeight || 0,
+    levelRewardPreview: snakeJumpReward(),
+    ...snakeJumpShopPayload(gRec),
+    practiceMode: false,
+    unlimited: true,
+    stakeMin: 0,
+    stakeMax: 0,
+    suggestedStake: 0,
+    vsMatchId: s.vsMatchId || null,
+    vsDeferred: !!s.vsDeferred,
+  };
+}
+
+function milestoneGainAmount() {
+  let gain = snakeJumpReward();
+  if (isLive()) gain = Math.floor(gain * LIVE_WIN_MULT);
+  return gain;
+}
+
+function handleSnakeJump(user, userRec, action, payload, pointStore) {
+  const gameId = "nfg_snake_jump";
+  const fields = baseFields(userRec, gameId, pointStore, user);
+  fields.stakeMin = 0;
+  fields.stakeMax = 0;
+  fields.suggestedStake = 0;
+  fields.unlimited = true;
+
+  if (!userRec.games.nfg_snake_jump) userRec.games.nfg_snake_jump = {};
+  const gRec = userRec.games.nfg_snake_jump;
+  if (!gRec.session) gRec.session = defaultSnakeJumpSession();
+  ensureSnakeJumpCosmetics(gRec);
+
+  const act = String(action || "status").toLowerCase();
+
+  if (act === "status" || act === "shop") {
+    return {
+      ok: true,
+      ...fields,
+      ...snakeJumpPayload(gRec),
+      message:
+        "NFG Jump — bounce higher. +3,000 pts every 2,500m. Jump VS: winner takes the combined pot.",
+    };
+  }
+
+  if (act === "start") {
+    gRec.session = defaultSnakeJumpSession();
+    gRec.session.active = true;
+    if (payload?.vsMatchId) {
+      gRec.session.vsMatchId = String(payload.vsMatchId).slice(0, 64);
+      gRec.session.vsDeferred = true;
+    }
+    gRec.bestHeight = gRec.bestHeight || 0;
+    userRec.games.nfg_snake_jump = gRec;
+    return {
+      ok: true,
+      ...fields,
+      ...snakeJumpPayload(gRec),
+      message: gRec.session.vsMatchId ? "VS match — climb fast or get eliminated!" : "New run — climb as high as you can!",
+    };
+  }
+
+  if (act === "buy") {
+    const itemId = String(payload.itemId || payload.skinId || "").trim();
+    const skin = getSnakeJumpSkin(itemId);
+    if (!skin || skin.id === SNAKE_JUMP_DEFAULT_SKIN && itemId && itemId !== SNAKE_JUMP_DEFAULT_SKIN) {
+      return { ok: false, reason: "invalid_item", message: "Unknown circle style.", ...fields, ...snakeJumpPayload(gRec) };
+    }
+    ensureSnakeJumpCosmetics(gRec);
+    if (gRec.ownedSkins.includes(skin.id)) {
+      gRec.equippedSkin = skin.id;
+      userRec.games.nfg_snake_jump = gRec;
+      return {
+        ok: true,
+        ...fields,
+        ...snakeJumpPayload(gRec),
+        message: `${skin.name} equipped.`,
+      };
+    }
+    if (skin.cost <= 0) {
+      gRec.ownedSkins.push(skin.id);
+      gRec.equippedSkin = skin.id;
+      userRec.games.nfg_snake_jump = gRec;
+      return { ok: true, ...fields, ...snakeJumpPayload(gRec), message: `${skin.name} equipped.` };
+    }
+    const bal = pointStore.getBalance(user);
+    if (bal < skin.cost) {
+      return {
+        ok: false,
+        reason: "insufficient",
+        message: `Need ${skin.cost.toLocaleString()} pts for ${skin.name}.`,
+        balance: bal,
+        ...fields,
+        ...snakeJumpPayload(gRec),
+      };
+    }
+    const debit = pointStore.tryDebit(user, skin.cost);
+    if (!debit.ok) {
+      return {
+        ok: false,
+        reason: "insufficient",
+        message: `Need ${skin.cost.toLocaleString()} pts.`,
+        balance: debit.balance || 0,
+        ...fields,
+        ...snakeJumpPayload(gRec),
+      };
+    }
+    gRec.ownedSkins.push(skin.id);
+    gRec.equippedSkin = skin.id;
+    userRec.games.nfg_snake_jump = gRec;
+    return {
+      ok: true,
+      ...fields,
+      ...snakeJumpPayload(gRec),
+      balance: debit.balance,
+      message: `${skin.name} purchased and equipped!`,
+    };
+  }
+
+  if (act === "equip") {
+    const itemId = String(payload.itemId || payload.skinId || "").trim();
+    const skin = getSnakeJumpSkin(itemId);
+    ensureSnakeJumpCosmetics(gRec);
+    if (!gRec.ownedSkins.includes(skin.id) && skin.cost > 0) {
+      return { ok: false, reason: "not_owned", message: "Buy this style first.", ...fields, ...snakeJumpPayload(gRec) };
+    }
+    gRec.equippedSkin = skin.id;
+    userRec.games.nfg_snake_jump = gRec;
+    return { ok: true, ...fields, ...snakeJumpPayload(gRec), message: `${skin.name} equipped.` };
+  }
+
+  if (act === "milestone") {
+    if (!gRec.session?.active) {
+      return {
+        ok: false,
+        reason: "no_session",
+        message: "Tap New Run first.",
+        ...fields,
+        ...snakeJumpPayload(gRec),
+      };
+    }
+    const height = Math.max(0, Math.floor(Number(payload.height) || 0));
+    const now = Date.now();
+    const expected = (gRec.session.milestones || 0) + 1;
+    const requiredHeight = expected * SNAKE_JUMP_MILESTONE_STEP;
+
+    if (height < requiredHeight) {
+      return {
+        ok: false,
+        reason: "height_too_low",
+        message: `Reach ${requiredHeight}m for the next milestone.`,
+        ...fields,
+        ...snakeJumpPayload(gRec),
+      };
+    }
+    if ((gRec.session.milestones || 0) >= SNAKE_JUMP_MAX_MILESTONES) {
+      return {
+        ok: false,
+        reason: "cap",
+        message: "Milestone cap reached this run — end session.",
+        ...fields,
+        ...snakeJumpPayload(gRec),
+      };
+    }
+
+    const gained = milestoneGainAmount();
+    if (gRec.session.vsDeferred) {
+      gRec.session.sessionPoints = (gRec.session.sessionPoints || 0) + gained;
+    } else {
+      creditWin(pointStore, user, gained);
+      gRec.session.sessionPoints = (gRec.session.sessionPoints || 0) + gained;
+    }
+    gRec.session.milestones = expected;
+    gRec.session.lastMilestoneHeight = requiredHeight;
+    gRec.session.lastMilestoneAt = now;
+    gRec.session.peakHeight = Math.max(gRec.session.peakHeight || 0, height);
+    gRec.bestHeight = Math.max(gRec.bestHeight || 0, height);
+    userRec.games.nfg_snake_jump = gRec;
+
+    return {
+      ok: true,
+      ...fields,
+      ...snakeJumpPayload(gRec),
+      gained,
+      cleared: true,
+      win: true,
+      message: `${height}m milestone! +${gained.toLocaleString()} pts (session ${gRec.session.sessionPoints.toLocaleString()} pts)`,
+    };
+  }
+
+  if (act === "game_over") {
+    const height = Math.max(0, Math.floor(Number(payload.height) || 0));
+    const peak = Math.max(gRec.session?.peakHeight || 0, height);
+    const sessionPts = gRec.session?.sessionPoints || 0;
+    const vsDeferred = !!gRec.session?.vsDeferred;
+    const vsMatchId = gRec.session?.vsMatchId;
+    gRec.bestHeight = Math.max(gRec.bestHeight || 0, peak);
+    if (vsDeferred && vsMatchId) {
+      gRec.session.active = false;
+      gRec.session.peakHeight = peak;
+      userRec.games.nfg_snake_jump = gRec;
+      return {
+        ok: true,
+        ...fields,
+        ...snakeJumpPayload(gRec),
+        sessionPoints: sessionPts,
+        score: peak,
+        message: `VS run over at ${peak}m — pot still in play`,
+      };
+    }
+    gRec.session = defaultSnakeJumpSession();
+    userRec.games.nfg_snake_jump = gRec;
+    return {
+      ok: true,
+      ...fields,
+      ...snakeJumpPayload(gRec),
+      sessionPoints: sessionPts,
+      score: peak,
+      message:
+        sessionPts > 0
+          ? `Run over — ${peak}m peak, ${sessionPts.toLocaleString()} pts banked`
+          : peak > 0
+            ? `Run over at ${peak}m — start a new run for milestones`
+            : "Run over — try again!",
+    };
+  }
+
+  return {
+    ok: false,
+    reason: "invalid_action",
+    message: "Use start, milestone, game_over, buy, or equip.",
+    ...fields,
+    ...snakeJumpPayload(gRec),
+  };
+}
+
+function getJumpPlayerCosmetics(userId) {
+  const state = loadState();
+  const uid = normUser(userId);
+  const g = state.users?.[uid]?.games?.nfg_snake_jump;
+  if (!g) {
+    const skin = getSnakeJumpSkin(SNAKE_JUMP_DEFAULT_SKIN);
+    return { skinId: skin.id, fill: skin.fill, ring: skin.ring, name: skin.name };
+  }
+  ensureSnakeJumpCosmetics(g);
+  const skin = getSnakeJumpSkin(g.equippedSkin);
+  return { skinId: skin.id, fill: skin.fill, ring: skin.ring, name: skin.name };
+}
+
+function prepareJumpVsMatch(playerIds, matchId, matchSeed) {
+  const state = loadState();
+  for (const rawId of playerIds) {
+    const user = normUser(rawId);
+    if (!user) continue;
+    const userRec = ensureUser(state, user);
+    if (!userRec.games.nfg_snake_jump) userRec.games.nfg_snake_jump = {};
+    const gRec = userRec.games.nfg_snake_jump;
+    gRec.session = defaultSnakeJumpSession();
+    gRec.session.active = true;
+    gRec.session.vsMatchId = matchId;
+    gRec.session.vsDeferred = true;
+    gRec.session.vsMatchSeed = matchSeed;
+    userRec.games.nfg_snake_jump = gRec;
+  }
+  saveState(state);
+}
+
+function syncJumpVsSessionPoints(userId) {
+  const state = loadState();
+  const uid = normUser(userId);
+  const pts = state.users?.[uid]?.games?.nfg_snake_jump?.session?.sessionPoints || 0;
+  return Math.max(0, Math.floor(Number(pts) || 0));
+}
+
+function finalizeJumpVsMatch(winnerId, playerIds, pointStore) {
+  const state = loadState();
+  let pot = 0;
+  const winner = normUser(winnerId);
+
+  for (const rawId of playerIds) {
+    const user = normUser(rawId);
+    if (!user) continue;
+    const gRec = state.users?.[user]?.games?.nfg_snake_jump;
+    const sessionPts = Math.max(0, Math.floor(Number(gRec?.session?.sessionPoints) || 0));
+    pot += sessionPts;
+    if (gRec) {
+      gRec.session = defaultSnakeJumpSession();
+      state.users[user].games.nfg_snake_jump = gRec;
+    }
+  }
+
+  if (winner && pot > 0 && pointStore) {
+    creditWin(pointStore, winner, pot);
+  }
+
+  saveState(state);
+  return pot;
+}
+
 const HANDLERS = {
   nfg_dice: handleDice,
   nfg_hilo: handleHiLo,
@@ -1744,6 +2234,7 @@ const HANDLERS = {
   nfg_tower: handleTower,
   nfg_coinflip: handleTower, // legacy id → Dragon Tower
   nfg_blocks: handleBlockBlast,
+  nfg_snake_jump: handleSnakeJump,
 };
 
 function buildCatalog(pointStore, user) {
@@ -1781,7 +2272,7 @@ function playGame(pointStore, game, user, gameId, action, payload) {
     return { ok: false, reason: "invalid_user", message: "Invalid user." };
   }
 
-  if (isStakedAction(action)) {
+  if (isStakedAction(action) && !ARCADE_NO_COOLDOWN_GAMES.has(gameId)) {
     const block = cooldownBlock(userRec, pointStore, user, gameId);
     if (block) {
       saveState(state);
@@ -1798,7 +2289,19 @@ function playGame(pointStore, game, user, gameId, action, payload) {
 
   const result = handler(user, userRec, action, payload || {}, pointStore);
 
-  if (result.ok !== false && isStakedAction(action)) {
+  if (result.ok !== false) {
+    if (gameId === "nfg_blocks") {
+      const best = userRec.games?.nfg_blocks?.bestLevel;
+      if (best > 0) recordArcadeLeaderboard(state, gameId, user, best, pointStore);
+    }
+    if (gameId === "nfg_snake_jump") {
+      const best = userRec.games?.nfg_snake_jump?.bestHeight;
+      if (best > 0) recordArcadeLeaderboard(state, gameId, user, best, pointStore);
+      syncJumpLeaderboardEntry(state, user, pointStore);
+    }
+  }
+
+  if (result.ok !== false && isStakedAction(action) && !ARCADE_NO_COOLDOWN_GAMES.has(gameId)) {
     touchArcadeStake(userRec);
   }
 
@@ -1892,6 +2395,49 @@ function registerMobileArcadeRoutes(app, ctx) {
       return res.status(500).json({ ok: false, message: e.message || "arcade_error" });
     }
   });
+
+  app.get("/api/mobile/arcade/leaderboard", (req, res) => {
+    const session = validateBearer(req);
+    if (!session) return res.status(401).json({ ok: false, error: "auth_required" });
+    const gameId = String(req.query.gameId || "").trim();
+    if (!LEADERBOARD_GAME_IDS.includes(gameId)) {
+      return res.status(400).json({
+        ok: false,
+        reason: "invalid_game",
+        message: "Leaderboard only for NFG Blocks and NFG Jump.",
+      });
+    }
+    try {
+      const state = loadState();
+      ensureLeaderboards(state);
+      const limit = Math.max(5, Math.min(50, Math.floor(Number(req.query.limit) || 25)));
+      const top = getArcadeLeaderboard(state, gameId, limit);
+      const uid = normUser(session.userId);
+      const idx = top.findIndex((e) => e.userId === uid);
+      const myScore = idx >= 0 ? top[idx].points : userRecBest(state, uid, gameId);
+      return res.json({
+        ok: true,
+        gameId,
+        top,
+        myRank: idx >= 0 ? idx + 1 : null,
+        myScore: myScore || 0,
+        scoreLabel: gameId === "nfg_snake_jump" ? "m" : "level",
+      });
+    } catch (e) {
+      return res.status(500).json({ ok: false, message: e.message || "arcade_error" });
+    }
+  });
 }
 
-module.exports = { registerMobileArcadeRoutes, buildCatalog, playGame, GAME_DEFS, getPublicTowerHero };
+module.exports = {
+  registerMobileArcadeRoutes,
+  buildCatalog,
+  playGame,
+  GAME_DEFS,
+  getPublicTowerHero,
+  getJumpPlayerCosmetics,
+  prepareJumpVsMatch,
+  syncJumpVsSessionPoints,
+  finalizeJumpVsMatch,
+  SNAKE_JUMP_SKINS,
+};

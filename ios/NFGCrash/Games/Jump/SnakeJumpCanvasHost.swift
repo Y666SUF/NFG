@@ -26,7 +26,9 @@ final class SnakeJumpCanvasController: ObservableObject {
     @Published var ghostOpponents: [JumpGhostOpponent] = []
     @Published var sessionActive = false
     @Published var running = false
+    @Published var profileImage: UIImage?
     var sessionPoints = 0
+    private(set) var trailDots: [(x: CGFloat, y: CGFloat, alpha: CGFloat)] = []
 
     var onMilestone: (() async -> Void)?
     var onGameOver: ((Int) async -> Void)?
@@ -63,8 +65,18 @@ final class SnakeJumpCanvasController: ObservableObject {
         if engine.gameOver {
             running = false
             sessionActive = false
+            trailDots.removeAll()
             let height = engine.currentHeight
             await onGameOver?(height)
+        }
+    }
+
+    func recordTrail(screenX: CGFloat, screenY: CGFloat) {
+        guard sessionActive, running else { return }
+        trailDots.append((screenX, screenY, 0.55))
+        if trailDots.count > 14 { trailDots.removeFirst(trailDots.count - 14) }
+        for i in trailDots.indices {
+            trailDots[i].alpha *= 0.88
         }
     }
 
@@ -88,7 +100,31 @@ final class SnakeJumpCanvasView: UIView {
         super.init(frame: frame)
         backgroundColor = SnakeJumpTheme.skyBottom
         isMultipleTouchEnabled = true
+        isUserInteractionEnabled = true
         startDisplayLink()
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        applySteer(from: touches)
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        applySteer(from: touches)
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        controller?.steer = 0
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        controller?.steer = 0
+    }
+
+    private func applySteer(from touches: Set<UITouch>) {
+        guard let touch = touches.first, let controller else { return }
+        let x = touch.location(in: self).x
+        let w = max(bounds.width, 1)
+        controller.steer = ((x / w) - 0.5) * 2
     }
 
     @available(*, unavailable)
@@ -155,14 +191,33 @@ final class SnakeJumpCanvasView: UIView {
         let playerScreenX = engine.playerX * scaleX + w * 0.5
         let playerScreenY = h - (engine.playerY - cam) - 40
         let pr = SnakeJumpEngine.playerRadius * 0.55
+        controller.recordTrail(screenX: playerScreenX, screenY: playerScreenY)
+
+        let fill = SnakeJumpTheme.uiColor(hex: controller.skinFill, fallback: SnakeJumpTheme.defaultFill)
+        let ring = SnakeJumpTheme.uiColor(hex: controller.skinRing, fallback: SnakeJumpTheme.defaultRing)
+        let trailR = pr * 0.42
+        for dot in controller.trailDots where dot.alpha > 0.04 {
+            fill.withAlphaComponent(dot.alpha * 0.45).setFill()
+            ring.withAlphaComponent(dot.alpha * 0.35).setStroke()
+            let rect = CGRect(x: dot.x - trailR, y: dot.y - trailR, width: trailR * 2, height: trailR * 2)
+            ctx.fillEllipse(in: rect)
+            ctx.setLineWidth(1.5)
+            ctx.strokeEllipse(in: rect)
+        }
+
         if engine.boostLiftRemaining > 0 {
             drawActiveBoostAura(ctx: ctx, x: playerScreenX, y: playerScreenY, elapsed: engine.elapsed)
         }
 
-        let fill = SnakeJumpTheme.uiColor(hex: controller.skinFill, fallback: SnakeJumpTheme.defaultFill)
-        let ring = SnakeJumpTheme.uiColor(hex: controller.skinRing, fallback: SnakeJumpTheme.defaultRing)
         fill.setFill()
         ctx.fillEllipse(in: CGRect(x: playerScreenX - pr, y: playerScreenY - pr, width: pr * 2, height: pr * 2))
+        if let img = controller.profileImage {
+            ctx.saveGState()
+            ctx.addEllipse(in: CGRect(x: playerScreenX - pr, y: playerScreenY - pr, width: pr * 2, height: pr * 2))
+            ctx.clip()
+            img.draw(in: CGRect(x: playerScreenX - pr, y: playerScreenY - pr, width: pr * 2, height: pr * 2))
+            ctx.restoreGState()
+        }
         ring.setStroke()
         ctx.setLineWidth(2.5)
         ctx.strokeEllipse(in: CGRect(x: playerScreenX - pr, y: playerScreenY - pr, width: pr * 2, height: pr * 2))

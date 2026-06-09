@@ -826,10 +826,23 @@ struct ArcadeHeistActive: Decodable, Hashable {
     }
 }
 
+struct ArcadeLeaderboardResponse: Decodable {
+    var ok: Bool?
+    var gameId: String?
+    var top: [ArcadeLadderRow]?
+    var myRank: Int?
+    var myScore: Int?
+    var scoreLabel: String?
+}
+
 struct ArcadeLadderRow: Decodable, Identifiable, Hashable {
     var userId: String
     var displayName: String?
     var points: Int
+    var jumpSkinId: String?
+    var jumpSkinName: String?
+    var jumpSkinFill: String?
+    var jumpSkinRing: String?
     var id: String { userId }
 
     var label: String {
@@ -847,10 +860,15 @@ struct ArcadeLadderRow: Decodable, Identifiable, Hashable {
             ?? ""
         displayName = try c.decodeIfPresent(String.self, forKey: .displayName)
         points = c.flexInt(forKey: .points) ?? 0
+        jumpSkinId = try c.decodeIfPresent(String.self, forKey: .jumpSkinId)
+        jumpSkinName = try c.decodeIfPresent(String.self, forKey: .jumpSkinName)
+        jumpSkinFill = try c.decodeIfPresent(String.self, forKey: .jumpSkinFill)
+        jumpSkinRing = try c.decodeIfPresent(String.self, forKey: .jumpSkinRing)
     }
 
     private enum CodingKeys: String, CodingKey {
         case userId, user, displayName, points
+        case jumpSkinId, jumpSkinName, jumpSkinFill, jumpSkinRing
     }
 }
 

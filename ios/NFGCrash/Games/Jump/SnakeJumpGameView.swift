@@ -316,6 +316,9 @@ struct SnakeJumpGameView: View {
             wireCanvasCallbacks()
             let status = try await client.arcadePlay(gameId: "nfg_snake_jump", action: "status")
             applyStatus(status)
+            if let data = try? await client.fetchProfileAvatar(), let img = UIImage(data: data) {
+                canvas.profileImage = img
+            }
         } catch {
             loadError = error.localizedDescription
             message = error.localizedDescription

@@ -777,4 +777,38 @@ struct GameAPI {
         }
         return wallet
     }
+
+    func fetchProfileAvatar(forceRefresh: Bool = false) async throws -> Data {
+        guard authToken != nil else { throw GameAPIError.notLoggedIn }
+        var path = "/api/mobile/me/avatar"
+        if forceRefresh { path += "?refresh=1" }
+        let req = try authorizedRequest(url: baseURL.appending(path: path))
+        let (data, response) = try await GameHTTP.data(for: req)
+        guard let http = response as? HTTPURLResponse else {
+            throw GameAPIError.serverError("No response")
+        }
+        if http.statusCode == 401 {
+            AuthStore.clearSession()
+            throw GameAPIError.notLoggedIn
+        }
+        guard http.statusCode == 200 else {
+            throw GameAPIError.serverError("Could not load profile picture.")
+        }
+        return data
+    }
+
+    func fetchArcadeLeaderboard(gameId: String, limit: Int = 5) async throws -> ArcadeLeaderboardResponse {
+        guard authToken != nil else { throw GameAPIError.notLoggedIn }
+        var comp = URLComponents(url: baseURL.appending(path: "/api/mobile/arcade/leaderboard"), resolvingAgainstBaseURL: false)!
+        comp.queryItems = [
+            URLQueryItem(name: "gameId", value: gameId),
+            URLQueryItem(name: "limit", value: String(limit)),
+        ]
+        let req = try authorizedRequest(url: comp.url!)
+        let (data, response) = try await GameHTTP.data(for: req)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw GameAPIError.serverError("Could not load arcade leaderboard.")
+        }
+        return try JSONDecoder().decode(ArcadeLeaderboardResponse.self, from: data)
+    }
 }

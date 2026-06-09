@@ -73,6 +73,8 @@
 		E1B2C3D500000000000000B8 /* SnakeJumpEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000B9 /* SnakeJumpEngine.swift */; };
 		E1B2C3D500000000000000BA /* SnakeJumpGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000BB /* SnakeJumpGameView.swift */; };
 		E1B2C3D500000000000000BC /* SnakeJumpTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000BD /* SnakeJumpTheme.swift */; };
+		E1B2C3D500000000000000C0 /* BlocksEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000C1 /* BlocksEngine.swift */; };
+		E1B2C3D500000000000000C2 /* BlocksGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000C3 /* BlocksGameView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -143,6 +145,8 @@
 		E1B2C3D500000000000000B9 /* SnakeJumpEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnakeJumpEngine.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000BB /* SnakeJumpGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnakeJumpGameView.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000BD /* SnakeJumpTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnakeJumpTheme.swift; sourceTree = "<group>"; };
+		E1B2C3D500000000000000C1 /* BlocksEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocksEngine.swift; sourceTree = "<group>"; };
+		E1B2C3D500000000000000C3 /* BlocksGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocksGameView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -188,10 +192,20 @@
 			path = Jump;
 			sourceTree = "<group>";
 		};
+		E1B2C3D500000000000000C4 /* Blocks */ = {
+			isa = PBXGroup;
+			children = (
+				E1B2C3D500000000000000C1 /* BlocksEngine.swift */,
+				E1B2C3D500000000000000C3 /* BlocksGameView.swift */,
+			);
+			path = Blocks;
+			sourceTree = "<group>";
+		};
 		E1B2C3D500000000000000BE /* Games */ = {
 			isa = PBXGroup;
 			children = (
 				E1B2C3D500000000000000BF /* Jump */,
+				E1B2C3D500000000000000C4 /* Blocks */,
 			);
 			path = Games;
 			sourceTree = "<group>";
@@ -450,6 +464,8 @@
 				E1B2C3D500000000000000B8 /* SnakeJumpEngine.swift in Sources */,
 				E1B2C3D500000000000000BA /* SnakeJumpGameView.swift in Sources */,
 				E1B2C3D500000000000000BC /* SnakeJumpTheme.swift in Sources */,
+				E1B2C3D500000000000000C0 /* BlocksEngine.swift in Sources */,
+				E1B2C3D500000000000000C2 /* BlocksGameView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

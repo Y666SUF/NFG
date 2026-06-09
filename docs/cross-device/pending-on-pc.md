@@ -40,9 +40,17 @@ This is a **Windows server mismatch**, not an iOS issue.
 Find the folder that the live process really runs from (the one with `server/index.js` it uses), then:
 
 ```powershell
+cd C:\Users\Yusef\test
+.\scripts\sync-pull.ps1
+npm install
+```
+
+Or manually:
+
+```powershell
 git fetch origin
-git checkout emergent/ui-polish-2026
-git pull origin emergent/ui-polish-2026
+git checkout main
+git pull origin main
 npm install
 ```
 
@@ -153,7 +161,10 @@ Then inside `registerMobileApi(app, ctx)` add:
 ```js
 registerMobileProfileRoutes(app, { validateBearer, pointStore, game });
 registerMobileArcadeRoutes(app, { validateBearer, pointStore, game, broadcast });
+registerTikTokAvatarRoutes(app, { validateBearer });
 ```
+
+(`tiktok-profile-avatar.js` should already exist; wire it if Jump profile pics fail.)
 
 ### 4) Restart the live server process
 

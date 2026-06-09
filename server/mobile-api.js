@@ -18,6 +18,7 @@ const { buildPlatformStatus, registerMobilePlatformRoutes } = require("./mobile-
 const { registerHangmanMobileRoutes } = require("./mobile-hangman");
 const { registerMobileProfileRoutes } = require("./mobile-profile");
 const { registerMobileArcadeRoutes } = require("./mobile-arcade");
+const { registerTikTokAvatarRoutes } = require("./tiktok-profile-avatar");
 const { registerMobileGameAdminRoutes } = require("./mobile-game-admin");
 const { isGameHost } = require("./host-config");
 const { registerTowerWorldRoutes } = require("./tower-world");
@@ -49,6 +50,7 @@ function registerMobileApi(app, ctx) {
   registerHangmanMobileRoutes(app, { validateBearer });
   registerMobileProfileRoutes(app, { validateBearer, pointStore, game });
   registerMobileArcadeRoutes(app, { validateBearer, pointStore, game });
+  registerTikTokAvatarRoutes(app, { validateBearer });
   registerMobileGameAdminRoutes(app, { validateBearer, pointStore, game, broadcast, pushState });
   registerTowerWorldRoutes(app, { validateBearer, pointStore, game });
   registerJumpVsRoutes(app, { validateBearer, pointStore, game });

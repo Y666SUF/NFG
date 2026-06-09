@@ -10,6 +10,8 @@ struct VaultArcadeHubView: View {
     @State private var serverWarning: String?
     @State private var isLoading = true
     @State private var selectedGame: ArcadeGameInfo?
+    @State private var blocksLeaderboard: ArcadeLeaderboardResponse?
+    @State private var jumpLeaderboard: ArcadeLeaderboardResponse?
 
     private var displayGames: [ArcadeGameInfo] {
         ArcadeBundledCatalog.merge(serverGames: catalog?.games)
@@ -50,6 +52,7 @@ struct VaultArcadeHubView: View {
                         earnBannerPlaceholder
                     }
                     gamesSection
+                    arcadeLeaderboardsSection
                     if let cat = catalog, !(cat.missions ?? []).isEmpty {
                         missionsSection(cat.missions ?? [])
                     }
@@ -77,9 +80,80 @@ struct VaultArcadeHubView: View {
                     .environmentObject(sync)
             }
         }
-        .task { await load() }
-        .onAppear { Task { await load() } }
+        .task {
+            await load()
+            await loadLeaderboards()
+        }
+        .onAppear {
+            Task {
+                await load()
+                await loadLeaderboards()
+            }
+        }
         .preferredColorScheme(.dark)
+    }
+
+    private var arcadeLeaderboardsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("LEADERBOARDS")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(NFGTheme.muted)
+            if let blocks = blocksLeaderboard?.top, !blocks.isEmpty {
+                arcadeLeaderboardCard(title: "NFG Blocks top", rows: blocks, scoreSuffix: " Lv")
+            }
+            if let jump = jumpLeaderboard?.top, !jump.isEmpty {
+                arcadeLeaderboardCard(title: "NFG Jump top", rows: jump, scoreSuffix: "m", showJumpSkins: true)
+            }
+            if (blocksLeaderboard?.top ?? []).isEmpty && (jumpLeaderboard?.top ?? []).isEmpty {
+                Text("Play Blocks or Jump to appear on the board.")
+                    .font(.system(size: 11))
+                    .foregroundStyle(NFGTheme.muted)
+            }
+        }
+    }
+
+    private func arcadeLeaderboardCard(title: String, rows: [ArcadeLadderRow], scoreSuffix: String, showJumpSkins: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(NFGTheme.text)
+            ForEach(Array(rows.prefix(5).enumerated()), id: \.element.id) { idx, row in
+                HStack(spacing: 8) {
+                    Text("\(idx + 1).")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(NFGTheme.muted)
+                        .frame(width: 18, alignment: .trailing)
+                    if showJumpSkins, let fill = row.jumpSkinFill {
+                        Circle()
+                            .fill(SnakeJumpTheme.swiftColor(hex: fill, fallback: NFGTheme.accent))
+                            .overlay(Circle().stroke(SnakeJumpTheme.swiftColor(hex: row.jumpSkinRing ?? "#f2c733", fallback: NFGTheme.gold), lineWidth: 2))
+                            .frame(width: 14, height: 14)
+                    }
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(row.label)
+                            .font(.system(size: 11, weight: .semibold))
+                        if showJumpSkins, let skinName = row.jumpSkinName, row.jumpSkinId != "classic" {
+                            Text(skinName)
+                                .font(.system(size: 9, weight: .medium))
+                                .foregroundStyle(SnakeJumpTheme.swiftColor(hex: row.jumpSkinRing ?? "#f2c733", fallback: NFGTheme.gold))
+                        }
+                    }
+                    Spacer()
+                    Text("\(row.points.formatted())\(scoreSuffix)")
+                        .font(.system(size: 11, weight: .bold, design: .monospaced))
+                        .foregroundStyle(NFGTheme.accent2)
+                }
+            }
+        }
+        .padding(10)
+        .background(NFGTheme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private func loadLeaderboards() async {
+        guard let api = sync.apiForArcade() else { return }
+        blocksLeaderboard = try? await api.fetchArcadeLeaderboard(gameId: "nfg_blocks", limit: 5)
+        jumpLeaderboard = try? await api.fetchArcadeLeaderboard(gameId: "nfg_snake_jump", limit: 5)
     }
 
     private var header: some View {
@@ -456,7 +530,7 @@ struct VaultArcadeGameView: View {
                 await playWheelSpin()
             }
         case "nfg_blocks":
-            BlockBlastGameView(
+            BlocksGameView(
                 busy: busy,
                 serverLevel: blocksLevel,
                 sessionPoints: blocksSessionPoints,

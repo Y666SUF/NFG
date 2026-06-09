@@ -66,6 +66,9 @@ out/
 
 # iOS / Xcode (NFG Crash — Mac)
 ios/DerivedData/
+ios/.derivedData/
+ios/.derivedDataDevice/
+ios/.derivedDataSim/
 ios/build/
 ios/archive/
 ios/export/*.ipa

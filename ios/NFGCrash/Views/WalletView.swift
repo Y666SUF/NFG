@@ -3,8 +3,21 @@ import SwiftUI
 struct WalletView: View {
     @EnvironmentObject private var sync: SyncClient
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var adCoordinator = RewardedAdCoordinator()
     @State private var showLegal = false
+    @State private var showAdSetup = false
+    @State private var showSettings = false
+    @State private var showCosmeticsShop = false
+    @State private var showArcade = false
+    @State private var displayNameDraft = ""
+    @State private var displayNameError: String?
+    @State private var displayNameSaving = false
+    @State private var displayNameSuccess = false
+
+    private var displayNameMaxLength: Int {
+        sync.wallet.displayNameMaxLength ?? 20
+    }
 
     var body: some View {
         NavigationStack {
@@ -15,7 +28,11 @@ struct WalletView: View {
                             .padding(.top, 40)
                     } else {
                         headerCard
+                        displayNameSection
+                        displayShopSection
+                        vaultArcadeSection
                         balanceCard
+                        storeSection
                         rewardedAdCard
                         statusRow
                         inventorySection
@@ -28,6 +45,19 @@ struct WalletView: View {
                             .multilineTextAlignment(.center)
                     }
 
+                    #if DEBUG
+                    if !AppDistribution.isAppStoreSubmission {
+                        Button {
+                            showAdSetup = true
+                        } label: {
+                            Text("Ads & IAP setup (diagnostics)")
+                                .font(.system(size: 12, weight: .medium))
+                                .foregroundStyle(NFGTheme.accent2)
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    #endif
+
                     Button {
                         showLegal = true
                     } label: {
@@ -36,43 +66,336 @@ struct WalletView: View {
                             .foregroundStyle(NFGTheme.muted)
                             .frame(maxWidth: .infinity)
                     }
-                    .padding(.top, 8)
+                    .padding(.top, 4)
                 }
                 .padding(16)
             }
             .background(NFGTheme.background.ignoresSafeArea())
-            .navigationTitle("My Wallet")
+            .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Close") { dismiss() }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        Task { await sync.refreshWallet() }
-                    } label: {
-                        Image(systemName: "arrow.clockwise")
+                    HStack(spacing: 14) {
+                        Button {
+                            showSettings = true
+                        } label: {
+                            Image(systemName: "gearshape.fill")
+                        }
+                        .accessibilityLabel("Settings")
+                        Button {
+                            Task { await sync.refreshWallet(force: true) }
+                        } label: {
+                            Image(systemName: "arrow.clockwise")
+                        }
+                        .disabled(sync.isLoadingWallet)
                     }
-                    .disabled(sync.isLoadingWallet)
                 }
+            }
+            .sheet(isPresented: $showSettings) {
+                SettingsView()
+                    .environmentObject(sync)
             }
             .preferredColorScheme(.dark)
             .fullScreenCover(isPresented: $adCoordinator.showSimulatedAd) {
                 SimulatedRewardedAdView(coordinator: adCoordinator)
             }
             .onAppear {
+                displayNameDraft = sync.wallet.displayName
                 Task {
-                    await sync.refreshWallet()
+                    await sync.refreshWallet(force: true)
+                    await sync.refreshCosmeticsShop()
                     if sync.connectionStatus == "Offline" {
                         sync.connect()
                     }
                     await sync.refreshRewardedAdStatus()
+                    await sync.refreshStoreProducts()
                 }
             }
             .sheet(isPresented: $showLegal) {
                 LegalComplianceView()
+                    .environmentObject(sync)
+            }
+            .navigationDestination(isPresented: $showAdSetup) {
+                AdSetupDiagnosticsView()
+                    .environmentObject(sync)
+            }
+            .navigationDestination(isPresented: $showCosmeticsShop) {
+                CosmeticsShopView()
+                    .environmentObject(sync)
+            }
+            .navigationDestination(isPresented: $showArcade) {
+                VaultArcadeHubView()
+                    .environmentObject(sync)
+            }
+            .onChange(of: showCosmeticsShop) { _, isOpen in
+                if !isOpen {
+                    Task { await sync.refreshWallet(force: true) }
+                }
+            }
+            .onChange(of: sync.wallet.displayName) { _, name in
+                if displayNameDraft.isEmpty || displayNameDraft == sync.wallet.user {
+                    displayNameDraft = name
+                }
             }
         }
+    }
+
+    private var displayNameSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "person.text.rectangle")
+                    .foregroundStyle(NFGTheme.accent2)
+                Text("Display name")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(NFGTheme.text)
+            }
+
+            Text("Choose how you appear in chat, leaderboards, and arcade. Emojis OK · max \(displayNameMaxLength) characters. Filtered like TikTok.")
+                .font(.system(size: 11))
+                .foregroundStyle(NFGTheme.muted)
+
+            if AuthStore.displayNameLocked || sync.wallet.displayNameLocked == true {
+                Label("Your custom name is saved and won’t change when TikTok updates.", systemImage: "lock.fill")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(NFGTheme.gold)
+            }
+
+            TextField("Display name", text: $displayNameDraft)
+                .textInputAutocapitalization(.words)
+                .autocorrectionDisabled()
+                .padding(12)
+                .background(NFGTheme.panel2)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(NFGTheme.border))
+                .disabled(!PlayerSession.isLoggedIn || displayNameSaving)
+                .onChange(of: displayNameDraft) { _, newValue in
+                    displayNameError = nil
+                    displayNameSuccess = false
+                    if newValue.count > displayNameMaxLength {
+                        displayNameDraft = String(newValue.prefix(displayNameMaxLength))
+                    }
+                }
+
+            HStack {
+                Text("\(displayNameDraft.count)/\(displayNameMaxLength)")
+                    .font(.system(size: 10, weight: .semibold, design: .monospaced))
+                    .foregroundStyle(NFGTheme.muted)
+                Spacer()
+            }
+
+            if let displayNameError {
+                Text(displayNameError)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(NFGTheme.danger)
+            } else if displayNameSuccess {
+                Text("Display name saved.")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(NFGTheme.accent2)
+            }
+
+            Button {
+                Task { await saveDisplayName() }
+            } label: {
+                Text(displayNameSaving ? "Saving…" : "Save display name")
+                    .font(.system(size: 13, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(NFGTheme.accent2)
+            .disabled(!PlayerSession.isLoggedIn || displayNameSaving || displayNameDraft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+        }
+        .padding(14)
+        .background(NFGTheme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(NFGTheme.accent2.opacity(0.35)))
+    }
+
+    private func saveDisplayName() async {
+        guard PlayerSession.isLoggedIn else { return }
+        let trimmed = displayNameDraft.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 2 else {
+            displayNameError = "Use at least 2 characters."
+            return
+        }
+        displayNameSaving = true
+        displayNameError = nil
+        displayNameSuccess = false
+        defer { displayNameSaving = false }
+        do {
+            try await sync.updateDisplayName(trimmed)
+            displayNameDraft = sync.wallet.displayName
+            displayNameSuccess = true
+        } catch {
+            displayNameError = error.localizedDescription
+        }
+    }
+
+    private var vaultArcadeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "gamecontroller.fill")
+                    .foregroundStyle(NFGTheme.gold)
+                Text("Vault Arcade")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(NFGTheme.text)
+            }
+            Text("6 Stake-style games — unlimited plays, real wins & losses (app only).")
+                .font(.system(size: 11))
+                .foregroundStyle(NFGTheme.muted)
+            Button {
+                showArcade = true
+            } label: {
+                Text(PlayerSession.isLoggedIn ? "Play Vault Arcade" : "Link TikTok to play")
+                    .font(.system(size: 13, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(NFGTheme.gold)
+            .disabled(!PlayerSession.isLoggedIn)
+        }
+        .padding(14)
+        .background(NFGTheme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(NFGTheme.gold.opacity(0.35)))
+    }
+
+    private var displayShopSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "paintbrush.fill")
+                    .foregroundStyle(NFGTheme.accent2)
+                Text("Display shop")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(NFGTheme.text)
+            }
+            Text("Name FX (!namefx) and status icons (!buy) — same as TikTok live.")
+                .font(.system(size: 11))
+                .foregroundStyle(NFGTheme.muted)
+            HStack(spacing: 8) {
+                NameBadgePill(
+                    badgeId: sync.wallet.nameBadge,
+                    short: PlayerCosmeticStyle.badgeShort(
+                        for: sync.wallet.nameBadge,
+                        catalog: sync.cosmeticsCatalog?.nameBadges ?? []
+                    )
+                )
+                NameStyledText(
+                    name: sync.wallet.displayName.isEmpty ? "Your name" : sync.wallet.displayName,
+                    styleId: sync.wallet.nameStyle,
+                    font: .system(size: 16, weight: .bold)
+                )
+            }
+            Button {
+                showCosmeticsShop = true
+            } label: {
+                Text(PlayerSession.isLoggedIn ? "Change name FX & icons" : "Link TikTok to customize")
+                    .font(.system(size: 13, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 11)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(NFGTheme.accent)
+            .disabled(!PlayerSession.isLoggedIn)
+        }
+        .padding(14)
+        .background(NFGTheme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(NFGTheme.accent2.opacity(0.3)))
+    }
+
+    private var storeSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Image(systemName: "bag.fill")
+                    .foregroundStyle(NFGTheme.accent2)
+                Text("Buy points")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(NFGTheme.text)
+            }
+
+            Text("Virtual play credits for the live crash game. Apple In-App Purchase only.")
+                .font(.system(size: 11))
+                .foregroundStyle(NFGTheme.muted)
+
+            if sync.storeIsTestMode && AppDistribution.allowsDevTestStore {
+                Text("Dev test mode — no real charge. Set NFG_ALLOW_TEST_STORE=1 on server.")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(NFGTheme.gold)
+            }
+
+            if let skErr = StoreKitService.shared.loadError, !sync.storeIsTestMode {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(skErr)
+                        .font(.system(size: 10))
+                        .foregroundStyle(NFGTheme.danger)
+                    Text("Product IDs: points_10k, points_50k, points_100k · Bundle: com.yusufali.nfgcrash")
+                        .font(.system(size: 9))
+                        .foregroundStyle(NFGTheme.muted)
+                    Button {
+                        Task { await sync.refreshStoreProducts() }
+                    } label: {
+                        Text("Retry loading App Store products")
+                            .font(.system(size: 11, weight: .semibold))
+                    }
+                    .disabled(sync.isPurchasingStore)
+                }
+            } else if !sync.storeIsTestMode {
+                let loaded = StoreKitService.shared.appleProducts.count
+                if loaded > 0, loaded < sync.storeProducts.count {
+                    Text("Some products still syncing with App Store (\(loaded)/\(sync.storeProducts.count)).")
+                        .font(.system(size: 10))
+                        .foregroundStyle(NFGTheme.gold)
+                }
+            }
+
+            ForEach(sync.storeProducts) { product in
+                Button {
+                    Task { await sync.purchaseStoreProduct(product) }
+                } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(product.displayTitle)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(NFGTheme.text)
+                            Text(
+                                StoreKitService.shared.displayPrice(
+                                    for: product.id,
+                                    fallback: product.priceLabel
+                                )
+                            )
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(NFGTheme.muted)
+                        }
+                        Spacer()
+                        if sync.isPurchasingStore {
+                            ProgressView()
+                        } else {
+                            Text("Buy")
+                                .font(.system(size: 13, weight: .bold))
+                        }
+                    }
+                    .padding(12)
+                    .background(NFGTheme.panel2)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .disabled(!PlayerSession.isLoggedIn || sync.isPurchasingStore)
+            }
+
+            if let msg = sync.storePurchaseMessage {
+                Text(msg)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(msg.contains("+") ? NFGTheme.accent2 : NFGTheme.danger)
+            }
+        }
+        .padding(14)
+        .background(NFGTheme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(NFGTheme.accent2.opacity(0.35)))
     }
 
     private var rewardedAdCard: some View {
@@ -182,9 +505,21 @@ struct WalletView: View {
                     .foregroundStyle(.white)
             }
             VStack(alignment: .leading, spacing: 4) {
-                Text(sync.wallet.displayName)
-                    .font(.system(size: 17, weight: .bold))
-                    .foregroundStyle(NFGTheme.text)
+                HStack(spacing: 6) {
+                    NameBadgePill(
+                        badgeId: sync.wallet.nameBadge,
+                        short: PlayerCosmeticStyle.badgeShort(
+                            for: sync.wallet.nameBadge,
+                            catalog: sync.cosmeticsCatalog?.nameBadges ?? []
+                        ),
+                        compact: true
+                    )
+                    NameStyledText(
+                        name: sync.wallet.displayName,
+                        styleId: sync.wallet.nameStyle,
+                        font: .system(size: 17, weight: .bold)
+                    )
+                }
                 Text("@\(sync.wallet.user)")
                     .font(.system(size: 13))
                     .foregroundStyle(NFGTheme.muted)
@@ -194,13 +529,10 @@ struct WalletView: View {
                     Text(sync.wallet.rank)
                         .font(.system(size: 11, weight: .medium))
                     if sync.wallet.superFan {
-                        Text("SUPER FAN")
-                            .font(.system(size: 9, weight: .black))
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(NFGTheme.gold.opacity(0.25))
-                            .clipShape(Capsule())
-                            .foregroundStyle(NFGTheme.gold)
+                        SuperFanBadgeView(
+                            badge: SuperFanBadgeDisplay(superFan: true, level: sync.wallet.superFanLevel),
+                            compact: true
+                        )
                     }
                 }
                 .foregroundStyle(NFGTheme.accent2)
@@ -218,9 +550,10 @@ struct WalletView: View {
             Text("CURRENT BALANCE")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(NFGTheme.muted)
-            Text("\(sync.wallet.balance.formatted()) pts")
+            Text("\(sync.liveBalance.formatted()) pts")
                 .font(.system(size: 36, weight: .heavy, design: .monospaced))
                 .foregroundStyle(NFGTheme.accent2)
+                .contentTransition(.numericText())
             Text("All-time: \(sync.wallet.allTime.formatted()) pts")
                 .font(.system(size: 13, design: .monospaced))
                 .foregroundStyle(NFGTheme.muted)

@@ -39,4 +39,10 @@ enum PlayerSession {
     }
 
     static var isLoggedIn: Bool { AuthStore.isLinked }
+
+    /// Clears TikTok username shown in-game after unlink / sign-out.
+    static func clearLinkedProfile() {
+        tiktokUsername = ""
+        displayName = ""
+    }
 }

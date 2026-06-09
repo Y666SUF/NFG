@@ -16,6 +16,7 @@ const {
 const { buildWalletPayload } = require("./mobile-wallet");
 const { buildPlatformStatus, registerMobilePlatformRoutes } = require("./mobile-platform");
 const { registerHangmanMobileRoutes } = require("./mobile-hangman");
+const { registerMobileProfileRoutes } = require("./mobile-profile");
 const { registerMobileArcadeRoutes } = require("./mobile-arcade");
 const { registerMobileGameAdminRoutes } = require("./mobile-game-admin");
 const { isGameHost } = require("./host-config");
@@ -46,6 +47,7 @@ function registerMobileApi(app, ctx) {
   registerMobilePresenceRoutes(app, { validateBearer, pointStore, broadcast });
   registerMobilePlatformRoutes(app, { game, pointStore, validateBearer, broadcast });
   registerHangmanMobileRoutes(app, { validateBearer });
+  registerMobileProfileRoutes(app, { validateBearer, pointStore, game });
   registerMobileArcadeRoutes(app, { validateBearer, pointStore, game });
   registerMobileGameAdminRoutes(app, { validateBearer, pointStore, game, broadcast, pushState });
   registerTowerWorldRoutes(app, { validateBearer, pointStore, game });

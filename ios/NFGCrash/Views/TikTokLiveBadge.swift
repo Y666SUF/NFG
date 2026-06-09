@@ -5,6 +5,7 @@ struct TikTokLiveBadge: View {
     var activeAppUsers: Int = 0
     var showInAppCount: Bool = false
     var compact: Bool = false
+    var prominent: Bool = false
 
     @Environment(\.openURL) private var openURL
 
@@ -28,18 +29,18 @@ struct TikTokLiveBadge: View {
     }
 
     private var badgeContent: some View {
-        HStack(spacing: compact ? 4 : 6) {
+        HStack(spacing: compact && !prominent ? 4 : 6) {
             Circle()
                 .fill(status.isOnLive ? Color.red : Color.orange.opacity(0.85))
-                .frame(width: compact ? 6 : 8, height: compact ? 6 : 8)
-                .shadow(color: status.isOnLive ? Color.red.opacity(0.6) : .clear, radius: 4)
+                .frame(width: dotSize, height: dotSize)
+                .shadow(color: status.isOnLive ? Color.red.opacity(0.75) : .clear, radius: prominent ? 6 : 4)
             HStack(spacing: 3) {
                 Text(status.isOnLive ? "LIVE" : "NOT LIVE")
-                    .font(.system(size: compact ? 10 : 12, weight: .bold, design: .rounded))
+                    .font(.system(size: labelSize, weight: .bold, design: .rounded))
                     .foregroundStyle(status.isOnLive ? Color.red : NFGTheme.muted)
                 if isTappableLive {
                     Image(systemName: "arrow.up.right")
-                        .font(.system(size: compact ? 8 : 9, weight: .bold))
+                        .font(.system(size: prominent ? 11 : (compact ? 8 : 9), weight: .bold))
                         .foregroundStyle(Color.red.opacity(0.85))
                 }
             }
@@ -59,11 +60,29 @@ struct TikTokLiveBadge: View {
                 .accessibilityLabel(inAppLabel)
             }
         }
-        .padding(.horizontal, compact ? 8 : 10)
-        .padding(.vertical, compact ? 3 : 5)
-        .background(NFGTheme.panel.opacity(0.95))
-        .clipShape(Capsule())
-        .overlay(Capsule().stroke(status.isOnLive ? Color.red.opacity(0.45) : NFGTheme.border))
+        .padding(.horizontal, prominent ? 12 : (compact ? 8 : 10))
+        .padding(.vertical, prominent ? 6 : (compact ? 3 : 5))
+        .background(
+            Capsule()
+                .fill(NFGTheme.panel.opacity(prominent ? 1 : 0.95))
+                .shadow(color: status.isOnLive && prominent ? Color.red.opacity(0.25) : .clear, radius: 8)
+        )
+        .overlay(
+            Capsule().stroke(
+                status.isOnLive ? Color.red.opacity(prominent ? 0.65 : 0.45) : NFGTheme.border,
+                lineWidth: prominent ? 1.5 : 1
+            )
+        )
+    }
+
+    private var dotSize: CGFloat {
+        if prominent { return 10 }
+        return compact ? 6 : 8
+    }
+
+    private var labelSize: CGFloat {
+        if prominent { return 14 }
+        return compact ? 10 : 12
     }
 
     private func openTikTokLive() {

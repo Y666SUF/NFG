@@ -1,0 +1,8 @@
+<svg viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <circle cx="24" cy="24" r="19" fill="#0a0014"/>
+      <circle cx="24" cy="24" r="17" fill="#f59e0b" stroke="#ffffff" stroke-width="1.2"/>
+      <circle cx="24" cy="24" r="14" fill="#fbbf24" stroke="#0a0014" stroke-width="0.8"/>
+      <circle cx="24" cy="24" r="11" fill="#7c3aed" stroke="#f5f3ff" stroke-width="1"/>
+      <text x="24" y="29" text-anchor="middle" font-size="14" font-weight="900" fill="#ffffff" font-family="Arial Black,sans-serif">₿</text>
+      <text x="24" y="29" text-anchor="middle" font-size="14" font-weight="900" fill="none" stroke="#0a0014" stroke-width="0.6" font-family="Arial Black,sans-serif">₿</text>
+    </svg>

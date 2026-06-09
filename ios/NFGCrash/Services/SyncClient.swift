@@ -6,10 +6,19 @@ final class SyncClient: ObservableObject {
     @Published var gameState: CrashGameState = .empty
     @Published var profile: PlayerProfile = .empty
     @Published var wallet: PlayerWallet = .empty
+    /// Mirrors `wallet.balance`; updated only via full wallet assign so Profile UI always refreshes.
+    @Published private(set) var liveBalance: Int = 0
     @Published var walletError: String?
     @Published var isLoadingWallet = false
     @Published var appChatMessages: [AppChatMessage] = []
     @Published var appChatError: String?
+    @Published var isChatAdmin = false
+    @Published var isChatMutedSelf = false
+    @Published var mutedChatUsers: [MutedChatUser] = []
+    @Published var chatModerationError: String?
+    @Published var activeChatBanner: AppChatBannerNotification?
+    /// Hide banners while the chat sheet is open.
+    @Published var suppressChatBanners = false
     @Published var connectionStatus = "Offline"
     @Published var feed: [FeedLine] = []
     @Published var lastActionMessage: String?
@@ -26,19 +35,18 @@ final class SyncClient: ObservableObject {
     @Published var activeAppUserList: [ActiveAppUser] = []
     /// Server returned `activeAppUsers` or accepted a presence heartbeat.
     @Published var presenceTrackingAvailable = false
+    /// Display name shown briefly when someone else opens the app.
+    @Published var presenceJoinAnnouncement: PresenceActivityAnnouncement?
+    /// Bumped on any presence pill change so toolbar chips reliably redraw.
+    @Published private(set) var presencePillRevision: UInt = 0
+    @Published private(set) var presencePillCount: Int = 0
+    @Published private(set) var presencePillVisible: Bool = false
     @Published var leaderboardTotalCount: Int = 0
 
     /// Shown in the header and chat — prefer live list count from server.
-    var displayedActiveAppUsers: Int {
-        if !activeAppUserList.isEmpty { return activeAppUserList.count }
-        if presenceTrackingAvailable { return max(activeAppUserCount, 1) }
-        if connectionStatus == "Online" { return max(activeAppUserCount, 1) }
-        return 0
-    }
+    var displayedActiveAppUsers: Int { presencePillCount }
 
-    var showActiveAppUserCount: Bool {
-        presenceTrackingAvailable || connectionStatus == "Online"
-    }
+    var showActiveAppUserCount: Bool { presencePillVisible }
     @Published var rewardedAdStatus: RewardedAdStatusResponse?
     @Published var rewardedAdBanner: String?
     @Published var isClaimingRewardedAd = false
@@ -46,6 +54,10 @@ final class SyncClient: ObservableObject {
     @Published var storePurchaseMessage: String?
     @Published var isPurchasingStore = false
     @Published var storeIsTestMode = true
+    @Published var cosmeticsCatalog: CosmeticsShopCatalog?
+    @Published var cosmeticsShopError: String?
+    @Published var cosmeticsPurchaseMessage: String?
+    @Published var isLoadingCosmeticsShop = false
 
     var topBalances: [LeaderboardRow] {
         Array(fullBalances.prefix(5))
@@ -57,19 +69,30 @@ final class SyncClient: ObservableObject {
     private var pingTimer: Timer?
     private var liveStatusTimer: Timer?
     private var presenceTimer: Timer?
+    private var knownPresenceUserIds = Set<String>()
+    private var presenceSnapshotReady = false
+    private var presenceJoinDismissTask: Task<Void, Never>?
     private var walletRefreshTimer: Timer?
+    /// Bumped whenever wallet balance is updated from a purchase or `applyWalletFromServer` — stale `refreshWallet` responses are ignored.
+    private var walletDataRevision: UInt64 = 0
     private var api: GameAPI?
     private var knownChatIds = Set<String>()
     private var reconnectTask: Task<Void, Never>?
+    private var pendingRoundResultPopup: RoundResultSummary?
+    private var localRecentCrashes: [Double] = []
+    /// Keeps entries visible when the live server omits `openBets` after betting (older PC builds).
+    private var cachedOpenBets: [OpenBet] = []
+    private var cachedOpenBetsRoundId: Int = -1
 
     private func bootstrapFromServer(api: GameAPI) async {
         await refreshMobileStatus()
         await sendPresenceHeartbeat()
 
         do {
-            gameState = try await api.fetchState()
+            gameState = enrichState(try await api.fetchState())
             applyStateSideEffects(gameState)
             connectionStatus = "Online"
+            syncPresencePillFromState()
 
             await refreshProfile()
             await refreshWallet()
@@ -79,8 +102,10 @@ final class SyncClient: ObservableObject {
             startLiveStatusPolling()
             startPresencePolling()
             startWalletPolling()
+            await refreshActiveAppUsers()
         } catch {
             connectionStatus = "Offline"
+            syncPresencePillFromState()
             appendFeed("Connection lost")
         }
     }
@@ -128,6 +153,14 @@ final class SyncClient: ObservableObject {
         liveStatusTimer = nil
         presenceTimer?.invalidate()
         presenceTimer = nil
+        presenceJoinDismissTask?.cancel()
+        presenceJoinDismissTask = nil
+        presenceJoinAnnouncement = nil
+        knownPresenceUserIds.removeAll()
+        presenceSnapshotReady = false
+        presenceTrackingAvailable = false
+        activeAppUserCount = 0
+        activeAppUserList = []
         walletRefreshTimer?.invalidate()
         walletRefreshTimer = nil
         webSocketTask?.cancel(with: .goingAway, reason: nil)
@@ -135,37 +168,252 @@ final class SyncClient: ObservableObject {
         if connectionStatus != "Server unreachable" {
             connectionStatus = "Offline"
         }
+        syncPresencePillFromState()
+    }
+
+    /// Unlink TikTok or App Review demo; returns user to the link / sign-in screen.
+    func signOut() async {
+        if let api {
+            await api.logoutSession()
+        }
+        disconnect()
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        AuthStore.clearSession()
+        api = nil
+        profile = .empty
+        wallet = .empty
+        liveBalance = 0
+        walletError = nil
+        gameState = .empty
+        appChatMessages = []
+        appChatError = nil
+        feed = []
+        fullBalances = []
+        lastActionMessage = nil
+        roundResultPopup = nil
+        pendingRoundResultPopup = nil
+        rewardedAdBanner = nil
+        storePurchaseMessage = nil
+        sublineText = "Signed out"
+        knownChatIds.removeAll()
     }
 
     func refreshProfile() async {
         guard PlayerSession.isLoggedIn, let api else { return }
         do {
             profile = try await api.fetchProfile(user: PlayerSession.tiktokUsername)
-            if wallet.user.isEmpty {
-                wallet.balance = profile.balance
-                wallet.allTime = profile.allTime
-                wallet.displayName = profile.displayName
-                wallet.user = profile.user
+            AuthStore.adoptDisplayNameFromServer(profile.displayName, userId: profile.user)
+            patchWallet { w in
+                if w.user.isEmpty {
+                    w.user = profile.user
+                }
+                let name = profile.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !name.isEmpty { w.displayName = name }
             }
         } catch {
             lastActionMessage = "Profile sync failed"
         }
     }
 
-    func refreshWallet() async {
+    /// Name sent with !bet / !balance — prefer server-remembered nickname over bare username.
+    func resolvedChatDisplayName() -> String {
+        let user = AuthStore.verifiedUserId
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "@", with: "")
+            .lowercased()
+        let walletName = wallet.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !walletName.isEmpty {
+            let key = walletName.lowercased().replacingOccurrences(of: "@", with: "")
+            if key != user { return walletName }
+        }
+        let verified = AuthStore.verifiedDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !verified.isEmpty {
+            let key = verified.lowercased().replacingOccurrences(of: "@", with: "")
+            if key != user { return verified }
+        }
+        if !walletName.isEmpty { return walletName }
+        if !verified.isEmpty { return verified }
+        return user
+    }
+
+    /// Reassign `wallet` so `@Published` fires (in-place struct mutation does not update SwiftUI).
+    private func patchWallet(_ mutate: (inout PlayerWallet) -> Void) {
+        var next = wallet
+        mutate(&next)
+        guard next != wallet else { return }
+        wallet = next
+        liveBalance = next.balance
+    }
+
+    func refreshWallet(force: Bool = false) async {
         guard PlayerSession.isLoggedIn, let api else { return }
+        let revisionAtStart = walletDataRevision
         isLoadingWallet = true
         walletError = nil
         defer { isLoadingWallet = false }
         do {
-            wallet = try await api.fetchMobileWallet()
-            profile.balance = wallet.balance
-            profile.allTime = wallet.allTime
-            profile.displayName = wallet.displayName
-            profile.level = wallet.level
-            profile.rank = wallet.rank
+            let next = try await api.fetchMobileWallet()
+            guard force || revisionAtStart == walletDataRevision else { return }
+            applyWalletFromServer(next)
         } catch {
             walletError = error.localizedDescription
+        }
+    }
+
+    func updateDisplayName(_ name: String) async throws {
+        guard let api else { throw GameAPIError.notLoggedIn }
+        let next = try await api.updateDisplayName(name)
+        applyWalletFromServer(next)
+    }
+
+    func applyWalletFromServer(_ next: PlayerWallet) {
+        walletDataRevision &+= 1
+        wallet = next
+        liveBalance = next.balance
+        profile.balance = next.balance
+        profile.allTime = next.allTime
+        profile.displayName = next.displayName
+        profile.level = next.level
+        profile.rank = next.rank
+        if let locked = next.displayNameLocked {
+            AuthStore.displayNameLocked = locked
+        }
+        if !next.user.isEmpty {
+            if AuthStore.displayNameLocked || next.displayNameLocked == true {
+                AuthStore.applyCustomDisplayName(next.displayName)
+            } else {
+                AuthStore.adoptDisplayNameFromServer(next.displayName, userId: next.user)
+            }
+        }
+        syncCosmeticsCatalogFromWallet(next)
+    }
+
+    func applyBalanceFromServer(balance: Int, allTime: Int? = nil) {
+        walletDataRevision &+= 1
+        patchWallet { w in
+            w.balance = balance
+            if let allTime { w.allTime = allTime }
+        }
+        liveBalance = balance
+        profile.balance = balance
+        if let allTime { profile.allTime = allTime }
+        syncCosmeticsCatalogBalance(balance)
+    }
+
+    private func syncCosmeticsCatalogBalance(_ balance: Int) {
+        guard var cat = cosmeticsCatalog else { return }
+        cat.balance = balance
+        cosmeticsCatalog = cat
+    }
+
+    private func syncCosmeticsCatalogFromWallet(_ next: PlayerWallet) {
+        guard var cat = cosmeticsCatalog else { return }
+        cat.nameStyle = next.nameStyle
+        cat.nameBadge = next.nameBadge
+        cat.ownedNameStyles = next.ownedNameStyles
+        cat.ownedBadges = next.ownedBadges
+        cat.balance = next.balance
+        cosmeticsCatalog = cat
+    }
+
+    func refreshCosmeticsShop() async {
+        guard PlayerSession.isLoggedIn, let api else {
+            cosmeticsCatalog = nil
+            return
+        }
+        isLoadingCosmeticsShop = true
+        cosmeticsShopError = nil
+        defer { isLoadingCosmeticsShop = false }
+        do {
+            var cat = try await api.fetchCosmeticsShopCatalog()
+            mergeCosmeticsCatalogIntoWallet(&cat)
+            cosmeticsCatalog = cat
+        } catch {
+            cosmeticsShopError = error.localizedDescription
+        }
+    }
+
+    /// Apply server catalog without overwriting wallet balance; union owned lists so nothing disappears.
+    private func mergeCosmeticsCatalogIntoWallet(_ cat: inout CosmeticsShopCatalog) {
+        patchWallet { w in
+            if let style = cat.nameStyle, !style.isEmpty { w.nameStyle = style }
+            if let badge = cat.nameBadge, !badge.isEmpty { w.nameBadge = badge }
+            let styles = Set(w.ownedNameStyles.map { $0.lowercased() })
+                .union((cat.ownedNameStyles ?? []).map { $0.lowercased() })
+            w.ownedNameStyles = Array(styles)
+            let badges = Set(w.ownedBadges.map { $0.lowercased() })
+                .union((cat.ownedBadges ?? []).map { $0.lowercased() })
+            w.ownedBadges = Array(badges)
+        }
+        cat.nameStyle = wallet.nameStyle
+        cat.nameBadge = wallet.nameBadge
+        cat.ownedNameStyles = wallet.ownedNameStyles
+        cat.ownedBadges = wallet.ownedBadges
+        cat.balance = wallet.balance
+    }
+
+    private func applyCosmeticsPurchaseResult(_ result: CosmeticsPurchaseResponse) async {
+        if let w = result.wallet {
+            applyWalletFromServer(w)
+        } else if let bal = result.resolvedBalance {
+            applyBalanceFromServer(balance: bal)
+        }
+        if let details = result.purchase {
+            patchWallet { w in
+                if let style = details.nameStyle, !style.isEmpty { w.nameStyle = style }
+                if let badge = details.nameBadge, !badge.isEmpty { w.nameBadge = badge }
+                let extraStyles = (details.ownedNameStyles ?? []).map { $0.lowercased() }
+                let mergedStyles = Set(w.ownedNameStyles.map { $0.lowercased() }).union(extraStyles)
+                w.ownedNameStyles = Array(mergedStyles)
+                let extraBadges = (details.ownedBadges ?? []).map { $0.lowercased() }
+                let mergedBadges = Set(w.ownedBadges.map { $0.lowercased() }).union(extraBadges)
+                w.ownedBadges = Array(mergedBadges)
+            }
+            if var cat = cosmeticsCatalog {
+                cat.nameStyle = wallet.nameStyle
+                cat.nameBadge = wallet.nameBadge
+                cat.ownedNameStyles = wallet.ownedNameStyles
+                cat.ownedBadges = wallet.ownedBadges
+                cat.balance = wallet.balance
+                cosmeticsCatalog = cat
+            }
+        } else if let w = result.wallet {
+            if var cat = cosmeticsCatalog {
+                cat.nameStyle = w.nameStyle
+                cat.nameBadge = w.nameBadge
+                cat.ownedBadges = w.ownedBadges
+                cat.balance = w.balance
+                cosmeticsCatalog = cat
+            }
+        }
+        await refreshWallet(force: true)
+        await refreshCosmeticsShop()
+    }
+
+    func purchaseNameStyle(_ styleId: String) async {
+        guard let api else { return }
+        cosmeticsShopError = nil
+        cosmeticsPurchaseMessage = nil
+        do {
+            let result = try await api.purchaseNameStyle(styleId: styleId)
+            await applyCosmeticsPurchaseResult(result)
+            cosmeticsPurchaseMessage = result.message
+        } catch {
+            cosmeticsShopError = error.localizedDescription
+        }
+    }
+
+    func purchaseNameBadge(_ badgeId: String) async {
+        guard let api else { return }
+        cosmeticsShopError = nil
+        cosmeticsPurchaseMessage = nil
+        do {
+            let result = try await api.purchaseNameBadge(badgeId: badgeId)
+            await applyCosmeticsPurchaseResult(result)
+            cosmeticsPurchaseMessage = result.message
+        } catch {
+            cosmeticsShopError = error.localizedDescription
         }
     }
 
@@ -197,9 +445,61 @@ final class SyncClient: ObservableObject {
             return
         }
         do {
-            storeProducts = try await api.fetchStoreProducts()
+            let resp = try await api.fetchStoreProductsResponse()
+            storeProducts = resp.products ?? StoreCatalog.fallbackProducts
+            storeIsTestMode = resp.testMode == true && AppDistribution.allowsDevTestStore
+            let ids = resp.productIds ?? storeProducts.map(\.id)
+            await StoreKitService.shared.loadProducts(ids: ids)
         } catch {
             storeProducts = StoreCatalog.fallbackProducts
+            await StoreKitService.shared.loadProducts(ids: StoreCatalog.fallbackProducts.map(\.id))
+        }
+    }
+
+    func purchaseStoreProduct(_ product: StoreProduct) async {
+        guard PlayerSession.isLoggedIn else {
+            storePurchaseMessage = "Link your TikTok account first."
+            return
+        }
+        guard let api else {
+            storePurchaseMessage = "Not connected to the game."
+            return
+        }
+
+        isPurchasingStore = true
+        storePurchaseMessage = nil
+        defer { isPurchasingStore = false }
+
+        if storeIsTestMode && AppDistribution.allowsDevTestStore {
+            await testPurchaseStoreProduct(product)
+            return
+        }
+
+        do {
+            let resp = try await StoreKitService.shared.purchase(productId: product.id) { pid, txnId, signed in
+                try await api.verifyPurchase(
+                    productId: pid,
+                    transactionId: txnId,
+                    signedTransactionInfo: signed
+                )
+            }
+            if resp.ok == true {
+                if let bal = resp.balance {
+                    applyBalanceFromServer(balance: bal)
+                }
+                let gained = resp.gained ?? product.points
+                if resp.alreadyProcessed == true {
+                    storePurchaseMessage = "Purchase already credited. Balance updated."
+                } else {
+                    storePurchaseMessage = "+\(gained.formatted()) pts added."
+                }
+                await refreshWallet(force: true)
+                await refreshLeaderboard()
+            } else {
+                storePurchaseMessage = resp.message ?? "Purchase failed."
+            }
+        } catch {
+            storePurchaseMessage = error.localizedDescription
         }
     }
 
@@ -256,15 +556,14 @@ final class SyncClient: ObservableObject {
             let resp = try await api.claimRewardedAd()
             if resp.ok == true {
                 if let bal = resp.balance {
-                    wallet.balance = bal
-                    profile.balance = bal
+                    applyBalanceFromServer(balance: bal)
                 }
                 let gained = resp.gained ?? AdMobConfig.rewardPoints
                 rewardedAdBanner = "+\(gained.formatted()) pts added!"
             } else {
                 rewardedAdBanner = resp.message ?? "Could not claim reward."
             }
-            await refreshWallet()
+            await refreshWallet(force: true)
             await refreshRewardedAdStatus()
         } catch {
             rewardedAdBanner = error.localizedDescription
@@ -280,6 +579,78 @@ final class SyncClient: ObservableObject {
         } catch {
             appChatError = error.localizedDescription
         }
+        await refreshChatModeration()
+    }
+
+    func refreshChatModeration() async {
+        let ownerOnDevice = ChatOwnerConfig.isOwnerLinkedAccount()
+        guard AuthStore.isLinked, let api else {
+            isChatAdmin = false
+            isChatMutedSelf = false
+            mutedChatUsers = []
+            return
+        }
+        do {
+            let status = try await api.fetchChatModerationStatus()
+            isChatAdmin = (status.isAdmin == true) || ownerOnDevice
+            isChatMutedSelf = status.isMuted == true
+            if let list = status.mutedUsers {
+                applyMutedChatUsers(list)
+            } else if !isChatAdmin {
+                mutedChatUsers = []
+            }
+            chatModerationError = nil
+        } catch {
+            isChatAdmin = ownerOnDevice
+            chatModerationError = nil
+        }
+    }
+
+    func isUserChatMuted(_ userId: String) -> Bool {
+        let key = normalizeChatUserId(userId)
+        return mutedChatUsers.contains { normalizeChatUserId($0.userId) == key }
+    }
+
+    func muteTargetUserId(for user: ActiveAppUser) -> String? {
+        if user.isGuest == true { return nil }
+        let handle = user.username?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if !handle.isEmpty { return handle }
+        let id = user.userId.trimmingCharacters(in: .whitespacesAndNewlines)
+        if id.lowercased().hasPrefix("guest:") { return nil }
+        return id
+    }
+
+    func deleteAppChatMessage(_ messageId: String) async {
+        guard isChatAdmin, let api else { return }
+        do {
+            try await api.deleteAppChatMessage(messageId: messageId)
+            removeAppChatMessageLocally(messageId)
+            chatModerationError = nil
+        } catch {
+            chatModerationError = error.localizedDescription
+        }
+    }
+
+    func muteChatUser(userId: String, displayName: String?) async {
+        guard isChatAdmin, let api else { return }
+        do {
+            let list = try await api.muteAppChatUser(userId: userId, displayName: displayName)
+            applyMutedChatUsers(list)
+            chatModerationError = nil
+        } catch {
+            chatModerationError = error.localizedDescription
+        }
+    }
+
+    func unmuteChatUser(userId: String) async {
+        guard isChatAdmin, let api else { return }
+        do {
+            let list = try await api.unmuteAppChatUser(userId: userId)
+            applyMutedChatUsers(list)
+            chatModerationError = nil
+        } catch {
+            chatModerationError = error.localizedDescription
+        }
     }
 
     func sendAppChat(_ text: String) async {
@@ -287,6 +658,10 @@ final class SyncClient: ObservableObject {
         guard !trimmed.isEmpty else { return }
         guard AuthStore.isLinked else {
             appChatError = "Link your TikTok on live first."
+            return
+        }
+        if isChatMutedSelf {
+            appChatError = "You are muted from app chat."
             return
         }
         guard let api else {
@@ -299,6 +674,9 @@ final class SyncClient: ObservableObject {
             appChatError = nil
         } catch {
             appChatError = error.localizedDescription
+            if error.localizedDescription.localizedCaseInsensitiveContains("muted") {
+                isChatMutedSelf = true
+            }
         }
     }
 
@@ -309,7 +687,7 @@ final class SyncClient: ObservableObject {
         }
 
         let user = AuthStore.verifiedUserId
-        let name = AuthStore.verifiedDisplayName
+        let name = resolvedChatDisplayName()
 
         guard let api else {
             OfflineQueue.enqueue(message: message, userId: user, displayName: name)
@@ -337,6 +715,11 @@ final class SyncClient: ObservableObject {
             lastActionMessage = "Enter amount (e.g. 100, 30k) and cashout ≥ 1.05"
             return
         }
+        guard let amount = BetAmountParser.parse(trimmed) else {
+            lastActionMessage = "Enter a valid amount (e.g. 100, 30k, 3m)"
+            return
+        }
+        rememberPlacedBet(amount: amount, cashout: cashout)
         await sendCommand("!\(trimmed) \(cashout)")
     }
 
@@ -384,17 +767,20 @@ final class SyncClient: ObservableObject {
         switch parsed.type {
         case "bet":
             if parsed.ok == true {
-                lastActionMessage = "Bet placed: \(parsed.amount ?? 0) @ \(parsed.cashout ?? 0)×"
+                let amt = parsed.amount ?? 0
+                let co = parsed.cashout ?? 0
+                lastActionMessage = "Bet placed: \(amt) @ \(co)×"
+                rememberPlacedBet(amount: amt, cashout: co)
             } else {
+                removeCachedBetForCurrentUser()
                 lastActionMessage = betErrorMessage(parsed.reason)
             }
         case "balance_shout":
             if parsed.ok == true, let bal = parsed.balance {
                 lastActionMessage = "Balance: \(bal.formatted()) pts"
-                wallet.balance = bal
-                profile.balance = bal
+                applyBalanceFromServer(balance: bal)
                 if let inv = parsed.inventory {
-                    wallet.inventory = inv
+                    patchWallet { $0.inventory = inv }
                 }
             } else if parsed.cooldown == true, let sec = parsed.secondsLeft {
                 lastActionMessage = "Balance shout cooldown — \(sec)s"
@@ -470,9 +856,13 @@ final class SyncClient: ObservableObject {
             if let payload = json["payload"],
                let payloadData = try? JSONSerialization.data(withJSONObject: payload),
                let state = try? JSONDecoder().decode(CrashGameState.self, from: payloadData) {
-                gameState = state
-                applyStateSideEffects(state)
-                if connectionStatus != "Online" { connectionStatus = "Online" }
+                let enriched = enrichState(state)
+                gameState = enriched
+                applyStateSideEffects(enriched)
+                if connectionStatus != "Online" {
+                    connectionStatus = "Online"
+                    syncPresencePillFromState()
+                }
             }
         case "chat_result":
             if let payload = json["payload"] as? [String: Any] {
@@ -489,25 +879,50 @@ final class SyncClient: ObservableObject {
                let row = try? JSONDecoder().decode(AppChatMessage.self, from: payloadData) {
                 ingestAppChatMessage(row)
             }
+        case "app_chat_delete":
+            if let payload = json["payload"] as? [String: Any],
+               let messageId = payload["messageId"] as? String {
+                removeAppChatMessageLocally(messageId)
+            }
+        case "app_chat_mute_state":
+            if let payload = json["payload"],
+               let payloadData = try? JSONSerialization.data(withJSONObject: payload),
+               let state = try? JSONDecoder().decode(ChatMuteStatePayload.self, from: payloadData) {
+                applyMutedChatUsers(state.mutedUsers ?? [])
+                let me = normalizeChatUserId(PlayerSession.tiktokUsername)
+                isChatMutedSelf = state.mutedUsers?.contains { normalizeChatUserId($0.userId) == me } == true
+            }
         case "balance_toast":
             if let payload = json["payload"] as? [String: Any],
                let user = payload["user"] as? String,
                user.lowercased() == PlayerSession.tiktokUsername.lowercased(),
                let bal = payload["balance"] as? Int {
-                wallet.balance = bal
-                profile.balance = bal
+                applyBalanceFromServer(balance: bal)
                 if let invObj = payload["inventory"] as? [String: Any],
                    let invData = try? JSONSerialization.data(withJSONObject: invObj),
                    let inv = try? JSONDecoder().decode(PowerupInventory.self, from: invData) {
-                    wallet.inventory = inv
+                    patchWallet { $0.inventory = inv }
                 }
+            }
+        case "presence_update":
+            if let payload = json["payload"],
+               let payloadData = try? JSONSerialization.data(withJSONObject: payload),
+               let snap = try? JSONDecoder().decode(PresenceWirePayload.self, from: payloadData) {
+                applyPresenceSnapshot(count: snap.activeAppUsers, users: snap.activeAppUserList)
             }
         default:
             break
         }
     }
 
-    private func ingestAppChatMessage(_ row: AppChatMessage) {
+    private var chatBannerDismissTask: Task<Void, Never>?
+
+    func dismissChatBanner() {
+        chatBannerDismissTask?.cancel()
+        activeChatBanner = nil
+    }
+
+    private func ingestAppChatMessage(_ row: AppChatMessage, showBanner: Bool = true) {
         guard knownChatIds.insert(row.id).inserted else { return }
         appChatMessages.append(row)
         appChatMessages.sort { $0.at < $1.at }
@@ -517,12 +932,63 @@ final class SyncClient: ObservableObject {
             for r in removed { knownChatIds.remove(r.id) }
             appChatMessages.removeFirst(drop)
         }
+        if showBanner {
+            presentChatBannerIfNeeded(for: row)
+        }
+    }
+
+    private func presentChatBannerIfNeeded(for row: AppChatMessage) {
+        guard AppPreferences.chatBannerNotificationsEnabled else { return }
+        guard !suppressChatBanners else { return }
+        guard !row.isMine else { return }
+
+        let text = row.message.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+
+        activeChatBanner = AppChatBannerNotification(
+            messageId: row.id,
+            displayName: row.displayName,
+            userId: row.userId,
+            message: text,
+            appLabel: row.resolvedAppLabel,
+            nameStyle: row.nameStyle,
+            nameBadge: row.nameBadge,
+            superFan: row.superFan,
+            superFanLevel: row.superFanLevel
+        )
+
+        chatBannerDismissTask?.cancel()
+        let bannerId = row.id
+        chatBannerDismissTask = Task {
+            try? await Task.sleep(nanoseconds: 5_500_000_000)
+            guard !Task.isCancelled else { return }
+            if activeChatBanner?.messageId == bannerId {
+                activeChatBanner = nil
+            }
+        }
     }
 
     private func mergeAppChatMessages(_ rows: [AppChatMessage]) {
         for row in rows {
-            ingestAppChatMessage(row)
+            ingestAppChatMessage(row, showBanner: false)
         }
+    }
+
+    private func removeAppChatMessageLocally(_ messageId: String) {
+        knownChatIds.remove(messageId)
+        appChatMessages.removeAll { $0.id == messageId }
+    }
+
+    private func applyMutedChatUsers(_ rows: [MutedChatUser]) {
+        mutedChatUsers = rows
+        let me = normalizeChatUserId(PlayerSession.tiktokUsername)
+        isChatMutedSelf = rows.contains { normalizeChatUserId($0.userId) == me }
+    }
+
+    private func normalizeChatUserId(_ raw: String) -> String {
+        raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "@", with: "")
+            .lowercased()
     }
 
     private func startWalletPolling() {
@@ -572,14 +1038,76 @@ final class SyncClient: ObservableObject {
 
     private func applyPresenceSnapshot(count: Int?, users: [ActiveAppUser]?) {
         if let users {
+            notePresenceJoins(users)
             presenceTrackingAvailable = true
             activeAppUserList = users
             activeAppUserCount = users.count
+            syncPresencePillFromState()
             return
         }
         if let count {
             presenceTrackingAvailable = true
             activeAppUserCount = max(0, count)
+        }
+        syncPresencePillFromState()
+    }
+
+    private func syncPresencePillFromState() {
+        let count: Int
+        if !activeAppUserList.isEmpty {
+            count = activeAppUserList.count
+        } else if presenceTrackingAvailable || connectionStatus == "Online" {
+            count = max(activeAppUserCount, 1)
+        } else {
+            count = 0
+        }
+        let visible = presenceTrackingAvailable || connectionStatus == "Online"
+        let changed = presencePillCount != count
+            || presencePillVisible != visible
+        presencePillCount = count
+        presencePillVisible = visible
+        if changed {
+            presencePillRevision &+= 1
+        }
+    }
+
+    private func notePresenceJoins(_ users: [ActiveAppUser]) {
+        let newIds = Set(users.map(\.userId))
+        let previousUsers = activeAppUserList
+        defer {
+            knownPresenceUserIds = newIds
+            presenceSnapshotReady = true
+        }
+        guard presenceSnapshotReady else { return }
+
+        let newcomers = users.filter { !$0.isMe && !knownPresenceUserIds.contains($0.userId) }
+        if let joined = newcomers.last {
+            showPresenceAnnouncement(for: joined, kind: .joined)
+            return
+        }
+
+        let departures = previousUsers.filter {
+            !$0.isMe && knownPresenceUserIds.contains($0.userId) && !newIds.contains($0.userId)
+        }
+        if let left = departures.last {
+            showPresenceAnnouncement(for: left, kind: .left)
+        }
+    }
+
+    private func showPresenceAnnouncement(for user: ActiveAppUser, kind: PresenceActivityAnnouncement.Kind) {
+        let label = user.presenceUsernameLabel.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !label.isEmpty else { return }
+        let announcement = PresenceActivityAnnouncement(username: label, kind: kind)
+        presenceJoinDismissTask?.cancel()
+        presenceJoinAnnouncement = announcement
+        presencePillRevision &+= 1
+        presenceJoinDismissTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 4_500_000_000)
+            guard !Task.isCancelled else { return }
+            if presenceJoinAnnouncement == announcement {
+                presenceJoinAnnouncement = nil
+                presencePillRevision &+= 1
+            }
         }
     }
 
@@ -616,15 +1144,158 @@ final class SyncClient: ObservableObject {
 
     private func startPresencePolling() {
         presenceTimer?.invalidate()
-        presenceTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+        presenceTimer = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                await self?.sendPresenceHeartbeat()
+                await self?.refreshActiveAppUsers()
             }
         }
     }
 
     func dismissRoundResultPopup() {
         roundResultPopup = nil
+        pendingRoundResultPopup = nil
+    }
+
+    /// Called when the chart crash slam animation finishes — shows round results.
+    func presentPendingRoundResultPopup() {
+        guard let pending = pendingRoundResultPopup else { return }
+        roundResultPopup = pending
+        pendingRoundResultPopup = nil
+    }
+
+    /// Keeps last-five crash list when server sends it; falls back to local tracking on older PC builds.
+    private func enrichState(_ s: CrashGameState) -> CrashGameState {
+        var out = enrichOpenBets(s)
+        if !out.recentCrashes.isEmpty {
+            localRecentCrashes = out.recentCrashes
+            return out
+        }
+        if out.phase == .ended, let cp = out.crashPoint, cp > 0 {
+            let v = (cp * 100).rounded() / 100
+            if localRecentCrashes.last != v {
+                localRecentCrashes.append(v)
+                if localRecentCrashes.count > 5 {
+                    localRecentCrashes.removeFirst(localRecentCrashes.count - 5)
+                }
+            }
+        }
+        out.recentCrashes = localRecentCrashes
+        return out
+    }
+
+    /// Live server may omit `openBets` after betting — keep local entries for the whole round.
+    private func enrichOpenBets(_ s: CrashGameState) -> CrashGameState {
+        var out = s
+
+        if out.roundId != cachedOpenBetsRoundId {
+            cachedOpenBetsRoundId = out.roundId
+            if out.phase == .betting {
+                cachedOpenBets = []
+            }
+        }
+
+        if !out.openBets.isEmpty {
+            cachedOpenBets = mergeOpenBets(server: out.openBets, cached: cachedOpenBets)
+            out.openBets = cachedOpenBets
+            return out
+        }
+
+        if !cachedOpenBets.isEmpty, out.roundId == cachedOpenBetsRoundId {
+            out.openBets = cachedOpenBets
+            return out
+        }
+
+        if out.phase == .ended,
+           let result = out.lastResult,
+           result.roundId == out.roundId {
+            let fromResult = openBets(from: result)
+            if !fromResult.isEmpty {
+                cachedOpenBets = fromResult
+                out.openBets = fromResult
+            }
+        }
+
+        return out
+    }
+
+    private func mergeOpenBets(server: [OpenBet], cached: [OpenBet]) -> [OpenBet] {
+        var byUser: [String: OpenBet] = [:]
+        for bet in server {
+            byUser[normalizeBetUser(bet.user)] = bet
+        }
+        for bet in cached {
+            let key = normalizeBetUser(bet.user)
+            if byUser[key] == nil {
+                byUser[key] = bet
+            }
+        }
+        return byUser.values.sorted {
+            $0.displayName.localizedCaseInsensitiveCompare($1.displayName) == .orderedAscending
+        }
+    }
+
+    private func normalizeBetUser(_ raw: String) -> String {
+        raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "@", with: "")
+            .lowercased()
+    }
+
+    private func openBets(from result: RoundLastResult) -> [OpenBet] {
+        var rows: [OpenBet] = []
+        var seen = Set<String>()
+        func append(_ user: String, name: String, amount: Int, cashout: Double) {
+            let key = "\(user)|\(amount)|\(cashout)"
+            guard seen.insert(key).inserted else { return }
+            rows.append(OpenBet(user: user, displayName: name, amount: amount, cashout: cashout))
+        }
+        for row in result.wins + result.losses {
+            guard let bet = row.bet, let cashout = row.cashout, bet > 0 else { continue }
+            append(row.user, name: row.resolvedName, amount: bet, cashout: cashout)
+        }
+        return rows
+    }
+
+    private func rememberPlacedBet(amount: Int, cashout: Double) {
+        guard amount > 0, cashout >= 1.05 else { return }
+        let user = resolvedBetUserId()
+        guard !user.isEmpty else { return }
+        let name = resolvedBetDisplayName()
+        let bet = OpenBet(user: user, displayName: name, amount: amount, cashout: cashout)
+        if cachedOpenBetsRoundId != gameState.roundId {
+            cachedOpenBetsRoundId = gameState.roundId
+            cachedOpenBets = []
+        }
+        cachedOpenBets.removeAll { normalizeBetUser($0.user) == normalizeBetUser(user) }
+        cachedOpenBets.append(bet)
+        applyCachedOpenBetsToPublishedState()
+    }
+
+    private func removeCachedBetForCurrentUser() {
+        let user = resolvedBetUserId()
+        guard !user.isEmpty else { return }
+        cachedOpenBets.removeAll { normalizeBetUser($0.user) == normalizeBetUser(user) }
+        applyCachedOpenBetsToPublishedState()
+    }
+
+    private func resolvedBetUserId() -> String {
+        let linked = AuthStore.verifiedUserId.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !linked.isEmpty { return linked }
+        return PlayerSession.tiktokUsername.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func resolvedBetDisplayName() -> String {
+        let linked = AuthStore.verifiedDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !linked.isEmpty { return linked }
+        let session = PlayerSession.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !session.isEmpty { return session }
+        return resolvedBetUserId()
+    }
+
+    private func applyCachedOpenBetsToPublishedState() {
+        var state = gameState
+        guard state.roundId == cachedOpenBetsRoundId else { return }
+        state.openBets = cachedOpenBets
+        gameState = enrichState(state)
     }
 
     private func applyStateSideEffects(_ s: CrashGameState) {
@@ -633,6 +1304,7 @@ final class SyncClient: ObservableObject {
             multiplierHistory = [1]
             if s.phase != .ended {
                 roundResultPopup = nil
+                pendingRoundResultPopup = nil
             }
         }
         taxPotAmount = s.taxPot?.displayAmount ?? 0
@@ -641,11 +1313,16 @@ final class SyncClient: ObservableObject {
         if s.phase == .running {
             let m = max(s.multiplier, 1)
             let last = multiplierHistory.last ?? 1
-            if multiplierHistory.isEmpty || m >= last - 0.0001 {
-                if multiplierHistory.isEmpty || abs(last - m) > 0.001 {
-                    multiplierHistory.append(m)
-                    if multiplierHistory.count > 200 { multiplierHistory.removeFirst() }
-                }
+            if multiplierHistory.isEmpty || abs(last - m) > 0.0005 {
+                multiplierHistory.append(m)
+                if multiplierHistory.count > 240 { multiplierHistory.removeFirst() }
+            }
+        } else if s.phase == .ended {
+            let final = max(s.crashPoint ?? s.multiplier, 1)
+            let last = multiplierHistory.last ?? 1
+            if abs(last - final) > 0.0005 {
+                multiplierHistory.append(final)
+                if multiplierHistory.count > 240 { multiplierHistory.removeFirst() }
             }
         } else if s.phase == .betting {
             multiplierHistory = [1]
@@ -657,11 +1334,13 @@ final class SyncClient: ObservableObject {
             let summary = RoundResultSummary(from: result)
             if summary.hasEntries {
                 lastRoundResultShownId = result.roundId
-                roundResultPopup = summary
+                pendingRoundResultPopup = summary
+                roundResultPopup = nil
             }
         }
-        if s.phase == .betting, s.roundId != lastRoundResultShownId {
+        if s.phase == .betting {
             roundResultPopup = nil
+            pendingRoundResultPopup = nil
         }
     }
 
@@ -700,4 +1379,9 @@ final class SyncClient: ObservableObject {
             break
         }
     }
+}
+
+private struct PresenceWirePayload: Decodable {
+    var activeAppUsers: Int?
+    var activeAppUserList: [ActiveAppUser]?
 }

@@ -32,19 +32,28 @@ struct ActiveAppUsersListView: View {
                                 HStack(spacing: 12) {
                                     avatar(for: user)
                                     VStack(alignment: .leading, spacing: 2) {
-                                        HStack(spacing: 6) {
-                                            Text(user.resolvedName)
-                                                .font(.system(size: 15, weight: .semibold))
-                                                .foregroundStyle(NFGTheme.text)
-                                            SuperFanBadgeView(badge: user.badge, compact: true)
-                                            if user.isMe {
-                                                Text("You")
-                                                    .font(.system(size: 10, weight: .bold))
-                                                    .foregroundStyle(NFGTheme.accent2)
-                                                    .padding(.horizontal, 6)
-                                                    .padding(.vertical, 2)
-                                                    .background(NFGTheme.accent.opacity(0.25))
-                                                    .clipShape(Capsule())
+                                        PlayerDisplayNameRow(
+                                            name: user.resolvedName,
+                                            styleId: user.nameStyle ?? "none",
+                                            badgeId: user.nameBadge ?? "none",
+                                            badgeShort: PlayerCosmeticStyle.badgeShort(
+                                                for: user.nameBadge ?? "none",
+                                                catalog: sync.cosmeticsCatalog?.nameBadges ?? []
+                                            ),
+                                            nameFont: .system(size: 15, weight: .semibold),
+                                            compactBadge: true
+                                        ) {
+                                            HStack(spacing: 6) {
+                                                SuperFanBadgeView(badge: user.badge, compact: true)
+                                                if user.isMe {
+                                                    Text("You")
+                                                        .font(.system(size: 10, weight: .bold))
+                                                        .foregroundStyle(NFGTheme.accent2)
+                                                        .padding(.horizontal, 6)
+                                                        .padding(.vertical, 2)
+                                                        .background(NFGTheme.accent.opacity(0.25))
+                                                        .clipShape(Capsule())
+                                                }
                                             }
                                         }
                                         if let handle = user.username, !handle.isEmpty, user.isGuest != true {

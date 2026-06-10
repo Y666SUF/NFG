@@ -28,6 +28,19 @@ function proxyHttpRequest(req, res) {
   const headers = { ...req.headers, host: targetUrl.host };
   delete headers.connection;
 
+  const method = String(req.method || "GET").toUpperCase();
+  const hasParsedBody =
+    req.body != null &&
+    typeof req.body === "object" &&
+    !Buffer.isBuffer(req.body) &&
+    ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+  let bodyBuffer = null;
+  if (hasParsedBody) {
+    bodyBuffer = Buffer.from(JSON.stringify(req.body), "utf8");
+    headers["content-type"] = headers["content-type"] || "application/json";
+    headers["content-length"] = String(bodyBuffer.length);
+  }
+
   const proxyReq = lib.request(
     targetUrl,
     {
@@ -54,7 +67,12 @@ function proxyHttpRequest(req, res) {
     }
   });
 
-  req.pipe(proxyReq);
+  if (bodyBuffer) {
+    proxyReq.write(bodyBuffer);
+    proxyReq.end();
+  } else {
+    req.pipe(proxyReq);
+  }
 }
 
 function registerPixelJumpHttpProxy(app) {

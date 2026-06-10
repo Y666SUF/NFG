@@ -528,6 +528,61 @@ struct ArcadeTowerState: Decodable, Hashable {
     }
 }
 
+struct VaultRunShipItem: Decodable, Identifiable, Hashable {
+    var id: String
+    var name: String
+    var cost: Int
+    var hull: String
+    var cockpit: String
+    var trail: String
+    var style: String
+    var desc: String?
+    var owned: Bool?
+    var equipped: Bool?
+
+    init(
+        id: String,
+        name: String,
+        cost: Int,
+        hull: String,
+        cockpit: String,
+        trail: String,
+        style: String,
+        desc: String? = nil,
+        owned: Bool? = nil,
+        equipped: Bool? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.cost = cost
+        self.hull = hull
+        self.cockpit = cockpit
+        self.trail = trail
+        self.style = style
+        self.desc = desc
+        self.owned = owned
+        self.equipped = equipped
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? ""
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? id
+        cost = c.flexInt(forKey: .cost) ?? 0
+        hull = try c.decodeIfPresent(String.self, forKey: .hull) ?? "#62b8f8"
+        cockpit = try c.decodeIfPresent(String.self, forKey: .cockpit) ?? "#35e0ff"
+        trail = try c.decodeIfPresent(String.self, forKey: .trail) ?? "#22d3ee"
+        style = try c.decodeIfPresent(String.self, forKey: .style) ?? "scout"
+        desc = try c.decodeIfPresent(String.self, forKey: .desc)
+        owned = c.flexBool(forKey: .owned)
+        equipped = c.flexBool(forKey: .equipped)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, cost, hull, cockpit, trail, style, desc, owned, equipped
+    }
+}
+
 struct ArcadePlayResponse: Decodable {
     var ok: Bool?
     var reason: String?
@@ -632,6 +687,13 @@ struct ArcadePlayResponse: Decodable {
     var sessionMilestones: Int?
     var vsMatchId: String?
     var vsDeferred: Bool?
+    var vaultShop: [VaultRunShipItem]?
+    var equippedVaultShip: String?
+    var ownedVaultShips: [String]?
+    var shipHull: String?
+    var shipCockpit: String?
+    var shipTrail: String?
+    var shipStyle: String?
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -747,6 +809,13 @@ struct ArcadePlayResponse: Decodable {
         if sessionMilestones == nil { sessionMilestones = sessionLevels }
         vsMatchId = try c.decodeIfPresent(String.self, forKey: .vsMatchId)
         vsDeferred = c.flexBool(forKey: .vsDeferred)
+        vaultShop = try? c.decode([VaultRunShipItem].self, forKey: .vaultShop)
+        equippedVaultShip = try c.decodeIfPresent(String.self, forKey: .equippedVaultShip)
+        ownedVaultShips = try c.decodeIfPresent([String].self, forKey: .ownedVaultShips)
+        shipHull = try c.decodeIfPresent(String.self, forKey: .shipHull)
+        shipCockpit = try c.decodeIfPresent(String.self, forKey: .shipCockpit)
+        shipTrail = try c.decodeIfPresent(String.self, forKey: .shipTrail)
+        shipStyle = try c.decodeIfPresent(String.self, forKey: .shipStyle)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -769,6 +838,8 @@ struct ArcadePlayResponse: Decodable {
         case sessionPoints, sessionLevels, linesTarget, levelRewardPreview, bestLevel
         case jumpShop, equippedSkin, ownedSkins, skinFill, skinRing, sessionMilestones
         case vsMatchId, vsDeferred
+        case vaultShop, equippedVaultShip, ownedVaultShips
+        case shipHull, shipCockpit, shipTrail, shipStyle
     }
 }
 
@@ -912,9 +983,11 @@ private extension KeyedDecodingContainer {
 /// Bundled arcade catalog (same NFG points as Crash).
 enum ArcadeBundledCatalog {
     static let jumpGameId = "nfg_snake_jump"
+    static let rushGameId = "nfg_vault_run"
 
     static let games: [ArcadeGameInfo] = [
         ArcadeGameInfo(id: jumpGameId, title: "NFG Jump", subtitle: "Bounce higher — skill climber + VS", playsPerDay: 0, icon: "⬆️", playsLeft: nil, playsUsed: nil),
+        ArcadeGameInfo(id: rushGameId, title: "NFG Rush", subtitle: "3-lane space run — milestone pts", playsPerDay: 0, icon: "🚀", playsLeft: nil, playsUsed: nil),
         ArcadeGameInfo(id: "nfg_dice", title: "Roll Line", subtitle: "Under or over 0–100", playsPerDay: 0, icon: "🎯", playsLeft: nil, playsUsed: nil),
         ArcadeGameInfo(id: "nfg_hilo", title: "Hi-Lo", subtitle: "Higher or lower cards", playsPerDay: 0, icon: "🃏", playsLeft: nil, playsUsed: nil),
         ArcadeGameInfo(id: "nfg_mines", title: "Mines", subtitle: "Gems vs mines", playsPerDay: 0, icon: "💣", playsLeft: nil, playsUsed: nil),

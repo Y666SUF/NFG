@@ -91,6 +91,14 @@ const GAME_DEFS = [
     helpText:
       "Bounce higher on platforms. +3,000 pts every 2,500m. Jump VS: 2+ players race — fall more than one milestone behind and you're out; winner takes the pot.",
   },
+  {
+    id: "nfg_vault_run",
+    title: "NFG Rush",
+    subtitle: "3-lane space run — milestone pts",
+    icon: "🚀",
+    helpText:
+      "3-lane space flight. Swipe lanes, boost over orange debris, shrink through purple rock tunnels, dodge red asteroids. Milestones every 400m — 3,000 pts scaling up. Ship shop in-game.",
+  },
 ];
 
 const STAKE_BASE = {
@@ -102,10 +110,11 @@ const STAKE_BASE = {
   nfg_tower: 1200,
   nfg_blocks: 0,
   nfg_snake_jump: 0,
+  nfg_vault_run: 0,
 };
 
-const ARCADE_NO_COOLDOWN_GAMES = new Set(["nfg_blocks", "nfg_snake_jump"]);
-const LEADERBOARD_GAME_IDS = ["nfg_blocks", "nfg_snake_jump"];
+const ARCADE_NO_COOLDOWN_GAMES = new Set(["nfg_blocks", "nfg_snake_jump", "nfg_vault_run"]);
+const LEADERBOARD_GAME_IDS = ["nfg_blocks", "nfg_snake_jump", "nfg_vault_run"];
 const LEADERBOARD_MAX = 200;
 
 /** Weights — higher mult = much rarer. Total 1000 → ~4% EV after ARCADE_EDGE. */
@@ -219,6 +228,7 @@ function userRecBest(state, userId, gameId) {
   const g = state.users[userId].games?.[gameId];
   if (!g) return 0;
   if (gameId === "nfg_snake_jump") return g.bestHeight || 0;
+  if (gameId === "nfg_vault_run") return g.bestDistance || 0;
   if (gameId === "nfg_blocks") return g.bestLevel || 0;
   return 0;
 }
@@ -2161,6 +2171,300 @@ function handleSnakeJump(user, userRec, action, payload, pointStore) {
   };
 }
 
+// ========== NFG Vault Run (3-lane space flight) ==========
+
+const VAULT_RUN_MILESTONE_BASE_STEP = 400;
+const VAULT_RUN_MILESTONE_BASE_REWARD = 3000;
+const VAULT_RUN_MILESTONE_REWARD_GROWTH = 600;
+const VAULT_RUN_MAX_MILESTONES = 40;
+const VAULT_RUN_DEFAULT_SHIP = "classic";
+
+function vaultRunMilestoneDistance(tier) {
+  return Math.max(0, tier) * VAULT_RUN_MILESTONE_BASE_STEP;
+}
+
+function vaultRunMilestoneReward(tier) {
+  if (tier <= 0) return VAULT_RUN_MILESTONE_BASE_REWARD;
+  return VAULT_RUN_MILESTONE_BASE_REWARD + (tier - 1) * VAULT_RUN_MILESTONE_REWARD_GROWTH;
+}
+
+const VAULT_RUN_SHIPS = [
+  { id: "classic", name: "Star Scout", cost: 0, hull: "#62b8f8", cockpit: "#35e0ff", trail: "#22d3ee", style: "scout", desc: "Default cyan scout · ion trail" },
+  { id: "neon_streak", name: "Neon Streak", cost: 1_000_000, hull: "#22d3ee", cockpit: "#67e8f9", trail: "#06b6d4", style: "fighter", desc: "Radiant fighter hull · cyan exhaust" },
+  { id: "solar_flare", name: "Solar Flare", cost: 3_500_000, hull: "#fbbf24", cockpit: "#fef08a", trail: "#f59e0b", style: "interceptor", desc: "Golden interceptor · solar trail" },
+  { id: "violet_nebula", name: "Violet Nebula", cost: 6_000_000, hull: "#a855f7", cockpit: "#e879f9", trail: "#c084fc", style: "scout", desc: "Purple nebula scout · violet wake" },
+  { id: "emerald_comet", name: "Emerald Comet", cost: 8_500_000, hull: "#34d399", cockpit: "#a7f3d0", trail: "#10b981", style: "fighter", desc: "Emerald fighter · comet trail" },
+  { id: "crimson_blaze", name: "Crimson Blaze", cost: 11_000_000, hull: "#ef4444", cockpit: "#fca5a5", trail: "#f97316", style: "interceptor", desc: "Crimson interceptor · blaze trail" },
+  { id: "ghost_void", name: "Ghost Void", cost: 13_500_000, hull: "#e2e8f0", cockpit: "#94a3b8", trail: "#cbd5e1", style: "phantom", desc: "Phantom hull · ghost wake" },
+  { id: "nfg_ignition", name: "NFG Ignition", cost: 15_000_000, hull: "#ff6b35", cockpit: "#ffd700", trail: "#fb923c", style: "inferno", desc: "Official NFG inferno · ultimate trail" },
+];
+
+function getVaultRunShip(id) {
+  const sid = String(id || VAULT_RUN_DEFAULT_SHIP).trim();
+  return VAULT_RUN_SHIPS.find((s) => s.id === sid) || VAULT_RUN_SHIPS[0];
+}
+
+function ensureVaultRunCosmetics(gRec) {
+  if (!Array.isArray(gRec.ownedShips)) gRec.ownedShips = [VAULT_RUN_DEFAULT_SHIP];
+  if (!gRec.ownedShips.includes(VAULT_RUN_DEFAULT_SHIP)) {
+    gRec.ownedShips.unshift(VAULT_RUN_DEFAULT_SHIP);
+  }
+  const equipped = String(gRec.equippedShip || VAULT_RUN_DEFAULT_SHIP);
+  if (!gRec.ownedShips.includes(equipped)) {
+    gRec.equippedShip = VAULT_RUN_DEFAULT_SHIP;
+  } else {
+    gRec.equippedShip = equipped;
+  }
+}
+
+function vaultRunShopPayload(gRec) {
+  ensureVaultRunCosmetics(gRec);
+  const equipped = getVaultRunShip(gRec.equippedShip);
+  const owned = new Set(gRec.ownedShips || [VAULT_RUN_DEFAULT_SHIP]);
+  return {
+    vaultShop: VAULT_RUN_SHIPS.map((s) => ({
+      id: s.id,
+      name: s.name,
+      cost: s.cost,
+      hull: s.hull,
+      cockpit: s.cockpit,
+      trail: s.trail,
+      style: s.style,
+      desc: s.desc,
+      owned: owned.has(s.id) || s.cost === 0,
+      equipped: s.id === equipped.id,
+    })),
+    equippedVaultShip: equipped.id,
+    ownedVaultShips: [...owned],
+    shipHull: equipped.hull,
+    shipCockpit: equipped.cockpit,
+    shipTrail: equipped.trail,
+    shipStyle: equipped.style,
+  };
+}
+
+function defaultVaultRunSession() {
+  return {
+    active: false,
+    milestones: 0,
+    sessionPoints: 0,
+    lastMilestoneDistance: 0,
+    lastMilestoneAt: 0,
+    peakDistance: 0,
+  };
+}
+
+function vaultRunPayload(gRec) {
+  const s = gRec.session || defaultVaultRunSession();
+  const nextTier = (s.milestones || 0) + 1;
+  return {
+    runActive: !!s.active,
+    sessionActive: !!s.active,
+    sessionPoints: s.sessionPoints || 0,
+    score: s.peakDistance || 0,
+    sessionMilestones: s.milestones || 0,
+    sessionLevels: s.milestones || 0,
+    bestLevel: gRec.bestDistance || 0,
+    levelRewardPreview: vaultRunMilestoneReward(nextTier),
+    ...vaultRunShopPayload(gRec),
+    practiceMode: false,
+    unlimited: true,
+    stakeMin: 0,
+    stakeMax: 0,
+    suggestedStake: 0,
+  };
+}
+
+function handleVaultRun(user, userRec, action, payload, pointStore) {
+  const gameId = "nfg_vault_run";
+  const fields = baseFields(userRec, gameId, pointStore, user);
+  fields.stakeMin = 0;
+  fields.stakeMax = 0;
+  fields.suggestedStake = 0;
+  fields.unlimited = true;
+
+  if (!userRec.games.nfg_vault_run) userRec.games.nfg_vault_run = {};
+  const gRec = userRec.games.nfg_vault_run;
+  if (!gRec.session) gRec.session = defaultVaultRunSession();
+  ensureVaultRunCosmetics(gRec);
+
+  const act = String(action || "status").toLowerCase();
+  const distanceFromPayload = () =>
+    Math.max(0, Math.floor(Number(payload.height ?? payload.distance) || 0));
+
+  if (act === "status" || act === "shop") {
+    return {
+      ok: true,
+      ...fields,
+      ...vaultRunPayload(gRec),
+      message:
+        "NFG Rush — 3-lane dash. Swipe lanes, boost, shrink. Milestones every 400m — 3,000 pts scaling up.",
+    };
+  }
+
+  if (act === "start") {
+    gRec.session = defaultVaultRunSession();
+    gRec.session.active = true;
+    gRec.bestDistance = gRec.bestDistance || 0;
+    userRec.games.nfg_vault_run = gRec;
+    return {
+      ok: true,
+      ...fields,
+      ...vaultRunPayload(gRec),
+      message: "New run — dash as far as you can!",
+    };
+  }
+
+  if (act === "buy") {
+    const itemId = String(payload.itemId || "").trim();
+    const ship = getVaultRunShip(itemId);
+    if (!ship || (ship.id !== VAULT_RUN_DEFAULT_SHIP && itemId && !VAULT_RUN_SHIPS.some((s) => s.id === itemId))) {
+      return { ok: false, reason: "invalid_item", message: "Unknown ship.", ...fields, ...vaultRunPayload(gRec) };
+    }
+    ensureVaultRunCosmetics(gRec);
+    if (gRec.ownedShips.includes(ship.id)) {
+      gRec.equippedShip = ship.id;
+      userRec.games.nfg_vault_run = gRec;
+      return { ok: true, ...fields, ...vaultRunPayload(gRec), message: `${ship.name} equipped.` };
+    }
+    if (ship.cost <= 0) {
+      gRec.ownedShips.push(ship.id);
+      gRec.equippedShip = ship.id;
+      userRec.games.nfg_vault_run = gRec;
+      return { ok: true, ...fields, ...vaultRunPayload(gRec), message: `${ship.name} equipped.` };
+    }
+    const bal = pointStore.getBalance(user);
+    if (bal < ship.cost) {
+      return {
+        ok: false,
+        reason: "insufficient",
+        message: `Need ${ship.cost.toLocaleString()} pts for ${ship.name}.`,
+        balance: bal,
+        ...fields,
+        ...vaultRunPayload(gRec),
+      };
+    }
+    const debit = pointStore.tryDebit(user, ship.cost);
+    if (!debit.ok) {
+      return {
+        ok: false,
+        reason: "insufficient",
+        message: `Need ${ship.cost.toLocaleString()} pts.`,
+        balance: debit.balance || 0,
+        ...fields,
+        ...vaultRunPayload(gRec),
+      };
+    }
+    gRec.ownedShips.push(ship.id);
+    gRec.equippedShip = ship.id;
+    userRec.games.nfg_vault_run = gRec;
+    return {
+      ok: true,
+      ...fields,
+      ...vaultRunPayload(gRec),
+      balance: debit.balance,
+      message: `${ship.name} purchased and equipped!`,
+    };
+  }
+
+  if (act === "equip") {
+    const itemId = String(payload.itemId || "").trim();
+    const ship = getVaultRunShip(itemId);
+    ensureVaultRunCosmetics(gRec);
+    if (!gRec.ownedShips.includes(ship.id) && ship.cost > 0) {
+      return { ok: false, reason: "not_owned", message: "Buy this ship first.", ...fields, ...vaultRunPayload(gRec) };
+    }
+    gRec.equippedShip = ship.id;
+    userRec.games.nfg_vault_run = gRec;
+    return { ok: true, ...fields, ...vaultRunPayload(gRec), message: `${ship.name} equipped.` };
+  }
+
+  if (act === "milestone") {
+    if (!gRec.session?.active) {
+      return {
+        ok: false,
+        reason: "no_session",
+        message: "Tap New Run first.",
+        ...fields,
+        ...vaultRunPayload(gRec),
+      };
+    }
+    const dist = distanceFromPayload();
+    const now = Date.now();
+    const expected = (gRec.session.milestones || 0) + 1;
+    const required = vaultRunMilestoneDistance(expected);
+
+    if (dist < required) {
+      return {
+        ok: false,
+        reason: "height_too_low",
+        message: `Reach ${required}m for the next milestone.`,
+        ...fields,
+        ...vaultRunPayload(gRec),
+      };
+    }
+    if ((gRec.session.milestones || 0) >= VAULT_RUN_MAX_MILESTONES) {
+      return {
+        ok: false,
+        reason: "cap",
+        message: "Milestone cap reached this run — end session.",
+        ...fields,
+        ...vaultRunPayload(gRec),
+      };
+    }
+
+    const reward = vaultRunMilestoneReward(expected);
+    const gained = creditWin(pointStore, user, reward);
+    gRec.session.milestones = expected;
+    gRec.session.sessionPoints = (gRec.session.sessionPoints || 0) + gained;
+    gRec.session.lastMilestoneDistance = required;
+    gRec.session.lastMilestoneAt = now;
+    gRec.session.peakDistance = Math.max(gRec.session.peakDistance || 0, dist);
+    gRec.bestDistance = Math.max(gRec.bestDistance || 0, dist);
+    userRec.games.nfg_vault_run = gRec;
+
+    return {
+      ok: true,
+      ...fields,
+      ...vaultRunPayload(gRec),
+      gained,
+      cleared: true,
+      win: true,
+      message: `${dist}m milestone! +${gained.toLocaleString()} pts (session ${gRec.session.sessionPoints.toLocaleString()} pts)`,
+    };
+  }
+
+  if (act === "game_over") {
+    const dist = distanceFromPayload();
+    const peak = Math.max(gRec.session?.peakDistance || 0, dist);
+    const sessionPts = gRec.session?.sessionPoints || 0;
+    gRec.bestDistance = Math.max(gRec.bestDistance || 0, peak);
+    gRec.session = defaultVaultRunSession();
+    userRec.games.nfg_vault_run = gRec;
+    return {
+      ok: true,
+      ...fields,
+      ...vaultRunPayload(gRec),
+      sessionPoints: sessionPts,
+      score: peak,
+      message:
+        sessionPts > 0
+          ? `Run over — ${peak}m peak, ${sessionPts.toLocaleString()} pts banked`
+          : peak > 0
+            ? `Run over at ${peak}m — start a new run for milestones`
+            : "Run over — try again!",
+    };
+  }
+
+  return {
+    ok: false,
+    reason: "invalid_action",
+    message: "Use start, milestone, game_over, buy, or equip.",
+    ...fields,
+    ...vaultRunPayload(gRec),
+  };
+}
+
 function getJumpPlayerCosmetics(userId) {
   const state = loadState();
   const uid = normUser(userId);
@@ -2235,6 +2539,7 @@ const HANDLERS = {
   nfg_coinflip: handleTower, // legacy id → Dragon Tower
   nfg_blocks: handleBlockBlast,
   nfg_snake_jump: handleSnakeJump,
+  nfg_vault_run: handleVaultRun,
 };
 
 function buildCatalog(pointStore, user) {
@@ -2298,6 +2603,10 @@ function playGame(pointStore, game, user, gameId, action, payload) {
       const best = userRec.games?.nfg_snake_jump?.bestHeight;
       if (best > 0) recordArcadeLeaderboard(state, gameId, user, best, pointStore);
       syncJumpLeaderboardEntry(state, user, pointStore);
+    }
+    if (gameId === "nfg_vault_run") {
+      const best = userRec.games?.nfg_vault_run?.bestDistance;
+      if (best > 0) recordArcadeLeaderboard(state, gameId, user, best, pointStore);
     }
   }
 

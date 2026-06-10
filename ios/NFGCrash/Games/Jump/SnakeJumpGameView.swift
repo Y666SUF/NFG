@@ -106,6 +106,8 @@ struct SnakeJumpGameView: View {
         .onChange(of: playMode) { _, mode in
             if mode == .solo {
                 leaveVs()
+            } else if vsClient == nil {
+                joinVs()
             }
         }
     }

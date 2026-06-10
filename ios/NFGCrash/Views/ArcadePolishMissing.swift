@@ -69,16 +69,66 @@ struct ArcadeCinematicBackdrop: View {
     }
 }
 
+/// How-to-play copy for arcade games.
+enum ArcadeGameGuide {
+    static func steps(for gameId: String) -> [String] {
+        switch ArcadeGameArt.normalizedId(gameId) {
+        case "nfg_vault_run":
+            return [
+                "NFG Rush — free 3-lane space flight with milestone pts (shorter distances than NFG Jump).",
+                "Tap New Run, then swipe left/right to steer between lanes.",
+                "Swipe up to boost over low debris fields · swipe down to shrink through rock tunnels.",
+                "Big asteroids block lanes — steer around them or it's game over.",
+                "Every 400m earns Crash pts — 3,000 at first, scaling up the farther you fly.",
+                "Speed ramps the farther you fly — your best distance saves to the leaderboard.",
+                "Tap Shop to buy ship hulls — your equipped ship colors the jet and particle trail.",
+            ]
+        default:
+            return ["Spend points, play the round, win or lose virtual balance."]
+        }
+    }
+}
+
 struct ArcadeHowToPlayCard: View {
     let gameId: String
     var body: some View {
-        Text("Stake fun points — outcomes sync with the Vault Arcade server.")
-            .font(.system(size: 11, weight: .medium))
-            .foregroundStyle(NFGTheme.muted)
+        let steps = ArcadeGameGuide.steps(for: gameId)
+        if steps.count <= 1 {
+            Text("Stake fun points — outcomes sync with the Vault Arcade server.")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(NFGTheme.muted)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(10)
+                .background(NFGTheme.panel2)
+                .clipShape(RoundedRectangle(cornerRadius: 10))
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                Label("How to play", systemImage: "questionmark.circle.fill")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(NFGTheme.accent2)
+
+                ForEach(Array(steps.enumerated()), id: \.offset) { idx, step in
+                    HStack(alignment: .top, spacing: 8) {
+                        Text("\(idx + 1).")
+                            .font(.system(size: 11, weight: .black, design: .rounded))
+                            .foregroundStyle(NFGTheme.gold)
+                            .frame(width: 16, alignment: .trailing)
+                        Text(step)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(NFGTheme.text)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+            .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(10)
-            .background(NFGTheme.panel2)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .background(NFGTheme.panel.opacity(0.85))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(NFGTheme.border.opacity(0.6), lineWidth: 1)
+            )
+        }
     }
 }
 

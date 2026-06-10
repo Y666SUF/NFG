@@ -24,6 +24,8 @@ enum ArcadeGameTheme {
             colors = [Color(red: 0.31, green: 0.82, blue: 1.0), Color(red: 0.12, green: 0.35, blue: 0.55)]
         case "nfg_snake_jump":
             colors = [Color(red: 0.35, green: 0.44, blue: 0.95), Color(red: 0.12, green: 0.18, blue: 0.45)]
+        case "nfg_vault_run":
+            colors = [Color(red: 0.98, green: 0.42, blue: 0.21), Color(red: 0.12, green: 0.08, blue: 0.28)]
         case "daily_safe":
             colors = [Color(red: 0.95, green: 0.75, blue: 0.2), Color(red: 0.75, green: 0.45, blue: 0.1)]
         case "scratch":
@@ -64,6 +66,7 @@ enum ArcadeGameTheme {
         case "nfg_tower": return Color(red: 0.95, green: 0.42, blue: 0.15)
         case "nfg_blocks": return Color(red: 0.31, green: 0.82, blue: 1.0)
         case "nfg_snake_jump": return Color(red: 0.35, green: 0.44, blue: 0.95)
+        case "nfg_vault_run": return Color(red: 0.98, green: 0.42, blue: 0.21)
         case "double_nothing": return NFGTheme.gold
         case "badge_hunt": return Color(red: 0.45, green: 0.75, blue: 1)
         case "duel": return Color(red: 0.95, green: 0.25, blue: 0.35)

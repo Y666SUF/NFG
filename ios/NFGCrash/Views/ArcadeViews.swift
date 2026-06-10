@@ -75,6 +75,8 @@ struct VaultArcadeHubView: View {
         .navigationDestination(item: $selectedGame) { game in
             if game.id == ArcadeBundledCatalog.jumpGameId {
                 SnakeJumpGameView()
+            } else if game.id == ArcadeBundledCatalog.rushGameId {
+                VaultRunGameScreen()
             } else {
                 VaultArcadeGameView(game: game)
                     .environmentObject(sync)

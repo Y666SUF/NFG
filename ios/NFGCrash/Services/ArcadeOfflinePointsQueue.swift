@@ -1,5 +1,9 @@
 import Foundation
 
+extension Notification.Name {
+    static let arcadeOfflineQueueDidChange = Notification.Name("arcadeOfflineQueueDidChange")
+}
+
 struct ArcadePendingCredit: Codable, Identifiable, Equatable {
     var id: String
     var gameId: String
@@ -15,7 +19,7 @@ enum ArcadeOfflinePointsQueue {
 
     static func userKey() -> String {
         let name = PlayerSession.tiktokUsername.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        return name.isEmpty ? AuthStore.deviceId : name
+        return name.isEmpty ? AuthStore.deviceId.lowercased() : name
     }
 
     static func enqueue(
@@ -55,23 +59,54 @@ enum ArcadeOfflinePointsQueue {
         pending(for: gameId, user: user).reduce(0) { $0 + $1.estimatedPoints }
     }
 
+    static func pendingPointsTotal(user: String? = nil) -> Int {
+        loadAll(for: normalized(user ?? userKey())).reduce(0) { $0 + $1.estimatedPoints }
+    }
+
+    static func pendingCount(user: String? = nil) -> Int {
+        loadAll(for: normalized(user ?? userKey())).count
+    }
+
+    /// Moves queued credits when an app guest links TikTok (device id → username).
+    static func migrateQueue(from oldUser: String, to newUser: String) {
+        let from = normalized(oldUser)
+        let to = normalized(newUser)
+        guard !from.isEmpty, !to.isEmpty, from != to else { return }
+        let guestItems = loadAll(for: from)
+        guard !guestItems.isEmpty else { return }
+        var merged = loadAll(for: to)
+        merged.append(contentsOf: guestItems)
+        save(merged, for: to)
+        save([], for: from)
+    }
+
     static func flush(api: GameAPI, sync: SyncClient? = nil, user: String? = nil) async -> Int {
         let key = normalized(user ?? userKey())
         guard !key.isEmpty else { return 0 }
-        var items = loadAll(for: key)
+        let items = loadAll(for: key)
         guard !items.isEmpty else { return 0 }
 
         var synced = 0
         var remaining: [ArcadePendingCredit] = []
         for item in items {
-            var payload: [String: Any] = [:]
+            var payload: [String: Any] = [
+                "queueId": item.id,
+                "points": item.estimatedPoints,
+                "originalAction": item.action,
+            ]
             if let payloadJSON = item.payloadJSON,
                let data = payloadJSON.data(using: .utf8),
                let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                payload = obj
+                for (k, v) in obj where payload[k] == nil {
+                    payload[k] = v
+                }
             }
             do {
-                let result = try await api.arcadePlay(gameId: item.gameId, action: item.action, payload: payload)
+                let result = try await api.arcadePlay(
+                    gameId: item.gameId,
+                    action: "offline_sync",
+                    payload: payload
+                )
                 await MainActor.run {
                     ArcadePointsBridge.applyToGlobalWallet(result, sync: sync)
                 }
@@ -102,11 +137,10 @@ enum ArcadeOfflinePointsQueue {
         guard !user.isEmpty else { return }
         if items.isEmpty {
             UserDefaults.standard.removeObject(forKey: storageKey(for: user))
-            return
-        }
-        if let data = try? JSONEncoder().encode(items) {
+        } else if let data = try? JSONEncoder().encode(items) {
             UserDefaults.standard.set(data, forKey: storageKey(for: user))
         }
+        NotificationCenter.default.post(name: .arcadeOfflineQueueDidChange, object: nil)
     }
 
     private static func normalized(_ user: String) -> String {

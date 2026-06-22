@@ -1,0 +1,145 @@
+# NFG Crash — Fix offline arcade points stuck as "pending sync" (Windows PC)
+
+Paste this entire prompt into **Cursor on your Windows PC** that runs the live server at **https://y666suf.com**.
+
+## Problem
+
+iOS users earn arcade points offline (NFG Jump milestones, NFG Rush, NFG Blocks level clears). When the server comes back online, the app shows **"X pts pending sync"** forever because:
+
+1. The app was replaying `milestone` / `level_clear` actions, which **require an active game session** on the server → sync fails with `no_session`.
+2. The app only tried to flush when opening a specific game — not globally on connect.
+
+## Fix (Mac already pushed to GitHub `main`)
+
+### Server: new `offline_sync` action
+
+`server/mobile-arcade.js` now supports:
+
+```
+POST /api/mobile/arcade/play
+{
+  "gameId": "nfg_snake_jump" | "nfg_vault_run" | "nfg_blocks",
+  "action": "offline_sync",
+  "payload": {
+    "queueId": "<uuid from iOS>",
+    "points": 3000,
+    "originalAction": "milestone",
+    "height": 2500,
+    "distance": 400,
+    "level": 3
+  }
+}
+```
+
+Behavior:
+- Credits `points` to the user's wallet (idempotent — same `queueId` never pays twice)
+- Updates best height / distance / level from payload
+- Works **without** an active run session
+
+Helper: `applyOfflineArcadeSync()` in `mobile-arcade.js`
+
+### iOS (separate TestFlight build)
+
+- Flushes offline queue on connect + every 30s while online
+- Uses `offline_sync` instead of replaying milestone/level_clear
+- Migrates offline queue when guest links TikTok
+
+---
+
+## Step 1 — Pull latest on PC
+
+```powershell
+cd C:\Users\Yusef\test
+.\scripts\sync-pull.ps1 -Merge
+npm install
+```
+
+**Must have updated:** `server/mobile-arcade.js` (search for `applyOfflineArcadeSync` and `offline_sync`)
+
+---
+
+## Step 2 — Restart live Node (one instance)
+
+Stop duplicate processes. Restart your usual launcher.
+
+---
+
+## Step 3 — Verify offline_sync works
+
+Replace `TOKEN` with a real bearer from app guest or TikTok session.
+
+### Jump offline sync smoke test
+
+```powershell
+curl -X POST https://y666suf.com/api/mobile/arcade/play `
+  -H "Authorization: Bearer TOKEN" `
+  -H "Content-Type: application/json" `
+  -d "{\"gameId\":\"nfg_snake_jump\",\"action\":\"offline_sync\",\"payload\":{\"queueId\":\"pc-test-001\",\"points\":3000,\"height\":2500}}"
+```
+
+Expect:
+```json
+{
+  "ok": true,
+  "offlineSync": true,
+  "gained": 3000,
+  "message": "Synced +3,000 offline pts"
+}
+```
+
+Run the **same curl again** — expect `"duplicate": true` and `"gained": 0` (idempotent).
+
+### Blocks offline sync
+
+```powershell
+curl -X POST https://y666suf.com/api/mobile/arcade/play `
+  -H "Authorization: Bearer TOKEN" `
+  -H "Content-Type: application/json" `
+  -d "{\"gameId\":\"nfg_blocks\",\"action\":\"offline_sync\",\"payload\":{\"queueId\":\"pc-test-blocks-001\",\"points\":5000,\"level\":2}}"
+```
+
+### Vault Run offline sync
+
+```powershell
+curl -X POST https://y666suf.com/api/mobile/arcade/play `
+  -H "Authorization: Bearer TOKEN" `
+  -H "Content-Type: application/json" `
+  -d "{\"gameId\":\"nfg_vault_run\",\"action\":\"offline_sync\",\"payload\":{\"queueId\":\"pc-test-vault-001\",\"points\":3000,\"distance\":400}}"
+```
+
+### If you get 404 or "invalid_action"
+
+PC is on **stale** `mobile-arcade.js` — re-pull and restart.
+
+---
+
+## Step 4 — Confirm arcade route is registered
+
+In `server/mobile-api.js` ensure:
+
+```js
+registerMobileArcadeRoutes(app, { validateBearer, pointStore, game });
+```
+
+---
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `invalid_action` on offline_sync | Old mobile-arcade.js | Pull + restart |
+| `invalid_sync` | Missing queueId or points | iOS sends both — check auth token |
+| Points still pending on iOS after server fix | Old iOS build | Ship new TestFlight with flush timer |
+| 401 on curl | Bad/expired token | Use fresh token from app |
+| gained is 0 but ok true | Duplicate queueId already synced | Normal — idempotent |
+
+---
+
+## After deploy checklist
+
+- [ ] `grep offline_sync server/mobile-arcade.js` finds handlers in Jump, Rush, Blocks
+- [ ] curl smoke test returns `ok: true, offlineSync: true`
+- [ ] Restart Node once
+- [ ] Tell Mac user PC is updated so they can ship iOS TestFlight build
+
+When done, set `docs/cross-device/pending-on-pc.md` frontmatter `cross_device_status: done` if you use that workflow.

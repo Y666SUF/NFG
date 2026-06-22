@@ -23,6 +23,8 @@ final class SyncClient: ObservableObject {
     @Published var feed: [FeedLine] = []
     @Published var lastActionMessage: String?
     @Published var pendingOfflineCount: Int = OfflineQueue.count
+    @Published var pendingArcadeSyncPoints: Int = 0
+    @Published var pendingArcadeSyncCount: Int = 0
     @Published var multiplierHistory: [Double] = [1]
     @Published var sublineText = "Connecting…"
     @Published var taxPotAmount: Int = 0
@@ -75,6 +77,7 @@ final class SyncClient: ObservableObject {
     private var presenceSnapshotReady = false
     private var presenceJoinDismissTask: Task<Void, Never>?
     private var walletRefreshTimer: Timer?
+    private var arcadeSyncTimer: Timer?
     /// Bumped whenever wallet balance is updated from a purchase or `applyWalletFromServer` — stale `refreshWallet` responses are ignored.
     private var walletDataRevision: UInt64 = 0
     private var api: GameAPI?
@@ -103,10 +106,12 @@ final class SyncClient: ObservableObject {
             await refreshWallet()
             await loadAppChatHistory()
             await flushOfflineQueue()
+            await flushArcadeOfflineQueue(silent: true)
             await refreshLeaderboard()
             startLiveStatusPolling()
             startPresencePolling()
             startWalletPolling()
+            startArcadeSyncPolling()
             await refreshActiveAppUsers()
         } catch {
             connectionStatus = "Offline"
@@ -193,6 +198,8 @@ final class SyncClient: ObservableObject {
         activeAppUserList = []
         walletRefreshTimer?.invalidate()
         walletRefreshTimer = nil
+        arcadeSyncTimer?.invalidate()
+        arcadeSyncTimer = nil
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
         if connectionStatus != "Server unreachable" {
@@ -800,6 +807,41 @@ final class SyncClient: ObservableObject {
         await refreshProfile()
     }
 
+    func refreshPendingArcadeSyncCount() {
+        pendingArcadeSyncPoints = ArcadeOfflinePointsQueue.pendingPointsTotal()
+        pendingArcadeSyncCount = ArcadeOfflinePointsQueue.pendingCount()
+    }
+
+    /// Pushes queued arcade milestone/level rewards to the server when online.
+    @discardableResult
+    func flushArcadeOfflineQueue(silent: Bool = false) async -> Int {
+        refreshPendingArcadeSyncCount()
+        guard pendingArcadeSyncCount > 0 || JumpPendingRunStore.pendingHeight(for: ArcadeOfflinePointsQueue.userKey()) > 0 else {
+            return 0
+        }
+        guard let api, PlayerSession.isLoggedIn, connectionStatus == "Online" else { return 0 }
+
+        let before = pendingArcadeSyncCount
+        let synced = await ArcadeOfflinePointsQueue.flush(api: api, sync: self)
+        let jumpSynced = await JumpPendingRunStore.flush(api: api, sync: self)
+        refreshPendingArcadeSyncCount()
+        await refreshWallet()
+
+        if synced > 0 || jumpSynced {
+            if !silent {
+                let parts = [
+                    synced > 0 ? "\(synced) arcade reward\(synced == 1 ? "" : "s")" : nil,
+                    jumpSynced ? "Jump high score" : nil,
+                ].compactMap { $0 }
+                appendFeed("Synced \(parts.joined(separator: " + ")).")
+                lastActionMessage = "Offline points synced to your account."
+            }
+        } else if before > 0 && !silent {
+            lastActionMessage = "Still syncing offline points — retrying…"
+        }
+        return synced + (jumpSynced ? 1 : 0)
+    }
+
     private func handleChatResult(_ result: ChatActionResult) {
         guard let parsed = result.parsed else {
             if result.ignored == true {
@@ -941,6 +983,7 @@ final class SyncClient: ObservableObject {
                 if connectionStatus != "Online" {
                     connectionStatus = "Online"
                     syncPresencePillFromState()
+                    Task { await flushArcadeOfflineQueue(silent: true) }
                 }
             }
         case "chat_result":
@@ -1075,6 +1118,16 @@ final class SyncClient: ObservableObject {
         walletRefreshTimer = Timer.scheduledTimer(withTimeInterval: 20, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 await self?.refreshWallet()
+            }
+        }
+    }
+
+    private func startArcadeSyncPolling() {
+        refreshPendingArcadeSyncCount()
+        arcadeSyncTimer?.invalidate()
+        arcadeSyncTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                await self?.flushArcadeOfflineQueue(silent: true)
             }
         }
     }

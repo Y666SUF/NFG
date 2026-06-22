@@ -20,6 +20,8 @@ final class JumpVSClient {
     private var hooks: Hooks
     private var webSocketTask: URLSessionWebSocketTask?
     private let session = URLSession(configuration: .default)
+    private var joinSent = false
+    private var joinAttempts = 0
 
     private(set) var phase = "waiting"
     private(set) var players: [JumpVsPlayer] = []
@@ -51,18 +53,43 @@ final class JumpVSClient {
         comp.queryItems = [URLQueryItem(name: "token", value: token)]
         guard let url = comp.url else { throw GameAPIError.invalidURL }
 
+        joinSent = false
+        joinAttempts = 0
         let task = session.webSocketTask(with: url)
         webSocketTask = task
         task.resume()
-        sendJoin()
-        hooks.onConnected?()
         receiveLoop()
+        scheduleJoinWhenReady()
     }
 
     func disconnect() {
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
+        joinSent = false
+        joinAttempts = 0
         hooks.onDisconnected?()
+    }
+
+    private func scheduleJoinWhenReady() {
+        guard let webSocketTask, !joinSent else { return }
+        webSocketTask.sendPing { [weak self] error in
+            Task { @MainActor in
+                guard let self else { return }
+                if error == nil {
+                    self.sendJoin()
+                    self.joinSent = true
+                    self.hooks.onConnected?()
+                    return
+                }
+                self.joinAttempts += 1
+                if self.joinAttempts < 25 {
+                    try? await Task.sleep(nanoseconds: 200_000_000)
+                    self.scheduleJoinWhenReady()
+                } else {
+                    self.hooks.onError?("Jump VS connection failed.")
+                }
+            }
+        }
     }
 
     private func sendJoin() {
@@ -76,7 +103,7 @@ final class JumpVSClient {
     }
 
     private func send(_ obj: [String: Any]) {
-        guard let webSocketTask, webSocketTask.state == .running else { return }
+        guard let webSocketTask else { return }
         guard let data = try? JSONSerialization.data(withJSONObject: obj),
               let text = String(data: data, encoding: .utf8) else { return }
         webSocketTask.send(.string(text)) { _ in }

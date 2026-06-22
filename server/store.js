@@ -1652,6 +1652,34 @@ class PointStore {
     return this.getBalance(u);
   }
 
+  ensureAppGuestAccount(user) {
+    const u = normalizeUser(user);
+    if (!u) return 0;
+    const starter =
+      Number(process.env.APP_STARTER_POINTS) ||
+      Number(process.env.STARTER_POINTS) ||
+      100000;
+    if (this.points.balances[u] == null) {
+      this.points.balances[u] = starter;
+      this.points.allTime[u] = 0;
+      this.points.profiles[u] = getDefaultProfile(u);
+      this.points.profiles[u].displayName = "App User";
+      this._savePoints();
+    } else {
+      this._ensureProfileShape(u);
+      const dn = this.getDisplayName(u);
+      if (!dn || dn === u || String(dn).toLowerCase().startsWith("appuser")) {
+        this.setDisplayName(u, "App User");
+      }
+    }
+    this.applySuperFanDailyBonus(u);
+    return this.getBalance(u);
+  }
+
+  mergeUserAccounts(fromUser, toUser, reason = "tiktok_link") {
+    return this._mergeUserAccount(fromUser, toUser, reason);
+  }
+
   getLevel(user) {
     const u = normalizeUser(user);
     if (!u) return 1;

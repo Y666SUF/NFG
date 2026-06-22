@@ -29,4 +29,12 @@ enum AppPreferences {
             UserDefaults.standard.set(newValue, forKey: soundEffectsEnabledKey)
         }
     }
+
+    private static let repeatLastBetKey = "nfg.repeatLastBetEnabled"
+
+    /// When true, re-places the last successful bet each betting window.
+    static var repeatLastBetEnabled: Bool {
+        get { UserDefaults.standard.bool(forKey: repeatLastBetKey) }
+        set { UserDefaults.standard.set(newValue, forKey: repeatLastBetKey) }
+    }
 }

@@ -28,10 +28,9 @@ const { registerHangmanHttpProxy, attachHangmanWebSocketProxy } = require("./han
 const { startHangmanProcess, waitForHangman, stopHangmanProcess, HANGMAN_PORT } = require("./hangman-process");
 const { registerWordGamesHttpProxy } = require("./word-games-proxy");
 const { startWordGamesProcess, waitForWordGames, WORD_GAMES_PORT } = require("./word-games-process");
-const { registerPixelJumpHttpProxy } = require("./pixel-jump-proxy");
+const { registerPixelJumpHttpProxy, waitForPixelJump } = require("./pixel-jump-proxy");
 const {
   startPixelJumpProcess,
-  waitForPixelJump,
   PIXEL_JUMP_PORT,
 } = require("./pixel-jump-process");
 const { registerIpaDownloads, getIpaDownloadMeta, IPA_CATALOG } = require("./ipa-downloads");
@@ -1339,7 +1338,7 @@ server.listen(PORT, SERVER_HOST, () => {
   }
   console.log(`Hangman backend port: ${HANGMAN_PORT} (WebSocket proxy: /hangman/ws)`);
   console.log(`Word Games backend port: ${WORD_GAMES_PORT} (HTTP proxy: /api/word-games/*)`);
-  console.log(`Pixel Jump backend port: ${PIXEL_JUMP_PORT} (HTTP/WS proxy: /api/pixel-jump/*)`);
+  console.log(`Pixel Jump backend port: ${PIXEL_JUMP_PORT} (HTTP proxy: /api/pixel-jump/*, WS: /api/ws/mp/*)`);
   console.log("Tower World: /api/mobile/tower/world/profile + WebSocket /api/mobile/tower/world/ws");
   startHangmanProcess();
   startWordGamesProcess();
@@ -1351,7 +1350,7 @@ server.listen(PORT, SERVER_HOST, () => {
     .then(() => console.log("[WordGames] Ready (proxied through this server)."))
     .catch((e) => console.warn("[WordGames] Not ready yet:", e.message));
   waitForPixelJump()
-    .then(() => console.log("[PixelJump] Ready at https://y666suf.com/api/pixel-jump/"))
+    .then(() => console.log("[PixelJump] Ready (proxied through this server)."))
     .catch((e) => console.warn("[PixelJump] Not ready yet:", e.message));
 
   openBrowser(url);

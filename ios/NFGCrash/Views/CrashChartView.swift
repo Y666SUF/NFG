@@ -9,6 +9,7 @@ struct CrashChartView: View {
     var openBets: [OpenBet] = []
     var queuedBets: [OpenBet] = []
     var entriesActionMessage: String?
+    var recentCrashes: [Double] = []
     var onCrashAnimationFinished: (() -> Void)?
 
     @State private var pulseGlow = false
@@ -239,6 +240,14 @@ struct CrashChartView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
                     .padding(.trailing, 10)
                     .padding(.bottom, 10)
+            }
+
+            if !recentCrashes.isEmpty {
+                RecentCrashesStrip(crashes: recentCrashes, inline: true, showAllFive: true)
+                    .frame(maxWidth: min(width - 100, 260), alignment: .leading)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                    .padding(.leading, 6)
+                    .padding(.bottom, 8)
             }
         }
         .allowsHitTesting(false)

@@ -23,6 +23,7 @@ function proxyHttpRequest(req, res) {
   const headers = { ...req.headers, host: targetUrl.host };
   delete headers.connection;
 
+  // express.json() may have already consumed the stream — re-send parsed body.
   let bodyBuffer = null;
   if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
     if (Buffer.isBuffer(req.body)) {
@@ -63,10 +64,9 @@ function proxyHttpRequest(req, res) {
 
   if (bodyBuffer) {
     proxyReq.end(bodyBuffer);
-    return;
+  } else {
+    req.pipe(proxyReq);
   }
-
-  req.pipe(proxyReq);
 }
 
 function registerWordGamesHttpProxy(app) {

@@ -1,0 +1,24 @@
+Pull latest nfg-crash (Pixel Jump proxy) and restart the NFG server on Windows.
+
+1) Open PowerShell in the nfg-crash folder (same repo as NFG Crash server).
+
+2) Pull:
+   git pull origin main
+
+3) Confirm Pixel Jump API is running on port 8001:
+   curl http://127.0.0.1:8001/api/
+   (Should return: {"app":"retro-pixel-jump","status":"ok"})
+
+   If not running, from NFG-JUMP-MULTIPLAYER folder:
+   docker compose up -d --build
+
+4) Restart the NFG Crash Node server (port 3847 / y666suf.com public).
+
+5) Verify from any machine:
+   curl https://y666suf.com/api/pixel-jump/
+   curl -X POST https://y666suf.com/api/pixel-jump/mp/rooms -H "Content-Type: application/json" -d "{\"hostName\":\"Test\",\"character\":\"char-cat-0\"}"
+
+   First should return retro-pixel-jump health JSON.
+   Second should return roomId, playerId, seed, wsUrl, voiceEnabled.
+
+The iPhone app calls https://y666suf.com/api/pixel-jump/mp/rooms — without this proxy it gets 404.

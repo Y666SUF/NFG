@@ -1,0 +1,125 @@
+# NFG Crash — Windows server update (paste into Cursor on PC)
+
+You are updating the **live NFG game server** on Windows so it matches the latest **iOS app** (iPhone dev build). The iOS app talks to **https://y666suf.com**.
+
+## ⚠️ First: get latest code from Mac
+
+The Mac may have **uncommitted** changes. Before pulling on PC, confirm Mac ran:
+
+```bash
+cd ~/Documents/nfg-crash   # or wherever the repo lives on Mac
+./scripts/sync-push.sh "Server + iOS: app-guest auth, crash polish, arcade, steals"
+```
+
+If that hasn't happened yet, **stop and ask the Mac user to push first**, then continue.
+
+On PC:
+
+```powershell
+cd C:\Users\Yusef\test
+.\scripts\sync-pull.ps1
+npm install
+```
+
+---
+
+## What the iOS app now expects from the server
+
+### 1) App-guest auth (play without TikTok) — **REQUIRED**
+
+New endpoint:
+
+- `POST /api/mobile/auth/app-guest`
+  - Body/header: `deviceId` (required)
+  - Returns: `{ ok, token, userId, displayName: "App User", linkedVia: "app_guest", starterGranted, balance }`
+  - New guests get **100,000 starter points** (via `ensureAppGuestAccount`)
+
+**Files to verify/deploy:**
+- `server/mobile-auth.js` — app-guest route, `appUserIdFromDevice()`, TikTok link merge for guests
+- `server/store.js` — `ensureAppGuestAccount()`, `mergeUserAccounts()` for guest→TikTok merge
+- `server/mobile-arcade.js` — `mergeArcadeUserRecords()` called on link
+
+**Optional env:** `APP_STARTER_POINTS=100000` (defaults to 100k if unset)
+
+**Verify after restart:**
+```powershell
+curl -X POST https://y666suf.com/api/mobile/auth/app-guest -H "Content-Type: application/json" -d "{\"deviceId\":\"test-pc-verify-001\"}"
+```
+Expect `ok: true`, `displayName: "App User"`, `balance: 100000` for a new device.
+
+---
+
+### 2) Steals in the mobile app — **uses existing game logic**
+
+iOS now sends `!steal @username` via `POST /api/chat` (bearer auth). **No new route needed** — but the live server must run current:
+
+- `server/game.js` — `_trySteal()`, `!steal @user` parser
+- `server/index.js` — `/api/chat` returns `{ ok, parsed }` with `type: "steal"` on success/failure
+- `server/store.js` — powerup inventory (`stealCharges`), shield checks, point transfer
+
+**Verify:** From iOS, open Leaderboard → tap a player with balance → Steal (requires steal charges in wallet).
+
+---
+
+### 3) Main crash game polish — **mostly server-already-there**
+
+These iOS features use **existing** game state; ensure live `game.js` / state push includes:
+
+- `recentCrashes` — last 5 crash multipliers in WebSocket state
+- `openBets` / `queuedBets` with `cashout` targets
+- `lastResult` with `wins` / `losses` including per-user `cashout` (for near-miss UI)
+
+No new endpoints — just confirm production isn't running a stale `game.js`.
+
+---
+
+### 4) Mobile API wiring — confirm all routes registered
+
+In `server/mobile-api.js`, ensure these are wired (pull from git; do not hand-merge unless files missing):
+
+```js
+registerMobileAuthRoutes(app, { isLocalhost, pointStore });
+registerMobileProfileRoutes(app, { validateBearer, pointStore, game });
+registerMobileArcadeRoutes(app, { validateBearer, pointStore, game });
+registerMobileGameAdminRoutes(app, { validateBearer, pointStore, game, broadcast, pushState });
+registerTikTokAvatarRoutes(app, { validateBearer });
+```
+
+**Files that must exist in `server/`:**
+- `mobile-auth.js` (app-guest + TikTok link)
+- `mobile-profile.js` (display name)
+- `mobile-arcade.js` (Vault Arcade catalog + play)
+- `mobile-game-admin.js` (host admin panel from app)
+- `mobile-wallet.js`, `mobile-store.js`, `mobile-cosmetics.js`, etc.
+
+---
+
+### 5) Restart production (single instance only)
+
+Restart the **one** live Node process (pm2 / your launcher / `run-electron-cloudflare.bat`). Do **not** start a second copy on another port.
+
+---
+
+## Post-deploy checklist
+
+| Test | Expected |
+|------|----------|
+| Fresh iOS install, no TikTok | Auto signs in as **App User**, ~100k pts |
+| Place bet `!100 2` | Bet accepted, balance updates |
+| Repeat last bet toggle | Re-bets each round when enabled |
+| Round ends near target | Near-miss banner (iOS only; needs `lastResult.cashout`) |
+| Chart | Last 5 crashes visible (needs `recentCrashes` in state) |
+| Leaderboard → Steal | Steal works or clear error (shielded / no charges) |
+| Profile → Link TikTok | Guest balance/progress merges to TikTok account |
+
+---
+
+## If something fails
+
+1. Check Node logs for `/api/mobile/auth/app-guest` 404 → old `mobile-auth.js`
+2. Steal 401 → bearer token / session issue
+3. Steal `steal_not_armed` → user has 0 steal charges (wallet/inventory)
+4. Arcade errors → `mobile-arcade.js` missing or not registered
+5. Compare PC `server/` file dates with git `main` — PC may be on stale branch
+
+When done: set `docs/cross-device/pending-on-pc.md` frontmatter `cross_device_status: done` and push from PC if you changed anything locally.

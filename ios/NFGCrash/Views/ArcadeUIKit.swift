@@ -24,6 +24,8 @@ enum ArcadeGameTheme {
             colors = [Color(red: 0.31, green: 0.82, blue: 1.0), Color(red: 0.12, green: 0.35, blue: 0.55)]
         case "nfg_snake_jump":
             colors = [Color(red: 0.35, green: 0.44, blue: 0.95), Color(red: 0.12, green: 0.18, blue: 0.45)]
+        case "nfg_vault_run":
+            colors = [Color(red: 0.98, green: 0.42, blue: 0.21), Color(red: 0.12, green: 0.08, blue: 0.28)]
         case "daily_safe":
             colors = [Color(red: 0.95, green: 0.75, blue: 0.2), Color(red: 0.75, green: 0.45, blue: 0.1)]
         case "scratch":
@@ -64,6 +66,7 @@ enum ArcadeGameTheme {
         case "nfg_tower": return Color(red: 0.95, green: 0.42, blue: 0.15)
         case "nfg_blocks": return Color(red: 0.31, green: 0.82, blue: 1.0)
         case "nfg_snake_jump": return Color(red: 0.35, green: 0.44, blue: 0.95)
+        case "nfg_vault_run": return Color(red: 0.98, green: 0.42, blue: 0.21)
         case "double_nothing": return NFGTheme.gold
         case "badge_hunt": return Color(red: 0.45, green: 0.75, blue: 1)
         case "duel": return Color(red: 0.95, green: 0.25, blue: 0.35)
@@ -735,8 +738,10 @@ struct VaultStreakWheelSegment: Identifiable {
 }
 
 struct VaultStreakWheelView: View {
-    let rotation: Double
+    var rotation: Double = 0
     let segments: [VaultStreakWheelSegment]
+    var highlightedIndex: Int? = nil
+    var landedIndex: Int? = nil
     var size: CGFloat = 280
 
     @State private var lightPhase = false
@@ -749,7 +754,6 @@ struct VaultStreakWheelView: View {
             let dim = min(geo.size.width, geo.size.height)
             let center = CGPoint(x: geo.size.width / 2, y: geo.size.height / 2)
             let radius = dim / 2
-            // Push labels closer to the rim so each segment has clear space.
             let labelRadius = radius * 0.74
 
             ZStack {
@@ -767,9 +771,10 @@ struct VaultStreakWheelView: View {
                     .shadow(color: ArcadeGameArt.style(for: "vault_wheel").glow.opacity(0.35), radius: 20)
 
                 ForEach(0..<32, id: \.self) { peg in
+                    let pegLit = highlightedIndex.map { $0 % 2 == peg % 2 } ?? (lightPhase && peg % 2 == 0)
                     Circle()
-                        .fill(lightPhase && peg % 2 == 0 ? NFGTheme.gold : Color.white.opacity(0.4))
-                        .frame(width: 5, height: 5)
+                        .fill(pegLit ? NFGTheme.gold : Color.white.opacity(0.25))
+                        .frame(width: highlightedIndex != nil ? 6 : 5, height: highlightedIndex != nil ? 6 : 5)
                         .position(
                             x: center.x + CGFloat(cos((Double(peg) * 11.25 - 90) * .pi / 180)) * (radius + 10),
                             y: center.y + CGFloat(sin((Double(peg) * 11.25 - 90) * .pi / 180)) * (radius + 10)
@@ -779,24 +784,36 @@ struct VaultStreakWheelView: View {
                 ZStack {
                     ForEach(0..<count, id: \.self) { index in
                         let start = Double(index) * step - 90
+                        let isHighlighted = highlightedIndex == index
+                        let isLanded = landedIndex == index
                         WheelSliceShape(startAngle: start, endAngle: start + step)
                             .fill(
                                 LinearGradient(
-                                    colors: segments[index].colors,
+                                    colors: segments[index].colors.map { c in
+                                        isLanded ? c : isHighlighted ? c.opacity(1) : c.opacity(0.55)
+                                    },
                                     startPoint: .topLeading,
                                     endPoint: .bottomTrailing
                                 )
                             )
                             .overlay(
                                 WheelSliceShape(startAngle: start, endAngle: start + step)
-                                    .stroke(Color.white.opacity(0.35), lineWidth: 1.5)
+                                    .stroke(
+                                        isLanded ? NFGTheme.gold : isHighlighted ? Color.white : Color.white.opacity(0.25),
+                                        lineWidth: isLanded ? 3 : isHighlighted ? 2.5 : 1.2
+                                    )
                             )
+                            .scaleEffect(isHighlighted || isLanded ? 1.03 : 1, anchor: .center)
+                            .animation(.easeOut(duration: 0.12), value: highlightedIndex)
+                            .animation(.spring(response: 0.35, dampingFraction: 0.65), value: landedIndex)
                     }
 
                     ForEach(0..<count, id: \.self) { index in
                         let mid = (Double(index) + 0.5) * step - 90
                         let rad = mid * .pi / 180
-                        wheelSegmentLabel(segments[index])
+                        let isHighlighted = highlightedIndex == index || landedIndex == index
+                        wheelSegmentLabel(segments[index], emphasized: isHighlighted)
+                            .scaleEffect(isHighlighted ? 1.15 : 1)
                             .position(
                                 x: center.x + CGFloat(cos(rad)) * labelRadius,
                                 y: center.y + CGFloat(sin(rad)) * labelRadius
@@ -804,7 +821,20 @@ struct VaultStreakWheelView: View {
                     }
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
-                .rotationEffect(.degrees(rotation))
+
+                if let highlightedIndex {
+                    let mid = (Double(highlightedIndex) + 0.5) * step - 90
+                    let rad = mid * .pi / 180
+                    Circle()
+                        .fill(NFGTheme.gold.opacity(landedIndex != nil ? 0.35 : 0.22))
+                        .frame(width: radius * 0.55, height: radius * 0.55)
+                        .blur(radius: 12)
+                        .position(
+                            x: center.x + CGFloat(cos(rad)) * (labelRadius * 0.55),
+                            y: center.y + CGFloat(sin(rad)) * (labelRadius * 0.55)
+                        )
+                        .animation(.easeOut(duration: 0.1), value: highlightedIndex)
+                }
 
                 Circle()
                     .fill(
@@ -819,15 +849,8 @@ struct VaultStreakWheelView: View {
                     .overlay(Circle().stroke(Color.white.opacity(0.55), lineWidth: 2))
                     .shadow(color: NFGTheme.gold.opacity(0.65), radius: 14)
                     .position(center)
-
-                Image(systemName: "arrowtriangle.up.fill")
-                    .font(.system(size: 28, weight: .bold))
-                    .foregroundStyle(
-                        LinearGradient(colors: [.white, NFGTheme.gold], startPoint: .top, endPoint: .bottom)
-                    )
-                    .shadow(color: NFGTheme.gold.opacity(0.9), radius: 10)
-                    .position(x: center.x, y: center.y - radius - 22)
-                    .scaleEffect(lightPhase ? 1.08 : 1)
+                    .scaleEffect(landedIndex != nil ? 1.08 : lightPhase ? 1.04 : 1)
+                    .animation(.spring(response: 0.4, dampingFraction: 0.6), value: landedIndex)
             }
         }
         .frame(width: size, height: size)
@@ -838,19 +861,19 @@ struct VaultStreakWheelView: View {
         }
     }
 
-    private func wheelSegmentLabel(_ seg: VaultStreakWheelSegment) -> some View {
+    private func wheelSegmentLabel(_ seg: VaultStreakWheelSegment, emphasized: Bool) -> some View {
         Image(systemName: seg.systemImage)
-            .font(.system(size: 18, weight: .black))
+            .font(.system(size: emphasized ? 20 : 18, weight: .black))
             .symbolRenderingMode(.hierarchical)
             .foregroundStyle(.white)
-            .frame(width: 30, height: 30)
-            .background(.black.opacity(0.4))
+            .frame(width: emphasized ? 34 : 30, height: emphasized ? 34 : 30)
+            .background((emphasized ? NFGTheme.gold.opacity(0.35) : Color.black.opacity(0.4)))
             .clipShape(Circle())
             .overlay(
                 Circle()
-                    .stroke(.white.opacity(0.35), lineWidth: 1)
+                    .stroke(emphasized ? NFGTheme.gold : Color.white.opacity(0.35), lineWidth: emphasized ? 2 : 1)
             )
-            .shadow(color: .black.opacity(0.6), radius: 2, y: 1)
+            .shadow(color: emphasized ? NFGTheme.gold.opacity(0.55) : .black.opacity(0.6), radius: emphasized ? 6 : 2, y: 1)
     }
 }
 
@@ -930,6 +953,183 @@ struct ArcadeDelayedOutcomeStrip: View {
             .overlay(
                 RoundedRectangle(cornerRadius: 10)
                     .stroke((visual.isGain ? NFGTheme.accent2 : visual.isLoss ? Color.red : NFGTheme.border).opacity(0.35), lineWidth: 1)
+            )
+        }
+    }
+}
+
+// MARK: - Unified skill-game lobby (Blocks, Jump, Rush)
+
+struct ArcadeSkillLobbyStat: Identifiable {
+    let id = UUID()
+    let text: String
+    let icon: String
+    let tint: Color
+}
+
+struct ArcadeSkillLobbyChrome<Middle: View>: View {
+    let gameId: String
+    let title: String
+    let subtitle: String
+    let titleColors: [Color]
+    let stats: [ArcadeSkillLobbyStat]
+    let previewSystemImage: String
+    let previewTitle: String
+    let previewSubtitle: String
+    let previewAccent: Color
+    let playTint: Color
+    let isLoading: Bool
+    let offlinePendingPoints: Int
+    let offlinePendingHeight: Int
+    let onPlay: () -> Void
+    @ViewBuilder let middleContent: () -> Middle
+
+    init(
+        gameId: String,
+        title: String,
+        subtitle: String,
+        titleColors: [Color],
+        stats: [ArcadeSkillLobbyStat],
+        previewSystemImage: String,
+        previewTitle: String,
+        previewSubtitle: String,
+        previewAccent: Color,
+        playTint: Color,
+        isLoading: Bool,
+        offlinePendingPoints: Int = 0,
+        offlinePendingHeight: Int = 0,
+        onPlay: @escaping () -> Void,
+        @ViewBuilder middleContent: @escaping () -> Middle = { EmptyView() }
+    ) {
+        self.gameId = gameId
+        self.title = title
+        self.subtitle = subtitle
+        self.titleColors = titleColors
+        self.stats = stats
+        self.previewSystemImage = previewSystemImage
+        self.previewTitle = previewTitle
+        self.previewSubtitle = previewSubtitle
+        self.previewAccent = previewAccent
+        self.playTint = playTint
+        self.isLoading = isLoading
+        self.offlinePendingPoints = offlinePendingPoints
+        self.offlinePendingHeight = offlinePendingHeight
+        self.onPlay = onPlay
+        self.middleContent = middleContent
+    }
+
+    var body: some View {
+        VStack(spacing: 16) {
+            hero
+            if !stats.isEmpty {
+                statsRow
+            }
+            middleContent()
+            previewCard
+            pendingSyncBanner
+            ArcadePrimaryButton(
+                title: isLoading ? "Loading…" : "Play",
+                icon: "play.fill",
+                tint: playTint,
+                disabled: isLoading
+            ) {
+                onPlay()
+            }
+        }
+    }
+
+    private var hero: some View {
+        VStack(spacing: 8) {
+            ArcadeSkillGameIcon(gameId: gameId, size: 56)
+            Text(title)
+                .font(.system(size: 22, weight: .black, design: .rounded))
+                .foregroundStyle(
+                    LinearGradient(colors: titleColors, startPoint: .leading, endPoint: .trailing)
+                )
+            Text(subtitle)
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(NFGTheme.muted)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 16)
+    }
+
+    private var statsRow: some View {
+        HStack(spacing: 8) {
+            ForEach(stats) { stat in
+                Label(stat.text, systemImage: stat.icon)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(stat.tint)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .background(NFGTheme.panel)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+        }
+        .padding(.horizontal, 4)
+    }
+
+    private var previewCard: some View {
+        ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(
+                    LinearGradient(
+                        colors: [previewAccent.opacity(0.22), Color(red: 0.04, green: 0.08, blue: 0.14)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+            VStack(spacing: 10) {
+                Image(systemName: previewSystemImage)
+                    .font(.system(size: 32, weight: .semibold))
+                    .foregroundStyle(previewAccent)
+                Text(previewTitle)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundStyle(NFGTheme.text)
+                Text(previewSubtitle)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(NFGTheme.muted)
+                    .multilineTextAlignment(.center)
+            }
+            .padding(20)
+        }
+        .frame(height: 140)
+        .overlay(
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .stroke(previewAccent.opacity(0.35), lineWidth: 1)
+        )
+    }
+
+    @ViewBuilder
+    private var pendingSyncBanner: some View {
+        if offlinePendingPoints > 0 || offlinePendingHeight > 0 {
+            VStack(spacing: 6) {
+                if offlinePendingPoints > 0 {
+                    Label(
+                        "\(offlinePendingPoints.formatted()) pts pending sync",
+                        systemImage: "icloud.and.arrow.up.fill"
+                    )
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(NFGTheme.gold.opacity(0.95))
+                }
+                if offlinePendingHeight > 0 {
+                    Label(
+                        "\(offlinePendingHeight.formatted())m best saved locally",
+                        systemImage: "arrow.triangle.2.circlepath"
+                    )
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(NFGTheme.accent2.opacity(0.95))
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .background(NFGTheme.panel.opacity(0.85))
+            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(NFGTheme.gold.opacity(0.25), lineWidth: 1)
             )
         }
     }

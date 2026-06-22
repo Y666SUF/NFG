@@ -3,11 +3,15 @@ const path = require("path");
 const crypto = require("crypto");
 const { normalizeUser } = require("./store");
 const { getAppRoot } = require("./paths");
+const { mergeArcadeUserRecords } = require("./mobile-arcade");
 
 const DATA_DIR = path.join(getAppRoot(), "data");
 const SESSIONS_FILE = path.join(DATA_DIR, "mobile-sessions.json");
 const LINK_CODE_TTL_MS = 10 * 60 * 1000;
 const SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+const APP_GUEST_DISPLAY_NAME = "App User";
+
+let _pointStore = null;
 
 const APP_REVIEW_USER_ID = "apple_app_review";
 const APP_REVIEW_DISPLAY_NAME = "Apple Review";
@@ -86,6 +90,15 @@ function nowMs() {
   return Date.now();
 }
 
+function appUserIdFromDevice(deviceId) {
+  const hash = crypto.createHash("sha256").update(String(deviceId || "")).digest("hex").slice(0, 16);
+  return hash ? `appuser_${hash}` : "";
+}
+
+function isAppGuestUserId(userId) {
+  return String(userId || "").toLowerCase().startsWith("appuser_");
+}
+
 function pruneExpired() {
   const now = nowMs();
   let changed = false;
@@ -113,6 +126,30 @@ function parseBearer(req) {
   return m ? String(m[1] || "").trim() : "";
 }
 
+function sessionPayload(session, token, now) {
+  return {
+    token,
+    userId: normalizeUser(session.userId),
+    displayName: String(session.displayName || session.userId || ""),
+    deviceId: String(session.deviceId || ""),
+    linkedVia: String(session.linkedVia || ""),
+    issuedAt: Number(session.issuedAt) || 0,
+    linkedAt: Number(session.linkedAt) || 0,
+    lastSeenAt: Number(session.lastSeenAt) || now,
+    expiresAt: Number(session.expiresAt) || 0,
+  };
+}
+
+function findValidSessionForDevice(deviceId) {
+  const now = nowMs();
+  for (const [token, rec] of Object.entries(state.sessions)) {
+    if (String(rec.deviceId || "") !== deviceId) continue;
+    if ((Number(rec.expiresAt) || 0) <= now) continue;
+    return { token, rec };
+  }
+  return null;
+}
+
 function validateBearer(req) {
   pruneExpired();
   const token = parseBearer(req);
@@ -130,17 +167,22 @@ function validateBearer(req) {
   return {
     ok: true,
     token,
-    session: {
-      token,
-      userId: normalizeUser(session.userId),
-      displayName: String(session.displayName || session.userId || ""),
-      deviceId: String(session.deviceId || ""),
-      issuedAt: Number(session.issuedAt) || 0,
-      linkedAt: Number(session.linkedAt) || 0,
-      lastSeenAt: Number(session.lastSeenAt) || now,
-      expiresAt: Number(session.expiresAt) || 0,
-    },
+    session: sessionPayload(session, token, now),
   };
+}
+
+function mergeGuestIntoTikTok(guestUserId, tiktokUserId, tiktokDisplayName) {
+  const guest = normalizeUser(guestUserId);
+  const tiktok = normalizeUser(tiktokUserId);
+  if (!guest || !tiktok || guest === tiktok) return;
+  if (_pointStore) {
+    _pointStore.mergeUserAccounts(guest, tiktok, "tiktok_link");
+    _pointStore.setDisplayName(tiktok, tiktokDisplayName);
+  }
+  mergeArcadeUserRecords(guest, tiktok, _pointStore);
+  for (const [tok, rec] of Object.entries(state.sessions)) {
+    if (normalizeUser(rec.userId) === guest) delete state.sessions[tok];
+  }
 }
 
 function completeLinkFromTikTok(userId, displayName, message) {
@@ -178,13 +220,35 @@ function completeLinkFromTikTok(userId, displayName, message) {
     };
   }
 
+  const deviceId = String(pending.deviceId || "");
+  const tiktokDisplayName = String(displayName || normalizedUser);
+  let guestUserId = "";
+  for (const rec of Object.values(state.sessions)) {
+    if (String(rec.deviceId || "") !== deviceId) continue;
+    const uid = normalizeUser(rec.userId);
+    if (rec.linkedVia === "app_guest" || isAppGuestUserId(uid)) {
+      guestUserId = uid;
+      break;
+    }
+  }
+  if (!guestUserId && deviceId) {
+    const derived = appUserIdFromDevice(deviceId);
+    if (derived && _pointStore && _pointStore.getBalance(derived) > 0) guestUserId = derived;
+  }
+  if (guestUserId && guestUserId !== normalizedUser) {
+    mergeGuestIntoTikTok(guestUserId, normalizedUser, tiktokDisplayName);
+  } else if (_pointStore) {
+    _pointStore.setDisplayName(normalizedUser, tiktokDisplayName);
+  }
+
   const token = newSessionToken();
   const expiresAt = now + SESSION_TTL_MS;
   state.sessions[token] = {
     token,
-    deviceId: String(pending.deviceId || ""),
+    deviceId,
     userId: normalizedUser,
-    displayName: String(displayName || normalizedUser),
+    displayName: tiktokDisplayName,
+    linkedVia: "tiktok",
     issuedAt: now,
     linkedAt: now,
     lastSeenAt: now,
@@ -195,7 +259,7 @@ function completeLinkFromTikTok(userId, displayName, message) {
     ...pending,
     status: "linked",
     userId: normalizedUser,
-    displayName: String(displayName || normalizedUser),
+    displayName: tiktokDisplayName,
     linkedAt: now,
     token,
     expiresAt: pending.expiresAt,
@@ -212,7 +276,7 @@ function completeLinkFromTikTok(userId, displayName, message) {
 }
 
 function registerMobileAuthRoutes(app, ctx = {}) {
-  const pointStore = ctx && ctx.pointStore;
+  _pointStore = ctx.pointStore || null;
 
   app.post("/api/mobile/auth/app-review", (req, res) => {
     pruneExpired();
@@ -239,20 +303,20 @@ function registerMobileAuthRoutes(app, ctx = {}) {
     }
 
     const userId = APP_REVIEW_USER_ID;
-    if (pointStore) {
-      if (typeof pointStore.ensureAccount === "function") pointStore.ensureAccount(userId);
-      if (typeof pointStore.setBalance === "function") {
-        pointStore.setBalance(userId, APP_REVIEW_BALANCE);
+    if (_pointStore) {
+      if (typeof _pointStore.ensureAccount === "function") _pointStore.ensureAccount(userId);
+      if (typeof _pointStore.setBalance === "function") {
+        _pointStore.setBalance(userId, APP_REVIEW_BALANCE);
       }
-      if (typeof pointStore.setDisplayName === "function") {
-        pointStore.setDisplayName(userId, APP_REVIEW_DISPLAY_NAME);
+      if (typeof _pointStore.setDisplayName === "function") {
+        _pointStore.setDisplayName(userId, APP_REVIEW_DISPLAY_NAME);
       }
     }
 
     const token = registerAppReviewSession(deviceId);
     const balance =
-      pointStore && typeof pointStore.getBalance === "function"
-        ? pointStore.getBalance(userId)
+      _pointStore && typeof _pointStore.getBalance === "function"
+        ? _pointStore.getBalance(userId)
         : APP_REVIEW_BALANCE;
 
     return res.json({
@@ -264,6 +328,68 @@ function registerMobileAuthRoutes(app, ctx = {}) {
       purpose: "app_review",
       linkedVia: "app_review",
       message: "Signed in to the App Review test account.",
+    });
+  });
+
+  app.post("/api/mobile/auth/app-guest", (req, res) => {
+    pruneExpired();
+    const deviceId = String(
+      req.body?.deviceId || req.headers["x-device-id"] || ""
+    )
+      .trim()
+      .slice(0, 200);
+    if (!deviceId) return res.status(400).json({ ok: false, error: "deviceId required" });
+
+    const now = nowMs();
+    const existing = findValidSessionForDevice(deviceId);
+    if (existing) {
+      const rec = existing.rec;
+      const userId = normalizeUser(rec.userId);
+      const balance = _pointStore ? _pointStore.getBalance(userId) : 0;
+      return res.json({
+        ok: true,
+        token: existing.token,
+        userId,
+        displayName: String(rec.displayName || APP_GUEST_DISPLAY_NAME),
+        linkedVia: String(rec.linkedVia || (isAppGuestUserId(userId) ? "app_guest" : "tiktok")),
+        starterGranted: false,
+        balance,
+      });
+    }
+
+    const userId = appUserIdFromDevice(deviceId);
+    if (!userId) return res.status(400).json({ ok: false, error: "invalid deviceId" });
+
+    let starterGranted = false;
+    let balance = 0;
+    if (_pointStore) {
+      const wasNew = _pointStore.points.balances[userId] == null;
+      balance = _pointStore.ensureAppGuestAccount(userId);
+      starterGranted = wasNew;
+    }
+
+    const token = newSessionToken();
+    state.sessions[token] = {
+      token,
+      deviceId,
+      userId,
+      displayName: APP_GUEST_DISPLAY_NAME,
+      linkedVia: "app_guest",
+      issuedAt: now,
+      linkedAt: 0,
+      lastSeenAt: now,
+      expiresAt: now + SESSION_TTL_MS,
+    };
+    saveState();
+
+    res.json({
+      ok: true,
+      token,
+      userId,
+      displayName: APP_GUEST_DISPLAY_NAME,
+      linkedVia: "app_guest",
+      starterGranted,
+      balance,
     });
   });
 
@@ -324,6 +450,7 @@ function registerMobileAuthRoutes(app, ctx = {}) {
         status: "linked",
         token: String(rec.token),
         userId: normalizeUser(rec.userId),
+        displayName: String(rec.displayName || rec.userId || ""),
       });
     }
     return res.json({
@@ -359,4 +486,3 @@ module.exports = {
   validateBearer,
   validateBearerSession,
 };
-

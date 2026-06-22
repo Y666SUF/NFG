@@ -58,6 +58,8 @@ final class SyncClient: ObservableObject {
     @Published var cosmeticsShopError: String?
     @Published var cosmeticsPurchaseMessage: String?
     @Published var isLoadingCosmeticsShop = false
+    @Published var isBootstrappingSession = false
+    @Published var nearMissMessage: String?
 
     var topBalances: [LeaderboardRow] {
         Array(fullBalances.prefix(5))
@@ -83,6 +85,9 @@ final class SyncClient: ObservableObject {
     /// Keeps entries visible when the live server omits `openBets` after betting (older PC builds).
     private var cachedOpenBets: [OpenBet] = []
     private var cachedOpenBetsRoundId: Int = -1
+    private var lastPhase: GamePhase = .idle
+    private var lastAutoBetRoundId: Int = -1
+    private var pendingBetAmountText: String?
 
     private func bootstrapFromServer(api: GameAPI) async {
         await refreshMobileStatus()
@@ -126,24 +131,49 @@ final class SyncClient: ObservableObject {
         disconnect()
         connectionStatus = "Connecting…"
 
-        do {
-            api = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
-        } catch {
-            connectionStatus = error.localizedDescription
-            return
-        }
-
-        guard let api else { return }
-
         Task {
-            await bootstrapFromServer(api: api)
-        }
+            if !PlayerSession.isLoggedIn {
+                isBootstrappingSession = true
+                await ensureAppGuestSession()
+                isBootstrappingSession = false
+            }
 
-        let session = URLSession(configuration: .default)
-        webSocketTask = session.webSocketTask(with: api.webSocketURL)
-        webSocketTask?.resume()
-        receiveLoop()
-        startPing()
+            guard PlayerSession.isLoggedIn else {
+                connectionStatus = "Server unreachable"
+                return
+            }
+
+            do {
+                api = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
+            } catch {
+                connectionStatus = error.localizedDescription
+                return
+            }
+
+            guard let api else { return }
+
+            await bootstrapFromServer(api: api)
+
+            let session = URLSession(configuration: .default)
+            webSocketTask = session.webSocketTask(with: api.webSocketURL)
+            webSocketTask?.resume()
+            receiveLoop()
+            startPing()
+        }
+    }
+
+    func ensureAppGuestSession() async {
+        do {
+            let bootstrapApi = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
+            let resp = try await bootstrapApi.bootstrapAppGuest(deviceId: AuthStore.deviceId)
+            AuthStore.saveGuestSession(
+                token: resp.token ?? "",
+                userId: resp.userId ?? "",
+                displayName: resp.displayName ?? AuthStore.appGuestDisplayName
+            )
+        } catch {
+            // Server may be down — user can retry connect.
+        }
     }
 
     func disconnect() {
@@ -171,7 +201,7 @@ final class SyncClient: ObservableObject {
         syncPresencePillFromState()
     }
 
-    /// Unlink TikTok or App Review demo; returns user to the link / sign-in screen.
+    /// Clears session and starts a fresh app guest account.
     func signOut() async {
         if let api {
             await api.logoutSession()
@@ -197,6 +227,7 @@ final class SyncClient: ObservableObject {
         storePurchaseMessage = nil
         sublineText = "Signed out"
         knownChatIds.removeAll()
+        connect()
     }
 
     func refreshProfile() async {
@@ -656,8 +687,8 @@ final class SyncClient: ObservableObject {
     func sendAppChat(_ text: String) async {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return }
-        guard AuthStore.isLinked else {
-            appChatError = "Link your TikTok on live first."
+        guard PlayerSession.isLoggedIn else {
+            appChatError = "Sign in required."
             return
         }
         if isChatMutedSelf {
@@ -681,8 +712,8 @@ final class SyncClient: ObservableObject {
     }
 
     func sendCommand(_ message: String) async {
-        guard AuthStore.isLinked else {
-            lastActionMessage = "Link your TikTok on live first."
+        guard PlayerSession.isLoggedIn else {
+            lastActionMessage = "Sign in required."
             return
         }
 
@@ -720,11 +751,23 @@ final class SyncClient: ObservableObject {
             return
         }
         rememberPlacedBet(amount: amount, cashout: cashout)
+        pendingBetAmountText = trimmed
         await sendCommand("!\(trimmed) \(cashout)")
     }
 
     func checkBalance() async {
         await sendCommand("!balance")
+    }
+
+    func stealFrom(target rawTarget: String) async {
+        let target = rawTarget
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "@", with: "")
+        guard !target.isEmpty else {
+            lastActionMessage = "Pick a player to steal from"
+            return
+        }
+        await sendCommand("!steal @\(target)")
     }
 
     func flushOfflineQueue() async {
@@ -771,9 +814,28 @@ final class SyncClient: ObservableObject {
                 let co = parsed.cashout ?? 0
                 lastActionMessage = "Bet placed: \(amt) @ \(co)×"
                 rememberPlacedBet(amount: amt, cashout: co)
+                LastBetStore.save(amountText: pendingBetAmountText ?? "\(amt)", cashout: co)
+                pendingBetAmountText = nil
             } else {
                 removeCachedBetForCurrentUser()
+                pendingBetAmountText = nil
                 lastActionMessage = betErrorMessage(parsed.reason)
+            }
+        case "steal":
+            if parsed.ok == true {
+                let stolen = parsed.stolen ?? 0
+                let name = parsed.targetDisplayName ?? parsed.target ?? "player"
+                lastActionMessage = "Stole \(stolen.formatted()) pts from \(name)"
+                if let bal = parsed.balance {
+                    applyBalanceFromServer(balance: bal)
+                }
+                if let ready = parsed.stealsReady {
+                    patchWallet { $0.inventory.stealCharges = ready }
+                } else if let inv = parsed.inventory {
+                    patchWallet { $0.inventory = inv }
+                }
+            } else {
+                lastActionMessage = stealErrorMessage(parsed.reason, secondsLeft: parsed.secondsLeft)
             }
         case "balance_shout":
             if parsed.ok == true, let bal = parsed.balance {
@@ -804,6 +866,23 @@ final class SyncClient: ObservableObject {
         case "bad_amount": return "Invalid bet amount"
         case "already_bet": return "You already have a bet this round"
         default: return reason ?? "Bet failed"
+        }
+    }
+
+    private func stealErrorMessage(_ reason: String?, secondsLeft: Int?) -> String {
+        switch reason {
+        case "steal_not_armed": return "No steal charges — open Wallet for powerups"
+        case "target_shielded":
+            if let sec = secondsLeft, sec > 0 {
+                return "Target is shielded — \(sec)s left"
+            }
+            return "Target is shielded"
+        case "target_empty": return "Target has no points to steal"
+        case "same_user": return "You can't steal from yourself"
+        case "invalid_target": return "Invalid steal target"
+        case "target_host_protected": return "That player can't be stolen from"
+        case "steal_failed": return "Steal failed — try again"
+        default: return reason?.replacingOccurrences(of: "_", with: " ") ?? "Steal failed"
         }
     }
 
@@ -1284,7 +1363,7 @@ final class SyncClient: ObservableObject {
     }
 
     private func resolvedBetDisplayName() -> String {
-        let linked = AuthStore.verifiedDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let linked = AuthStore.appFacingDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !linked.isEmpty { return linked }
         let session = PlayerSession.displayName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !session.isEmpty { return session }
@@ -1299,6 +1378,18 @@ final class SyncClient: ObservableObject {
     }
 
     private func applyStateSideEffects(_ s: CrashGameState) {
+        let previousPhase = lastPhase
+        defer { lastPhase = s.phase }
+
+        if s.phase == .betting && previousPhase != .betting {
+            nearMissMessage = nil
+            maybeRepeatLastBet(roundId: s.roundId)
+        }
+
+        if s.phase == .ended && previousPhase != .ended {
+            evaluateNearMiss(s)
+        }
+
         if s.roundId != lastRoundId {
             lastRoundId = s.roundId
             multiplierHistory = [1]
@@ -1327,6 +1418,56 @@ final class SyncClient: ObservableObject {
         } else if s.phase == .betting {
             multiplierHistory = [1]
         }
+    }
+
+    private func maybeRepeatLastBet(roundId: Int) {
+        guard AppPreferences.repeatLastBetEnabled,
+              PlayerSession.isLoggedIn,
+              roundId != lastAutoBetRoundId,
+              let last = LastBetStore.load() else { return }
+
+        let me = normalizeBetUser(resolvedBetUserId())
+        if !me.isEmpty {
+            let alreadyBet = gameState.openBets.contains { normalizeBetUser($0.user) == me }
+                || gameState.queuedBets.contains { normalizeBetUser($0.user) == me }
+            if alreadyBet { return }
+        }
+
+        lastAutoBetRoundId = roundId
+        Task {
+            await placeBet(amountText: last.amountText, cashout: last.cashout)
+        }
+    }
+
+    private func evaluateNearMiss(_ s: CrashGameState) {
+        guard let result = s.lastResult else { return }
+        let userId = resolvedBetUserId()
+        guard !userId.isEmpty else { return }
+
+        let summary = RoundResultSummary(from: result)
+        guard let outcome = summary.personalOutcome(for: userId),
+              let target = outcome.cashout, target > 1.05 else { return }
+
+        let key = userId
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "@", with: "")
+            .lowercased()
+        guard summary.losses.contains(where: {
+            $0.user.trimmingCharacters(in: .whitespacesAndNewlines)
+                .replacingOccurrences(of: "@", with: "")
+                .lowercased() == key
+        }) else { return }
+
+        let crash = summary.crashPoint
+        guard crash < target else { return }
+
+        let gap = target - crash
+        guard gap > 0, gap <= 0.15 else { return }
+
+        nearMissMessage = String(
+            format: "Crashed at %.2f× — your %.2f× target missed by %.2f",
+            crash, target, gap
+        )
     }
 
     private func updateRoundResultPopup(_ s: CrashGameState) {

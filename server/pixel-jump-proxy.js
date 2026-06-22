@@ -1,6 +1,7 @@
 /**
- * Reverse-proxy Retro Pixel Jump (FastAPI) through the NFG platform port.
- * Public: https://y666suf.com/api/pixel-jump/*  →  local uvicorn on PIXEL_JUMP_PORT (8001).
+ * Reverse-proxy Retro Pixel Jump (Python/FastAPI) through the NFG platform port.
+ * Public: https://y666suf.com/api/pixel-jump/*  →  local API on PIXEL_JUMP_PORT (8001).
+ * WebSocket: wss://y666suf.com/api/ws/mp/*     →  ws://127.0.0.1:8001/api/ws/mp/*
  */
 const http = require("http");
 const https = require("https");
@@ -11,48 +12,14 @@ const PIXEL_JUMP_BACKEND_URL = String(
   process.env.PIXEL_JUMP_BACKEND_URL || "http://127.0.0.1:8001"
 ).replace(/\/$/, "");
 
-const PUBLIC_PREFIX = "/api/pixel-jump";
+const PIXEL_JUMP_WS_BASE = PIXEL_JUMP_BACKEND_URL.replace(/^http/i, "ws");
 
-function rewritePixelJumpPath(urlPath) {
-  let path = String(urlPath || "/");
-  if (path.startsWith(PUBLIC_PREFIX)) {
-    path = path.slice(PUBLIC_PREFIX.length) || "/";
-  }
-  if (path.startsWith("/api/")) return path;
-  if (path === "/") return "/api/";
-  return `/api${path.startsWith("/") ? path : `/${path}`}`;
-}
-
-function pixelJumpTargetUrl(req) {
-  const orig = req.originalUrl || req.url || "/";
-  const qIndex = orig.indexOf("?");
-  const pathOnly = qIndex >= 0 ? orig.slice(0, qIndex) : orig;
-  const query = qIndex >= 0 ? orig.slice(qIndex) : "";
-  const backendPath = rewritePixelJumpPath(pathOnly);
-  return new URL(`${backendPath}${query}`, PIXEL_JUMP_BACKEND_URL);
-}
-
-function pixelJumpWsTarget(request) {
-  let pathname = "/";
-  let search = "";
-  try {
-    const parsed = new URL(request.url || "/", "http://localhost");
-    pathname = parsed.pathname;
-    search = parsed.search || "";
-  } catch {
-    const raw = String(request.url || "/");
-    pathname = raw.split("?")[0] || "/";
-    search = raw.includes("?") ? `?${raw.split("?").slice(1).join("?")}` : "";
-  }
-  const backendPath = rewritePixelJumpPath(pathname);
-  const wsBase = PIXEL_JUMP_BACKEND_URL.replace(/^http/i, "ws");
-  return `${wsBase}${backendPath}${search}`;
-}
+const pixelJumpWss = new WebSocket.Server({ noServer: true });
 
 function proxyHttpRequest(req, res) {
   let targetUrl;
   try {
-    targetUrl = pixelJumpTargetUrl(req);
+    targetUrl = new URL(req.originalUrl || req.url, PIXEL_JUMP_BACKEND_URL);
   } catch (e) {
     return res.status(502).json({ ok: false, error: "pixel_jump_proxy_bad_url", message: e.message });
   }
@@ -61,17 +28,17 @@ function proxyHttpRequest(req, res) {
   const headers = { ...req.headers, host: targetUrl.host };
   delete headers.connection;
 
+  const method = String(req.method || "GET").toUpperCase();
   const hasParsedBody =
-    req.body !== undefined &&
-    req.body !== null &&
-    ["POST", "PUT", "PATCH", "DELETE"].includes(String(req.method || "").toUpperCase());
-
-  let bodyData = null;
+    req.body != null &&
+    typeof req.body === "object" &&
+    !Buffer.isBuffer(req.body) &&
+    ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+  let bodyBuffer = null;
   if (hasParsedBody) {
-    bodyData = Buffer.isBuffer(req.body)
-      ? req.body
-      : Buffer.from(typeof req.body === "string" ? req.body : JSON.stringify(req.body), "utf8");
-    headers["content-length"] = String(bodyData.length);
+    bodyBuffer = Buffer.from(JSON.stringify(req.body), "utf8");
+    headers["content-type"] = headers["content-type"] || "application/json";
+    headers["content-length"] = String(bodyBuffer.length);
   }
 
   const proxyReq = lib.request(
@@ -93,23 +60,23 @@ function proxyHttpRequest(req, res) {
         error: "pixel_jump_unreachable",
         message: err.message,
         backend: PIXEL_JUMP_BACKEND_URL,
+        hint: "Start Pixel Jump API on port 8001 (docker compose or uvicorn).",
       });
     } else {
       res.end();
     }
   });
 
-  if (bodyData) {
-    proxyReq.write(bodyData);
+  if (bodyBuffer) {
+    proxyReq.write(bodyBuffer);
     proxyReq.end();
-    return;
+  } else {
+    req.pipe(proxyReq);
   }
-
-  req.pipe(proxyReq);
 }
 
 function registerPixelJumpHttpProxy(app) {
-  app.use(PUBLIC_PREFIX, (req, res, next) => {
+  app.use("/api/pixel-jump", (req, res, next) => {
     if (req.method === "OPTIONS") return next();
     proxyHttpRequest(req, res);
   });
@@ -123,65 +90,100 @@ function tryPixelJumpUpgrade(request, socket, head) {
     pathname = String(request.url || "/").split("?")[0] || "/";
   }
 
-  if (!pathname.startsWith(`${PUBLIC_PREFIX}/ws/`) && !pathname.startsWith(`${PUBLIC_PREFIX}/api/ws/`)) {
-    return false;
-  }
+  if (!pathname.startsWith("/api/ws/mp/")) return false;
 
-  const pixelWss = new WebSocket.Server({ noServer: true });
-  pixelWss.handleUpgrade(request, socket, head, (clientWs) => {
-    const upstream = new WebSocket(pixelJumpWsTarget(request));
+  const upstreamUrl = `${PIXEL_JUMP_WS_BASE}${request.url || pathname}`;
+  pixelJumpWss.handleUpgrade(request, socket, head, (ws) => {
+    const upstream = new WebSocket(upstreamUrl);
     let clientOpen = true;
-    let upstreamOpen = false;
-
-    const closeBoth = () => {
-      try {
-        if (clientWs.readyState === WebSocket.OPEN) clientWs.close();
-      } catch {
-        /* ignore */
-      }
-      try {
-        if (upstream.readyState === WebSocket.OPEN) upstream.close();
-      } catch {
-        /* ignore */
-      }
-    };
 
     upstream.on("open", () => {
-      upstreamOpen = true;
-      clientWs.on("message", (data) => {
+      ws.on("message", (data) => {
         if (upstream.readyState === WebSocket.OPEN) upstream.send(data);
       });
       upstream.on("message", (data) => {
-        if (clientWs.readyState === WebSocket.OPEN) clientWs.send(data);
+        if (ws.readyState === WebSocket.OPEN) ws.send(data);
       });
     });
 
     upstream.on("error", () => {
-      if (clientOpen && clientWs.readyState === WebSocket.OPEN) {
+      if (clientOpen && ws.readyState === WebSocket.OPEN) {
         try {
-          clientWs.close(1011, "pixel jump upstream error");
+          ws.close(1011, "pixel jump upstream error");
         } catch {
           /* ignore */
         }
       }
     });
 
-    clientWs.on("error", closeBoth);
-    clientWs.on("close", () => {
+    ws.on("error", () => {
+      try {
+        upstream.close();
+      } catch {
+        /* ignore */
+      }
+    });
+    ws.on("close", () => {
       clientOpen = false;
-      if (upstreamOpen) upstream.close();
+      try {
+        upstream.close();
+      } catch {
+        /* ignore */
+      }
     });
     upstream.on("close", () => {
-      if (clientOpen && clientWs.readyState === WebSocket.OPEN) clientWs.close();
+      if (clientOpen && ws.readyState === WebSocket.OPEN) ws.close();
     });
   });
-
   return true;
+}
+
+function pixelJumpHealthUrl() {
+  return `${PIXEL_JUMP_BACKEND_URL}/api/`;
+}
+
+function waitForPixelJump(timeoutMs = 45000) {
+  const start = Date.now();
+  return new Promise((resolve, reject) => {
+    function tick() {
+      const req = http.get(pixelJumpHealthUrl(), (res) => {
+        let body = "";
+        res.on("data", (c) => {
+          body += c;
+        });
+        res.on("end", () => {
+          if (res.statusCode >= 200 && res.statusCode < 400) {
+            try {
+              const json = JSON.parse(body);
+              if (json && json.app === "retro-pixel-jump") return resolve(true);
+            } catch {
+              /* fall through */
+            }
+          }
+          if (Date.now() - start > timeoutMs) return reject(new Error("Pixel Jump health check timeout"));
+          setTimeout(tick, 400);
+        });
+      });
+      req.on("error", () => {
+        if (Date.now() - start > timeoutMs) {
+          return reject(new Error("Timed out waiting for Pixel Jump API"));
+        }
+        setTimeout(tick, 400);
+      });
+      req.setTimeout(2000, () => {
+        req.destroy();
+        if (Date.now() - start > timeoutMs) return reject(new Error("Pixel Jump health check timeout"));
+        setTimeout(tick, 400);
+      });
+    }
+    tick();
+  });
 }
 
 module.exports = {
   PIXEL_JUMP_BACKEND_URL,
-  PUBLIC_PREFIX,
   registerPixelJumpHttpProxy,
   tryPixelJumpUpgrade,
+  pixelJumpHealthUrl,
+  waitForPixelJump,
 };

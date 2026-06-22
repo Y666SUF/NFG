@@ -4,23 +4,22 @@ struct RoundResultPopupView: View {
     let result: RoundResultSummary
     let onDismiss: () -> Void
 
+    @State private var heroScale: CGFloat = 0.88
+    @State private var heroOpacity: Double = 0
+
+    private var personal: RoundOutcome? {
+        result.personalOutcome(for: AuthStore.verifiedUserId)
+    }
+
+    private var personalWin: Bool { personal?.isWin == true }
+    private var personalLoss: Bool { personal != nil && personal?.isWin != true }
+
     var body: some View {
         ZStack {
-            // Backdrop with subtle radial flash
-            ZStack {
-                Color.black.opacity(0.78)
-                    .ignoresSafeArea()
-                RadialGradient(
-                    colors: [NFGTheme.danger.opacity(0.25), .clear],
-                    center: .top,
-                    startRadius: 0,
-                    endRadius: 380
-                )
-                .ignoresSafeArea()
-            }
-            .onTapGesture { onDismiss() }
+            backdrop
 
             VStack(spacing: 0) {
+                personalHero
                 header
                 ScrollView {
                     VStack(alignment: .leading, spacing: NFGSpacing.lg) {
@@ -44,7 +43,7 @@ struct RoundResultPopupView: View {
                     .padding(.horizontal, NFGSpacing.lg)
                     .padding(.vertical, NFGSpacing.md)
                 }
-                .frame(maxHeight: 380)
+                .frame(maxHeight: 320)
 
                 Button(action: onDismiss) {
                     Text("CONTINUE")
@@ -63,7 +62,91 @@ struct RoundResultPopupView: View {
             )
             .padding(.horizontal, NFGSpacing.xl)
             .shadow(color: .black.opacity(0.55), radius: 30, y: 12)
-            .shadow(color: NFGTheme.danger.opacity(0.15), radius: 24)
+            .shadow(color: accentGlow.opacity(0.2), radius: 24)
+            .scaleEffect(heroScale)
+            .opacity(heroOpacity)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.42, dampingFraction: 0.78)) {
+                heroScale = 1
+                heroOpacity = 1
+            }
+            if personalWin {
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+            } else if personalLoss {
+                UINotificationFeedbackGenerator().notificationOccurred(.warning)
+            } else {
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            }
+        }
+    }
+
+    private var accentGlow: Color {
+        if personalWin { return NFGTheme.accent2 }
+        if personalLoss { return NFGTheme.danger }
+        return NFGTheme.danger
+    }
+
+    private var backdrop: some View {
+        ZStack {
+            Color.black.opacity(0.78)
+                .ignoresSafeArea()
+            RadialGradient(
+                colors: [accentGlow.opacity(0.28), .clear],
+                center: .top,
+                startRadius: 0,
+                endRadius: 380
+            )
+            .ignoresSafeArea()
+        }
+        .onTapGesture { onDismiss() }
+    }
+
+    @ViewBuilder
+    private var personalHero: some View {
+        if let personal {
+            VStack(spacing: 8) {
+                Image(systemName: personalWin ? "checkmark.seal.fill" : "xmark.octagon.fill")
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundStyle(personalWin ? NFGTheme.accent2 : NFGTheme.danger)
+                    .symbolEffect(.bounce, value: heroOpacity)
+
+                if personalWin, let payout = personal.payout ?? personal.grossPayout {
+                    Text("You cashed out!")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(NFGTheme.muted)
+                    Text("+\(formatPoints(payout)) pts")
+                        .font(NFGFont.numeric(32, weight: .black))
+                        .foregroundStyle(NFGTheme.accent2)
+                        .contentTransition(.numericText())
+                    if let bet = personal.bet, let target = personal.cashout {
+                        Text("Bet \(formatPoints(bet)) @ \(String(format: "%.2f", target))×")
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(NFGTheme.muted)
+                    }
+                } else {
+                    Text("You busted")
+                        .font(.system(size: 15, weight: .heavy, design: .rounded))
+                        .foregroundStyle(NFGTheme.danger)
+                    if let bet = personal.bet {
+                        Text("Lost \(formatPoints(bet)) pts")
+                            .font(.system(size: 13, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(NFGTheme.muted)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, NFGSpacing.md)
+            .background(
+                LinearGradient(
+                    colors: [
+                        personalWin ? NFGTheme.accent2.opacity(0.12) : NFGTheme.danger.opacity(0.12),
+                        NFGTheme.panel2.opacity(0.4),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
         }
     }
 
@@ -97,7 +180,7 @@ struct RoundResultPopupView: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, NFGSpacing.lg)
+        .padding(.vertical, personal == nil ? NFGSpacing.lg : NFGSpacing.sm)
         .background(
             LinearGradient(
                 colors: [NFGTheme.panel2, NFGTheme.panel],
@@ -138,17 +221,29 @@ struct RoundResultPopupView: View {
         }
     }
 
+    @ViewBuilder
     private func outcomeRow(_ row: RoundOutcome, accent: Color) -> some View {
+        let isYou = row.user.lowercased() == AuthStore.verifiedUserId.lowercased()
         HStack(alignment: .top, spacing: 10) {
             Circle()
                 .fill(accent.opacity(0.85))
                 .frame(width: 6, height: 6)
                 .padding(.top, 6)
             VStack(alignment: .leading, spacing: 2) {
-                Text(row.resolvedName)
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(NFGTheme.text)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(row.resolvedName)
+                        .font(.system(size: 13, weight: .bold, design: .rounded))
+                        .foregroundStyle(NFGTheme.text)
+                        .lineLimit(1)
+                    if isYou {
+                        Text("YOU")
+                            .font(.system(size: 9, weight: .black, design: .rounded))
+                            .foregroundStyle(NFGTheme.gold)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(NFGTheme.gold.opacity(0.2)))
+                    }
+                }
                 if let bet = row.bet, let target = row.cashout {
                     Text("Bet \(formatPoints(bet)) @ \(String(format: "%.2f", target))×")
                         .font(.system(size: 11, design: .monospaced))
@@ -172,11 +267,11 @@ struct RoundResultPopupView: View {
         .padding(NFGSpacing.sm + 2)
         .background(
             RoundedRectangle(cornerRadius: NFGRadius.md)
-                .fill(accent.opacity(0.07))
+                .fill(isYou ? accent.opacity(0.14) : accent.opacity(0.07))
         )
         .overlay(
             RoundedRectangle(cornerRadius: NFGRadius.md)
-                .stroke(accent.opacity(0.28), lineWidth: 1)
+                .stroke(isYou ? accent.opacity(0.45) : accent.opacity(0.28), lineWidth: 1)
         )
     }
 

@@ -405,6 +405,8 @@ struct VaultWheelGameView: View {
     let suggestedStake: Int
     let balance: Int
     var playVisual: ArcadePlayVisual?
+    var inPlaySession: Bool = false
+    var lockedStake: Int?
     /// Server spin first; returns segment index, label, multiplier, and whether it was a winning segment.
     var onSpin: () async -> (index: Int, label: String, mult: Double, won: Bool)
 
@@ -415,14 +417,34 @@ struct VaultWheelGameView: View {
     @State private var outcomeGen = 0
     @State private var landedSegmentLabel: String?
     @State private var landedSegmentMult: Double?
+    @State private var highlightedIndex: Int? = nil
+    @State private var landedIndex: Int? = nil
 
     private var wheelSegments: [VaultStreakWheelSegment] {
         ArcadeWheelLayout.vaultStreakSegments()
     }
 
     var body: some View {
-        ArcadeStageCard(gameId: "nfg_wheel", icon: "🎡", title: "Vault Wheel", subtitle: "Spin your stake — LOSE is on the wheel") {
-            VStack(spacing: 16) {
+        Group {
+            if inPlaySession {
+                wheelPlayContent(showLegend: false)
+            } else {
+                ArcadeStageCard(gameId: "nfg_wheel", icon: "🎡", title: "Vault Wheel", subtitle: "Set stake in lobby · open game to spin") {
+                    EmptyView()
+                }
+            }
+        }
+    }
+
+    private var effectiveStake: Int { lockedStake ?? stake }
+
+    @ViewBuilder
+    private func wheelPlayContent(showLegend: Bool) -> some View {
+        VStack(spacing: 16) {
+            if inPlaySession, let lockedStake {
+                ArcadeLockedStakeChip(stake: lockedStake)
+            }
+            if !inPlaySession {
                 ArcadeHowToPlayCard(gameId: "nfg_wheel")
                 ArcadeStakeControl(
                     stake: $stake,
@@ -434,36 +456,43 @@ struct VaultWheelGameView: View {
                     payoutLabel: "Jackpot up to",
                     disabled: busy || spinning
                 )
+            }
 
-                ZStack {
-                    if winFlash {
-                        Circle()
-                            .stroke(NFGTheme.gold, lineWidth: 3)
-                            .frame(width: 280, height: 280)
-                            .blur(radius: 2)
-                            .opacity(0.8)
-                    }
-                    VaultStreakWheelView(rotation: rotation, segments: wheelSegments, size: 290)
-
-                    if let landedSegmentLabel, let landedSegmentMult {
-                        VStack(spacing: 2) {
-                            Text("Landed: \(landedSegmentLabel)")
-                                .font(.system(size: 11, weight: .heavy))
-                                .foregroundStyle(NFGTheme.gold)
-                            Text(landedSegmentMult == 0 ? "No payout" : "×\(String(format: "%.1f", landedSegmentMult))")
-                                .font(.system(size: 10, weight: .semibold))
-                                .foregroundStyle(NFGTheme.text)
-                        }
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
-                        .background(.black.opacity(0.65))
-                        .clipShape(Capsule())
-                        .offset(y: 118)
-                    }
+            ZStack {
+                if winFlash {
+                    Circle()
+                        .stroke(NFGTheme.gold, lineWidth: 3)
+                        .frame(width: inPlaySession ? 260 : 280, height: inPlaySession ? 260 : 280)
+                        .blur(radius: 2)
+                        .opacity(0.8)
                 }
+                VaultStreakWheelView(
+                    segments: wheelSegments,
+                    highlightedIndex: highlightedIndex,
+                    landedIndex: landedIndex,
+                    size: inPlaySession ? 260 : 290
+                )
 
-                ArcadeDelayedOutcomeStrip(visual: playVisual, show: showOutcome)
+                if let landedSegmentLabel, let landedSegmentMult {
+                    VStack(spacing: 2) {
+                        Text("Landed: \(landedSegmentLabel)")
+                            .font(.system(size: 11, weight: .heavy))
+                            .foregroundStyle(NFGTheme.gold)
+                        Text(landedSegmentMult == 0 ? "No payout" : "×\(String(format: "%.1f", landedSegmentMult))")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(NFGTheme.text)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(.black.opacity(0.65))
+                    .clipShape(Capsule())
+                    .offset(y: inPlaySession ? 108 : 118)
+                }
+            }
 
+            ArcadeDelayedOutcomeStrip(visual: playVisual, show: showOutcome)
+
+            if showLegend {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("What each color does")
                         .font(.system(size: 11, weight: .bold))
@@ -490,7 +519,7 @@ struct VaultWheelGameView: View {
                                 .font(.system(size: 9, weight: .bold))
                                 .foregroundStyle(seg.mult >= 3 ? NFGTheme.danger.opacity(0.9) : NFGTheme.muted)
                             Spacer(minLength: 8)
-                            Text(payoutExplanation(for: seg, stake: stake))
+                            Text(payoutExplanation(for: seg, stake: effectiveStake))
                                 .font(.system(size: 11, weight: .medium))
                                 .foregroundStyle(NFGTheme.muted)
                         }
@@ -504,61 +533,78 @@ struct VaultWheelGameView: View {
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(NFGTheme.muted)
                     .multilineTextAlignment(.center)
-
-                ArcadePrimaryButton(
-                    title: spinning
-                        ? "Spinning…"
-                        : arcadeCooldownTitle("Spin (\(stake.formatted()) pts)", cooldownSecondsLeft: cooldownSecondsLeft),
-                    icon: "arrow.triangle.2.circlepath",
-                    tint: .pink,
-                    disabled: arcadeStakeBlocked(
-                        busy: busy,
-                        cooldownSecondsLeft: cooldownSecondsLeft,
-                        balance: balance,
-                        stake: stake,
-                        minStake: minStake,
-                        extra: spinning
-                    )
-                ) {
-                    guard !spinning else { return }
-                    spinning = true
-                    winFlash = false
-                    landedSegmentLabel = nil
-                    landedSegmentMult = nil
-                    Task {
-                        outcomeGen = ArcadePlayReveal.schedule(gameId: "nfg_wheel", generation: outcomeGen, hide: {
-                            showOutcome = false
-                        }, show: { token in
-                            guard token == outcomeGen else { return }
-                            showOutcome = true
-                        })
-                        let spin = await onSpin()
-                        landedSegmentLabel = spin.label
-                        landedSegmentMult = spin.mult
-                        let extra = Double.random(in: 4...6)
-                        let targetRotation = ArcadeWheelLayout.rotationToLand(
-                            segmentIndex: spin.index,
-                            currentRotation: rotation,
-                            extraFullSpins: extra
-                        )
-                        withAnimation(.timingCurve(0.12, 0.85, 0.2, 1, duration: 3.0)) {
-                            rotation = targetRotation
-                        }
-                        try? await Task.sleep(nanoseconds: 3_100_000_000)
-                        if spin.won {
-                            withAnimation(.easeOut(duration: 0.35)) { winFlash = true }
-                        }
-                        spinning = false
-                    }
-                }
             }
+
+            spinButton
+        }
+    }
+
+    private var spinButton: some View {
+        ArcadePrimaryButton(
+            title: spinning
+                ? "Spinning…"
+                : arcadeCooldownTitle("Spin (\(effectiveStake.formatted()) pts)", cooldownSecondsLeft: cooldownSecondsLeft),
+            icon: "arrow.triangle.2.circlepath",
+            tint: .pink,
+            disabled: arcadeStakeBlocked(
+                busy: busy,
+                cooldownSecondsLeft: cooldownSecondsLeft,
+                balance: balance,
+                stake: effectiveStake,
+                minStake: minStake,
+                extra: spinning
+            )
+        ) {
+            guard !spinning else { return }
+            spinning = true
+            winFlash = false
+            landedSegmentLabel = nil
+            landedSegmentMult = nil
+            landedIndex = nil
+            highlightedIndex = nil
+            Task {
+                outcomeGen = ArcadePlayReveal.schedule(gameId: "nfg_wheel", generation: outcomeGen, hide: {
+                    showOutcome = false
+                }, show: { token in
+                    guard token == outcomeGen else { return }
+                    showOutcome = true
+                })
+                let spin = await onSpin()
+                landedSegmentLabel = spin.label
+                landedSegmentMult = spin.mult
+
+                let count = wheelSegments.count
+                var idx = Int.random(in: 0..<count)
+                highlightedIndex = idx
+                let totalSteps = Int.random(in: 26...38) + spin.index
+                for step in 0..<totalSteps {
+                    let progress = Double(step) / Double(max(1, totalSteps - 1))
+                    let delay = 0.045 + progress * progress * 0.22
+                    idx = (idx + 1) % count
+                    highlightedIndex = idx
+                    try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+                }
+                highlightedIndex = spin.index
+                landedIndex = spin.index
+                try? await Task.sleep(nanoseconds: 450_000_000)
+                if spin.won {
+                    withAnimation(.easeOut(duration: 0.35)) { winFlash = true }
+                }
+                spinning = false
+            }
+        }
+    }
+
+    // Legacy inline layout kept for reference — use lobby + inPlaySession instead.
+    private var legacyWheelCard: some View {
+        ArcadeStageCard(gameId: "nfg_wheel", icon: "🎡", title: "Vault Wheel", subtitle: "Spin your stake — LOSE is on the wheel") {
+            wheelPlayContent(showLegend: true)
         }
     }
 
     private func wheelChance(for seg: VaultStreakWheelSegment) -> String {
         switch seg.mult {
         case 0: return "56%"
-        case 0.5: return "26%"
         case 1.5: return "11%"
         case 2: return "5%"
         case 3: return "1.5%"
@@ -570,7 +616,6 @@ struct VaultWheelGameView: View {
     private func payoutExplanation(for seg: VaultStreakWheelSegment, stake: Int) -> String {
         let pay = Int(Double(stake) * seg.mult * 0.96)
         if seg.mult == 0 { return "lose \(stake.formatted()) pts" }
-        if seg.mult == 0.5 { return "get \(pay.formatted()) pts back" }
         return "pays \(pay.formatted()) pts"
     }
 }

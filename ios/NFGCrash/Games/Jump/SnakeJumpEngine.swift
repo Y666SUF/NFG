@@ -10,6 +10,7 @@ struct JumpPlatform: Identifiable {
     var moveSpan: Double
     var moveSpeed: Double
     var crumbleUsed: Bool
+    var crumbleBreakAt: Double? = nil
     var headFacesRight: Bool
 
     func centerX(at time: Double) -> Double {
@@ -44,6 +45,9 @@ final class SnakeJumpEngine {
     static let worldBufferAbove: Double = 10000
     static let maxPlatformCount: Int = 14
     static let materializeAhead: Double = 580
+    /// Player screen anchor — 45% from top minus offset (matches fixed draw position).
+    static let cameraPlayerScreenRatio: Double = 0.55
+    static let physicsSubsteps: Int = 3
 
     var playerX: Double = 0
     var playerY: Double = 120
@@ -65,6 +69,8 @@ final class SnakeJumpEngine {
     var lastViewWidth: Double = 320
 
     private var rng: () -> Double = { Double.random(in: 0..<1) }
+    private var fingerTargetX: Double?
+    private(set) var fingerScreenX: Double?
 
     init() {
         reset(viewWidth: 320)
@@ -90,6 +96,8 @@ final class SnakeJumpEngine {
         boostLiftRemaining = 0
         platforms = []
         powerUps = []
+        fingerTargetX = nil
+        fingerScreenX = nil
         maxHeight = 0
         milestonesClaimed = 0
         alive = true
@@ -113,7 +121,7 @@ final class SnakeJumpEngine {
     }
 
     func paceMultiplier(tier: Int) -> Double {
-        1 + Double(min(28, tier)) * 0.075
+        1 + Double(min(18, tier)) * 0.045
     }
 
     var nextMilestoneHeight: Int {
@@ -126,9 +134,7 @@ final class SnakeJumpEngine {
 
     func tick(
         dt: Double,
-        steer: Double = 0,
-        moveLeft: Bool = false,
-        moveRight: Bool = false,
+        steeringActive: Bool = false,
         viewWidth: Double,
         viewHeight: Double
     ) {
@@ -143,32 +149,42 @@ final class SnakeJumpEngine {
         let gravity = Self.baseGravity + Double(tier) * 14
         let jumpVelocity = Self.baseJumpVelocity + Double(min(16, tier)) * 10
 
-        applyHorizontalInput(steer: steer, dt: simStep, moveLeft: moveLeft, moveRight: moveRight)
-
-        if boostLiftRemaining > 0 {
-            velocityY = max(velocityY, Self.boostImpulseVelocity * pace)
-            let uplift = max(0, velocityY * simStep)
-            boostLiftRemaining = max(0, boostLiftRemaining - uplift)
+        if steeringActive {
+            syncPlayerToFinger()
         }
 
-        velocityY -= gravity * simStep
-        playerX += velocityX * simStep
-        playerY += velocityY * simStep
-
-        let margin: Double = 28
-        let halfW = max(80, viewWidth * 0.5 - margin)
+        let halfW = playableHalfWidth(viewWidth: viewWidth)
         playerX = min(halfW, max(-halfW, playerX))
 
-        tryLand(jumpVelocity: jumpVelocity)
+        let subDt = simStep / Double(Self.physicsSubsteps)
+        for _ in 0..<Self.physicsSubsteps {
+            if boostLiftRemaining > 0 {
+                velocityY = max(velocityY, Self.boostImpulseVelocity * pace)
+                let uplift = max(0, velocityY * subDt)
+                boostLiftRemaining = max(0, boostLiftRemaining - uplift)
+            }
+
+            velocityY -= gravity * subDt
+            playerY += velocityY * subDt
+
+            if steeringActive {
+                syncPlayerToFinger()
+                playerX = min(halfW, max(-halfW, playerX))
+            }
+
+            tryLand(jumpVelocity: jumpVelocity)
+        }
+
         collectPowerUps()
 
         if currentHeight > maxHeight { maxHeight = currentHeight }
 
-        let targetCam = playerY - viewHeight * 0.55
+        let targetCam = playerY - viewHeight * Self.cameraPlayerScreenRatio
         if cameraAnchorY == 0, viewHeight > 0 {
             cameraAnchorY = targetCam
-        } else {
-            cameraAnchorY = max(cameraAnchorY, targetCam)
+        } else if targetCam > cameraAnchorY {
+            let blend = min(1.0, step * 14.0)
+            cameraAnchorY += (targetCam - cameraAnchorY) * blend
         }
 
         trimPlatforms(belowY: cameraAnchorY - 60)
@@ -176,6 +192,7 @@ final class SnakeJumpEngine {
         let playTop = playerY + min(Self.materializeAhead, max(480, viewHeight * 0.9))
         spawnUpTo(targetY: playTop, viewWidth: viewWidth, maxSteps: 1)
         capPlatformCount()
+        purgeBrokenCrumblePlatforms()
 
         let screenY = viewHeight - (playerY - cameraAnchorY)
         if screenY >= viewHeight - Self.playerRadius - 10 {
@@ -184,17 +201,35 @@ final class SnakeJumpEngine {
         }
     }
 
-    private func applyHorizontalInput(steer: Double, dt: Double, moveLeft: Bool, moveRight: Bool) {
-        var targetVX: Double = 0
-        if moveLeft || steer < -0.12 {
-            targetVX = -Self.horizontalSpeed
-        } else if moveRight || steer > 0.12 {
-            targetVX = Self.horizontalSpeed
-        } else if abs(steer) > 0.08 {
-            targetVX = steer * Self.horizontalSpeed
-        }
-        let blend = min(1, max(dt, 1 / 120) * 16)
-        velocityX += (targetVX - velocityX) * blend
+    func setFingerTarget(screenX: Double, viewWidth: Double) {
+        let w = max(280, viewWidth)
+        lastViewWidth = w
+        let scale = screenScale(viewWidth: w)
+        let halfW = max(60, (w * 0.5 - Self.playerRadius) / scale)
+        let maxScreenX = halfW * scale + w * 0.5
+        let minScreenX = w * 0.5 - halfW * scale
+        let clampedScreen = min(maxScreenX, max(minScreenX, screenX))
+        fingerScreenX = clampedScreen
+        fingerTargetX = (clampedScreen - w * 0.5) / scale
+        syncPlayerToFinger()
+    }
+
+    func clearFingerTarget() {
+        fingerTargetX = nil
+        fingerScreenX = nil
+    }
+
+    /// Lock player world X to finger — TikTok emoji-jump style (no lag / no skip).
+    func syncPlayerToFinger() {
+        guard let target = fingerTargetX else { return }
+        let halfW = playableHalfWidth(viewWidth: lastViewWidth)
+        playerX = min(halfW, max(-halfW, target))
+        velocityX = 0
+    }
+
+    /// Legacy alias — sets follow target, does not snap position.
+    func applyFingerScreenX(_ screenX: Double, viewWidth: Double) {
+        setFingerTarget(screenX: screenX, viewWidth: viewWidth)
     }
 
     private func tryLand(jumpVelocity: Double) {
@@ -226,6 +261,7 @@ final class SnakeJumpEngine {
         if plat.kind == "crumble" {
             if plat.crumbleUsed { return }
             plat.crumbleUsed = true
+            plat.crumbleBreakAt = elapsed + 0.22
             platforms[idx] = plat
         }
         playerY = plat.y + Self.playerRadius
@@ -249,8 +285,27 @@ final class SnakeJumpEngine {
         }
     }
 
+    func screenScale(viewWidth: Double) -> Double {
+        1.0
+    }
+
     func playableHalfWidth(viewWidth: Double) -> Double {
-        max(90, viewWidth * 0.42)
+        let w = max(280, viewWidth)
+        let scale = screenScale(viewWidth: w)
+        // Match screen edges so finger X maps 1:1 to player screen X.
+        return max(60, (w * 0.5 - Self.playerRadius) / scale)
+    }
+
+    func worldX(fromScreenX screenX: Double, viewWidth: Double) -> Double {
+        let w = max(viewWidth, 280)
+        lastViewWidth = w
+        let scale = screenScale(viewWidth: w)
+        return (screenX - w * 0.5) / scale
+    }
+
+    func screenX(fromWorldX worldX: Double, viewWidth: Double) -> Double {
+        let w = max(viewWidth, 280)
+        return worldX * screenScale(viewWidth: w) + w * 0.5
     }
 
     func horizontalReach(tier: Int, early: Bool) -> Double {
@@ -321,14 +376,14 @@ final class SnakeJumpEngine {
         appendPlatform(kind: primaryKind, x: anchor, y: y, width: primaryWidth, moveSpan: moveSpan, moveSpeed: moveSpeed, phase: phase, headFacesRight: headRight)
         lastSafeX = anchor
         lastSafeY = y
+        let crumbleChance = early ? 0.12 : min(0.38, 0.08 + Double(climbTier) * 0.02)
+        if platforms.count < Self.maxPlatformCount - 2, rng() < crumbleChance {
+            spawnOptionalCrumble(maxX: maxX, y: y + 16 + rng() * 10, tier: climbTier, hReach: hReach)
+        }
         if !early, platforms.count < Self.maxPlatformCount - 2 {
             let avoidLo = useMoving ? anchor - moveSpan - 24 : anchor - primaryWidth * 0.5 - 28
             let avoidHi = useMoving ? anchor + moveSpan + 24 : anchor + primaryWidth * 0.5 + 28
             spawnDecoys(maxX: maxX, y: y, tier: climbTier, avoidLo: avoidLo, avoidHi: avoidHi, hReach: hReach)
-            let crumbleChance = min(0.34, 0.06 + Double(climbTier) * 0.02)
-            if rng() < crumbleChance {
-                spawnOptionalCrumble(maxX: maxX, y: y + 16 + rng() * 10, tier: climbTier, hReach: hReach)
-            }
             if rng() < min(0.1, 0.04 + Double(climbTier) * 0.004) {
                 powerUps.append(
                     JumpPowerUp(
@@ -465,6 +520,13 @@ final class SnakeJumpEngine {
     private func trimPlatforms(belowY: Double) {
         platforms.removeAll { $0.y < belowY }
         powerUps.removeAll { $0.y < belowY - 60 }
+    }
+
+    private func purgeBrokenCrumblePlatforms() {
+        platforms.removeAll { plat in
+            guard plat.kind == "crumble", plat.crumbleUsed, let breakAt = plat.crumbleBreakAt else { return false }
+            return elapsed >= breakAt
+        }
     }
 
     private func capPlatformCount() {

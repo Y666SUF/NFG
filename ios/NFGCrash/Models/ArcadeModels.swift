@@ -528,6 +528,61 @@ struct ArcadeTowerState: Decodable, Hashable {
     }
 }
 
+struct VaultRunShipItem: Decodable, Identifiable, Hashable {
+    var id: String
+    var name: String
+    var cost: Int
+    var hull: String
+    var cockpit: String
+    var trail: String
+    var style: String
+    var desc: String?
+    var owned: Bool?
+    var equipped: Bool?
+
+    init(
+        id: String,
+        name: String,
+        cost: Int,
+        hull: String,
+        cockpit: String,
+        trail: String,
+        style: String,
+        desc: String? = nil,
+        owned: Bool? = nil,
+        equipped: Bool? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.cost = cost
+        self.hull = hull
+        self.cockpit = cockpit
+        self.trail = trail
+        self.style = style
+        self.desc = desc
+        self.owned = owned
+        self.equipped = equipped
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decodeIfPresent(String.self, forKey: .id) ?? ""
+        name = try c.decodeIfPresent(String.self, forKey: .name) ?? id
+        cost = c.flexInt(forKey: .cost) ?? 0
+        hull = try c.decodeIfPresent(String.self, forKey: .hull) ?? "#62b8f8"
+        cockpit = try c.decodeIfPresent(String.self, forKey: .cockpit) ?? "#35e0ff"
+        trail = try c.decodeIfPresent(String.self, forKey: .trail) ?? "#22d3ee"
+        style = try c.decodeIfPresent(String.self, forKey: .style) ?? "scout"
+        desc = try c.decodeIfPresent(String.self, forKey: .desc)
+        owned = c.flexBool(forKey: .owned)
+        equipped = c.flexBool(forKey: .equipped)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, name, cost, hull, cockpit, trail, style, desc, owned, equipped
+    }
+}
+
 struct ArcadePlayResponse: Decodable {
     var ok: Bool?
     var reason: String?
@@ -630,8 +685,16 @@ struct ArcadePlayResponse: Decodable {
     var skinFill: String?
     var skinRing: String?
     var sessionMilestones: Int?
+    var totalJumpEarned: Int?
     var vsMatchId: String?
     var vsDeferred: Bool?
+    var vaultShop: [VaultRunShipItem]?
+    var equippedVaultShip: String?
+    var ownedVaultShips: [String]?
+    var shipHull: String?
+    var shipCockpit: String?
+    var shipTrail: String?
+    var shipStyle: String?
 
     init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
@@ -745,8 +808,16 @@ struct ArcadePlayResponse: Decodable {
         skinRing = try c.decodeIfPresent(String.self, forKey: .skinRing)
         sessionMilestones = c.flexInt(forKey: .sessionMilestones)
         if sessionMilestones == nil { sessionMilestones = sessionLevels }
+        totalJumpEarned = c.flexInt(forKey: .totalJumpEarned)
         vsMatchId = try c.decodeIfPresent(String.self, forKey: .vsMatchId)
         vsDeferred = c.flexBool(forKey: .vsDeferred)
+        vaultShop = try? c.decode([VaultRunShipItem].self, forKey: .vaultShop)
+        equippedVaultShip = try c.decodeIfPresent(String.self, forKey: .equippedVaultShip)
+        ownedVaultShips = try c.decodeIfPresent([String].self, forKey: .ownedVaultShips)
+        shipHull = try c.decodeIfPresent(String.self, forKey: .shipHull)
+        shipCockpit = try c.decodeIfPresent(String.self, forKey: .shipCockpit)
+        shipTrail = try c.decodeIfPresent(String.self, forKey: .shipTrail)
+        shipStyle = try c.decodeIfPresent(String.self, forKey: .shipStyle)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -767,8 +838,10 @@ struct ArcadePlayResponse: Decodable {
         case cardRank, cardSuit, prevCardRank, prevCardSuit, nextCardRank, nextCardSuit
         case hiloCorrect, stepMultiplier, tower
         case sessionPoints, sessionLevels, linesTarget, levelRewardPreview, bestLevel
-        case jumpShop, equippedSkin, ownedSkins, skinFill, skinRing, sessionMilestones
+        case jumpShop, equippedSkin, ownedSkins, skinFill, skinRing, sessionMilestones, totalJumpEarned
         case vsMatchId, vsDeferred
+        case vaultShop, equippedVaultShip, ownedVaultShips
+        case shipHull, shipCockpit, shipTrail, shipStyle
     }
 }
 
@@ -912,23 +985,37 @@ private extension KeyedDecodingContainer {
 /// Bundled arcade catalog (same NFG points as Crash).
 enum ArcadeBundledCatalog {
     static let jumpGameId = "nfg_snake_jump"
+    static let rushGameId = "nfg_vault_run"
+
+    private static let skillGameIds: Set<String> = [jumpGameId, rushGameId, "nfg_blocks"]
 
     static let games: [ArcadeGameInfo] = [
-        ArcadeGameInfo(id: jumpGameId, title: "NFG Jump", subtitle: "Bounce higher — skill climber + VS", playsPerDay: 0, icon: "⬆️", playsLeft: nil, playsUsed: nil),
         ArcadeGameInfo(id: "nfg_dice", title: "Roll Line", subtitle: "Under or over 0–100", playsPerDay: 0, icon: "🎯", playsLeft: nil, playsUsed: nil),
         ArcadeGameInfo(id: "nfg_hilo", title: "Hi-Lo", subtitle: "Higher or lower cards", playsPerDay: 0, icon: "🃏", playsLeft: nil, playsUsed: nil),
         ArcadeGameInfo(id: "nfg_mines", title: "Mines", subtitle: "Gems vs mines", playsPerDay: 0, icon: "💣", playsLeft: nil, playsUsed: nil),
         ArcadeGameInfo(id: "nfg_plinko", title: "Plinko", subtitle: "Drop for a multiplier", playsPerDay: 0, icon: "⚪", playsLeft: nil, playsUsed: nil),
         ArcadeGameInfo(id: "nfg_wheel", title: "Wheel", subtitle: "Spin to win or lose", playsPerDay: 0, icon: "🎡", playsLeft: nil, playsUsed: nil),
-        ArcadeGameInfo(id: "nfg_tower", title: "Dragon Tower", subtitle: "RPG — battle & level up", playsPerDay: 0, icon: "🐉", playsLeft: nil, playsUsed: nil),
-        ArcadeGameInfo(id: "nfg_blocks", title: "NFG Blocks", subtitle: "Block puzzle — earn points", playsPerDay: 0, icon: "🧱", playsLeft: nil, playsUsed: nil),
+        ArcadeGameInfo(id: "nfg_blocks", title: "NFG Blocks", subtitle: "Block Blast puzzle — earn pts", playsPerDay: 0, icon: "🧱", playsLeft: nil, playsUsed: nil),
+        ArcadeGameInfo(id: jumpGameId, title: "NFG Jump", subtitle: "Bounce higher — skill climber + VS", playsPerDay: 0, icon: "⬆️", playsLeft: nil, playsUsed: nil),
+        ArcadeGameInfo(id: rushGameId, title: "NFG Rush", subtitle: "3-lane casino run — milestone pts", playsPerDay: 0, icon: "🏃", playsLeft: nil, playsUsed: nil),
     ]
+
+    /// Games removed from the client hub (server may still list them).
+    private static let hiddenGameIds: Set<String> = ["nfg_tower", "nfg_coinflip"]
+
+    /// Skill games (Blocks, Jump, Rush) pinned to the bottom of the hub grid.
+    static func hubDisplayOrder(_ games: [ArcadeGameInfo]) -> [ArcadeGameInfo] {
+        let visible = games.filter { !hiddenGameIds.contains($0.id) }
+        let regular = visible.filter { !skillGameIds.contains($0.id) }
+        let skillOrder = ["nfg_blocks", jumpGameId, rushGameId]
+        let skill = skillOrder.compactMap { id in visible.first(where: { $0.id == id }) }
+        return regular + skill
+    }
 
     /// Maps legacy server/catalog ids to the current client game id.
     static func normalizeGameId(_ id: String) -> String {
         switch id {
         case "nfg_limbo": return "nfg_hilo"
-        case "nfg_coinflip": return "nfg_tower"
         default: return id
         }
     }
@@ -944,18 +1031,12 @@ enum ArcadeBundledCatalog {
                     copy.icon = hilo.icon
                 }
             }
-            if g.id == "nfg_coinflip" {
-                if let tower = games.first(where: { $0.id == "nfg_tower" }) {
-                    copy.title = tower.title
-                    copy.subtitle = tower.subtitle
-                    copy.icon = tower.icon
-                }
-            }
             return copy
         }
-        if fromServer.isEmpty { return games }
+        let filtered = fromServer.filter { !hiddenGameIds.contains($0.id) }
+        if filtered.isEmpty { return games }
         return games.map { bundled in
-            var merged = fromServer.first(where: { $0.id == bundled.id }) ?? bundled
+            var merged = filtered.first(where: { $0.id == bundled.id }) ?? bundled
             merged.id = bundled.id
             merged.title = bundled.title
             merged.subtitle = bundled.subtitle

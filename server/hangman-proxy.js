@@ -28,8 +28,22 @@ function proxyHttpRequest(req, res) {
   }
 
   const lib = targetUrl.protocol === "https:" ? https : http;
+  const method = String(req.method || "GET").toUpperCase();
   const headers = { ...req.headers, host: targetUrl.host };
   delete headers.connection;
+
+  let bodyBuffer = null;
+  if (["POST", "PUT", "PATCH"].includes(method)) {
+    if (Buffer.isBuffer(req.body)) {
+      bodyBuffer = req.body;
+    } else if (req.body != null && typeof req.body === "object") {
+      bodyBuffer = Buffer.from(JSON.stringify(req.body), "utf8");
+      headers["content-type"] = headers["content-type"] || "application/json";
+    }
+  }
+  if (bodyBuffer) {
+    headers["content-length"] = String(bodyBuffer.length);
+  }
 
   const proxyReq = lib.request(
     targetUrl,
@@ -56,7 +70,11 @@ function proxyHttpRequest(req, res) {
     }
   });
 
-  req.pipe(proxyReq);
+  if (bodyBuffer) {
+    proxyReq.end(bodyBuffer);
+  } else {
+    req.pipe(proxyReq);
+  }
 }
 
 function registerHangmanHttpProxy(app) {
@@ -128,6 +146,7 @@ function attachHangmanWebSocketProxy(httpServer, crashWss, ctx = {}) {
       return;
     }
 
+    if (tryPixelJumpUpgrade(request, socket, head)) return;
     if (tryTowerWorldUpgrade(request, socket, head)) return;
     if (tryJumpVsUpgrade(request, socket, head, ctx)) return;
     if (tryPixelJumpUpgrade(request, socket, head)) return;

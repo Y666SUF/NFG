@@ -94,6 +94,7 @@ struct LeaderboardView: View {
                     isYou: isCurrentUser(row),
                     position: row.rankPosition ?? sync.fullBalances.firstIndex(where: { $0.id == row.id }).map { $0 + 1 }
                 )
+                .environmentObject(sync)
             }
         }
         .preferredColorScheme(.dark)
@@ -157,6 +158,7 @@ struct ShieldTimerBadge: View {
 
 struct LeaderboardPlayerDetailSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var sync: SyncClient
     let row: LeaderboardRow
     let isYou: Bool
     let position: Int?
@@ -164,6 +166,16 @@ struct LeaderboardPlayerDetailSheet: View {
     @State private var lookup: PlayerLookupResponse?
     @State private var isLoadingLookup = false
     @State private var lookupError: String?
+    @State private var showStealConfirm = false
+    @State private var isStealing = false
+
+    private var stealChargesAvailable: Int {
+        sync.wallet.inventory.stealCharges
+    }
+
+    private var canStealThisPlayer: Bool {
+        !isYou && stealChargesAvailable > 0 && row.balance > 0
+    }
 
     var body: some View {
         NavigationStack {
@@ -224,9 +236,21 @@ struct LeaderboardPlayerDetailSheet: View {
                     .clipShape(RoundedRectangle(cornerRadius: 14))
                     .overlay(RoundedRectangle(cornerRadius: 14).stroke(NFGTheme.border))
 
+                    if canStealThisPlayer {
+                        stealActionCard
+                    }
+
                     bettingStatsCard
-                    dragonTowerHeroCard
+                    powerupsStatusCard
                     shieldStatusCard
+                    jetLockStatusCard
+
+                    MobileGameHostAdminPanel(
+                        userId: row.resolvedUser,
+                        seed: AdminPlayerSeed.from(row: row, lookup: lookup)
+                    ) {
+                        Task { await sync.refreshLeaderboard() }
+                    }
                 }
                 .padding(20)
             }
@@ -247,6 +271,63 @@ struct LeaderboardPlayerDetailSheet: View {
         .task(id: row.resolvedUser) {
             await loadPlayerLookup()
         }
+        .alert("Steal points?", isPresented: $showStealConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Steal", role: .destructive) {
+                Task { await performSteal() }
+            }
+        } message: {
+            Text("Use 1 steal charge to take all of \(row.resolvedDisplayName)'s \(row.balance.formatted()) pts.")
+        }
+    }
+
+    @ViewBuilder
+    private var stealActionCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Steal powerup", systemImage: "bolt.fill")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(NFGTheme.gold)
+
+            Text("Transfer this player's entire balance to you. Shields block steals.")
+                .font(.system(size: 12))
+                .foregroundStyle(NFGTheme.muted)
+
+            Button {
+                showStealConfirm = true
+            } label: {
+                HStack(spacing: 8) {
+                    if isStealing {
+                        ProgressView().tint(.white)
+                    } else {
+                        Image(systemName: "bolt.fill")
+                            .font(.system(size: 13, weight: .bold))
+                        Text("STEAL \(row.balance.formatted()) PTS")
+                            .tracking(0.8)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(NFGPrimaryButtonStyle(isDisabled: isStealing))
+            .disabled(isStealing)
+
+            Text("\(stealChargesAvailable) steal charge\(stealChargesAvailable == 1 ? "" : "s") left")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(NFGTheme.muted)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(NFGTheme.panel2)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(NFGTheme.gold.opacity(0.35)))
+    }
+
+    private func performSteal() async {
+        isStealing = true
+        defer { isStealing = false }
+        await sync.stealFrom(target: row.resolvedUser)
+        await sync.refreshLeaderboard()
+        await sync.refreshWallet(force: true)
+        await loadPlayerLookup()
     }
 
     @ViewBuilder
@@ -281,73 +362,6 @@ struct LeaderboardPlayerDetailSheet: View {
         .overlay(RoundedRectangle(cornerRadius: 14).stroke(NFGTheme.border))
     }
 
-    @ViewBuilder
-    private var dragonTowerHeroCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Label("Dragon Tower hero", systemImage: "figure.stand")
-                .font(.system(size: 13, weight: .bold))
-                .foregroundStyle(NFGTheme.gold)
-
-            if isLoadingLookup && lookup?.towerHero == nil {
-                HStack(spacing: 8) {
-                    ProgressView().tint(NFGTheme.gold)
-                    Text("Loading hero…")
-                        .font(.system(size: 12))
-                        .foregroundStyle(NFGTheme.muted)
-                }
-            } else if let hero = lookup?.towerHero, let appearance = hero.appearance, appearance.created {
-                HStack(spacing: 16) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(NFGTheme.panel)
-                            .frame(width: 96, height: 120)
-                        TowerCharacterAvatar(
-                            appearance: appearance,
-                            loadout: hero.resolvedLoadout,
-                            size: 88,
-                            pose: .idle,
-                            facingRight: true
-                        )
-                    }
-                    .overlay(RoundedRectangle(cornerRadius: 12).stroke(NFGTheme.gold.opacity(0.35)))
-
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(hero.resolvedHeroName)
-                            .font(.system(size: 16, weight: .bold, design: .rounded))
-                            .foregroundStyle(NFGTheme.text)
-                        Text(appearance.bodyStyle == "female" ? "Female hero" : "Male hero")
-                            .font(.system(size: 11))
-                            .foregroundStyle(NFGTheme.muted)
-                        if let level = hero.level {
-                            Text("Tower level \(level)")
-                                .font(.system(size: 12, weight: .semibold))
-                                .foregroundStyle(NFGTheme.accent)
-                        }
-                        if let floor = hero.bestFloor, floor > 0 {
-                            Text("Best floor \(floor)")
-                                .font(.system(size: 11, design: .monospaced))
-                                .foregroundStyle(NFGTheme.muted)
-                        }
-                    }
-                }
-            } else {
-                HStack(spacing: 10) {
-                    Image(systemName: "person.crop.circle.badge.questionmark")
-                        .font(.system(size: 28))
-                        .foregroundStyle(NFGTheme.muted)
-                    Text("No Dragon Tower hero yet — create one in the Arcade.")
-                        .font(.system(size: 12))
-                        .foregroundStyle(NFGTheme.muted)
-                }
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(NFGTheme.panel2)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).stroke(NFGTheme.gold.opacity(0.25)))
-    }
-
     private func statTile(title: String, value: Int, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(title.uppercased())
@@ -376,6 +390,103 @@ struct LeaderboardPlayerDetailSheet: View {
         } catch {
             lookupError = error.localizedDescription
         }
+    }
+
+    @ViewBuilder
+    private var powerupsStatusCard: some View {
+        let inv = lookup?.inventory
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Powerups", systemImage: "bolt.fill")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(NFGTheme.accent2)
+            if isLoadingLookup && inv == nil {
+                ProgressView().tint(NFGTheme.accent2)
+            } else {
+                HStack(spacing: 10) {
+                    powerupTile(title: "Steals", value: inv?.stealCharges ?? 0, icon: "bolt.fill")
+                    powerupTile(title: "Shield breaks", value: inv?.shieldBreakCharges ?? 0, icon: "hammer.fill")
+                    powerupTile(title: "Jet locks", value: inv?.jetLockCharges ?? 0, icon: "snowflake")
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(NFGTheme.panel2)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(NFGTheme.border))
+    }
+
+    private func powerupTile(title: String, value: Int, icon: String) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(NFGTheme.gold)
+            Text("\(value)")
+                .font(.system(size: 18, weight: .heavy, design: .monospaced))
+            Text(title)
+                .font(.system(size: 9, weight: .medium))
+                .foregroundStyle(NFGTheme.muted)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(NFGTheme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    @ViewBuilder
+    private var jetLockStatusCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Label("Jet lock status", systemImage: "airplane")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(NFGTheme.accent2)
+
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let jetMs = jetLockMsRemaining(at: context.date)
+                if jetMs > 0 {
+                    HStack(spacing: 10) {
+                        Image(systemName: "airplane.circle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(NFGTheme.accent2)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Jet locked")
+                                .font(.system(size: 15, weight: .semibold))
+                            Text("\(LeaderboardRow.formatDurationMs(jetMs)) remaining")
+                                .font(.system(size: 20, weight: .heavy, design: .monospaced))
+                                .foregroundStyle(NFGTheme.accent2)
+                        }
+                    }
+                    Text("Player cannot bet or use chat commands while jet locked.")
+                        .font(.system(size: 12))
+                        .foregroundStyle(NFGTheme.muted)
+                } else {
+                    HStack(spacing: 10) {
+                        Image(systemName: "airplane")
+                            .font(.system(size: 24))
+                            .foregroundStyle(NFGTheme.muted)
+                        Text("Not jet locked")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(NFGTheme.text)
+                    }
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(16)
+        .background(NFGTheme.panel2)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(NFGTheme.border))
+    }
+
+    private func jetLockMsRemaining(at date: Date) -> Int {
+        if let until = lookup?.jetLockUntil, until > 0 {
+            return max(0, until - Int(date.timeIntervalSince1970 * 1000))
+        }
+        if let ms = lookup?.jetLockMsLeft, ms > 0 { return ms }
+        if lookup?.jetLockActive == true {
+            return max(0, (lookup?.jetLockSecondsLeft ?? 0) * 1000)
+        }
+        return 0
     }
 
     @ViewBuilder

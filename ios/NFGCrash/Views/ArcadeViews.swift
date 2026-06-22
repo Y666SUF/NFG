@@ -332,7 +332,7 @@ struct VaultArcadeGameView: View {
     @State private var suggestedStake = 2000
     @State private var stakeAmount = 2000
     @State private var stakeMin = 100
-    @State private var stakeMax = 5000
+    @State private var stakeMax = 100_000
     @State private var zoneWidth: CGFloat = 0.18
     @State private var tapRunActive = false
     @State private var safeSessionActive = false

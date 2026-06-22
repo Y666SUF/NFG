@@ -101,6 +101,8 @@ const GAME_DEFS = [
   },
 ];
 
+const STAKE_ABS_MAX = Number(process.env.ARCADE_STAKE_MAX) || 100_000;
+
 const STAKE_BASE = {
   nfg_dice: 1200,
   nfg_hilo: 1500,

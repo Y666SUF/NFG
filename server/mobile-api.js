@@ -64,7 +64,7 @@ function appendBetaSignup(entry) {
 function registerMobileApi(app, ctx) {
   const { game, pointStore, isLocalhost, broadcast, pushState } = ctx;
 
-  registerMobileAuthRoutes(app, { isLocalhost, pointStore });
+  registerMobileAuthRoutes(app, { isLocalhost, pointStore, getTikTokBridgeStatus });
   if (typeof broadcast === "function") {
     registerMobileChatRoutes(app, { broadcast, validateBearer, pointStore });
     registerMobileChatModerationRoutes(app, {

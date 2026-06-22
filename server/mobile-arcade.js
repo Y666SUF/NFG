@@ -2786,26 +2786,45 @@ function mergeArcadeUserRecords(fromUser, toUser, pointStore) {
   const fromRec = state.users?.[from];
   if (!fromRec) return { ok: true, merged: false };
 
+  const mergeGameRec = (gFrom, gTo, gameId) => {
+    if (!gTo) return { ...gFrom };
+    const out = { ...gTo, ...gFrom };
+    out.skillLevel = Math.max(gFrom.skillLevel || 1, gTo.skillLevel || 1);
+    if (gameId === "nfg_snake_jump") {
+      const bhFrom = Math.max(gFrom.bestHeight || 0, gFrom.session?.bestHeight || 0);
+      const bhTo = Math.max(gTo.bestHeight || 0, gTo.session?.bestHeight || 0);
+      const best = Math.max(bhFrom, bhTo);
+      out.bestHeight = best;
+      if (out.session) out.session.bestHeight = Math.max(out.session.bestHeight || 0, best);
+      out.totalEarned =
+        Math.max(0, Math.floor(Number(gFrom.totalEarned) || 0)) +
+        Math.max(0, Math.floor(Number(gTo.totalEarned) || 0));
+      const owned = new Set([...(gFrom.ownedSkins || []), ...(gTo.ownedSkins || [])]);
+      out.ownedSkins = [...owned];
+      const equipped = gTo.equippedSkin || gFrom.equippedSkin;
+      out.equippedSkin = owned.has(equipped) ? equipped : [...owned][0];
+    }
+    if (gameId === "nfg_vault_run") {
+      out.bestDistance = Math.max(gFrom.bestDistance || 0, gTo.bestDistance || 0);
+    }
+    if (gameId === "nfg_blocks") {
+      out.bestLevel = Math.max(gFrom.bestLevel || 0, gTo.bestLevel || 0);
+    }
+    return out;
+  };
+
   if (!state.users[to]) {
     state.users[to] = fromRec;
   } else {
     const toRec = state.users[to];
+    toRec.stats = {
+      rounds: (fromRec.stats?.rounds || 0) + (toRec.stats?.rounds || 0),
+      wins: (fromRec.stats?.wins || 0) + (toRec.stats?.wins || 0),
+      lost: (fromRec.stats?.lost || 0) + (toRec.stats?.lost || 0),
+    };
     for (const [gameId, gFrom] of Object.entries(fromRec.games || {})) {
       const gTo = toRec.games?.[gameId];
-      if (!gTo) {
-        toRec.games[gameId] = gFrom;
-      } else {
-        const sl = Math.max(gFrom.skillLevel || 1, gTo.skillLevel || 1);
-        gTo.skillLevel = sl;
-        if (gameId === "nfg_snake_jump") {
-          const bhFrom = Math.max(gFrom.bestHeight || 0, gFrom.session?.bestHeight || 0);
-          const bhTo = Math.max(gTo.bestHeight || 0, gTo.session?.bestHeight || 0);
-          if (bhFrom > bhTo) {
-            gTo.bestHeight = bhFrom;
-            if (gTo.session) gTo.session.bestHeight = bhFrom;
-          }
-        }
-      }
+      toRec.games[gameId] = mergeGameRec(gFrom, gTo, gameId);
     }
     toRec.claimedMissions = [
       ...new Set([...(toRec.claimedMissions || []), ...(fromRec.claimedMissions || [])]),

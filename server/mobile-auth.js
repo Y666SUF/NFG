@@ -174,15 +174,18 @@ function validateBearer(req) {
 function mergeGuestIntoTikTok(guestUserId, tiktokUserId, tiktokDisplayName) {
   const guest = normalizeUser(guestUserId);
   const tiktok = normalizeUser(tiktokUserId);
-  if (!guest || !tiktok || guest === tiktok) return;
+  if (!guest || !tiktok || guest === tiktok) return { ok: false, reason: "invalid_merge" };
+  let accountMerge = { ok: false };
   if (_pointStore) {
-    _pointStore.mergeUserAccounts(guest, tiktok, "tiktok_link");
+    accountMerge = _pointStore.mergeUserAccounts(guest, tiktok, "tiktok_link");
     _pointStore.setDisplayName(tiktok, tiktokDisplayName);
+    _pointStore.updateRank(tiktok);
   }
-  mergeArcadeUserRecords(guest, tiktok, _pointStore);
+  const arcadeMerge = mergeArcadeUserRecords(guest, tiktok, _pointStore);
   for (const [tok, rec] of Object.entries(state.sessions)) {
     if (normalizeUser(rec.userId) === guest) delete state.sessions[tok];
   }
+  return { ok: true, accountMerge, arcadeMerge, guest, tiktok };
 }
 
 function completeLinkFromTikTok(userId, displayName, message) {
@@ -232,11 +235,11 @@ function completeLinkFromTikTok(userId, displayName, message) {
     }
   }
   if (!guestUserId && deviceId) {
-    const derived = appUserIdFromDevice(deviceId);
-    if (derived && _pointStore && _pointStore.getBalance(derived) > 0) guestUserId = derived;
+    guestUserId = appUserIdFromDevice(deviceId);
   }
+  let mergeResult = null;
   if (guestUserId && guestUserId !== normalizedUser) {
-    mergeGuestIntoTikTok(guestUserId, normalizedUser, tiktokDisplayName);
+    mergeResult = mergeGuestIntoTikTok(guestUserId, normalizedUser, tiktokDisplayName);
   } else if (_pointStore) {
     _pointStore.setDisplayName(normalizedUser, tiktokDisplayName);
   }
@@ -263,20 +266,54 @@ function completeLinkFromTikTok(userId, displayName, message) {
     linkedAt: now,
     token,
     expiresAt: pending.expiresAt,
+    merge: mergeResult?.accountMerge?.ok
+      ? {
+          combinedBalance: mergeResult.accountMerge.mergedBalance,
+          mergedLevel: mergeResult.accountMerge.mergedLevel,
+        }
+      : null,
   };
   saveState();
+  const mergedBalance = mergeResult?.accountMerge?.mergedBalance;
+  const mergeNote =
+    mergedBalance != null
+      ? ` Merged app + TikTok progress — balance now ${mergedBalance.toLocaleString()} pts.`
+      : "";
   return {
     handled: true,
     linked: true,
     code,
     token,
     userId: normalizedUser,
-    tiktokChatReply: `Linked successfully for @${normalizedUser}. Return to your iOS app.`,
+    merge: mergeResult,
+    tiktokChatReply: `Linked successfully for @${normalizedUser}.${mergeNote} Return to your iOS app.`,
   };
 }
 
 function registerMobileAuthRoutes(app, ctx = {}) {
   _pointStore = ctx.pointStore || null;
+  const getTikTokBridgeStatus =
+    typeof ctx.getTikTokBridgeStatus === "function" ? ctx.getTikTokBridgeStatus : null;
+
+  app.get("/api/mobile/link/health", (_req, res) => {
+    pruneExpired();
+    const bridge = getTikTokBridgeStatus ? getTikTokBridgeStatus() : null;
+    res.json({
+      ok: true,
+      linkStart: true,
+      linkStatus: true,
+      pendingLinks: Object.keys(state.pendingLinks || {}).length,
+      tiktokBridge: bridge
+        ? {
+            enabled: bridge.enabled !== false,
+            state: String(bridge.state || "unknown"),
+            uniqueId: String(bridge.uniqueId || "y666.suf"),
+            isLive: bridge.state === "live",
+          }
+        : { enabled: false, state: "unknown", uniqueId: "y666.suf", isLive: false },
+      message: "TikTok link routes are active. Comment !link CODE on live to complete linking.",
+    });
+  });
 
   app.post("/api/mobile/auth/app-review", (req, res) => {
     pruneExpired();
@@ -451,6 +488,7 @@ function registerMobileAuthRoutes(app, ctx = {}) {
         token: String(rec.token),
         userId: normalizeUser(rec.userId),
         displayName: String(rec.displayName || rec.userId || ""),
+        merge: rec.merge || null,
       });
     }
     return res.json({

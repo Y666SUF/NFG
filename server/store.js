@@ -501,7 +501,7 @@ function savePoints(state, options = {}) {
 
   atomicWriteJsonFile(PRIMARY_POINTS_FILE, payload);
   try {
-    fs.copyFileSync(PRIMARY_POINTS_FILE, POINTS_BAK_FILE);
+    atomicWriteJsonFile(POINTS_BAK_FILE, payload);
   } catch (err) {
     console.warn("[Points] Could not refresh .bak copy:", err.message);
   }
@@ -667,7 +667,7 @@ function saveShields(shields, options = {}) {
 
   atomicWriteJsonFile(SHIELDS_FILE, payload);
   try {
-    fs.copyFileSync(SHIELDS_FILE, SHIELDS_BAK_FILE);
+    atomicWriteJsonFile(SHIELDS_BAK_FILE, payload);
   } catch (err) {
     console.warn("[Shields] Could not refresh .bak copy:", err.message);
   }

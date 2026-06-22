@@ -3,9 +3,10 @@
     "sk.07020": {
       "dayKey": "2026-06-22",
       "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
+        "rounds": 5,
+        "wins": 3,
+        "lost": 4464,
+        "liveWin": 1
       },
       "games": {
         "nfg_blocks": {
@@ -66,7 +67,7 @@
           "skillLevel": 10
         },
         "nfg_plinko": {
-          "skillLevel": 4
+          "skillLevel": 7
         },
         "nfg_snake_jump": {
           "bestHeight": 35010,
@@ -84,7 +85,7 @@
             "classic"
           ],
           "equippedSkin": "classic",
-          "totalEarned": 139347
+          "totalEarned": 280327
         },
         "nfg_hilo": {
           "session": null,
@@ -92,7 +93,7 @@
         },
         "nfg_vault_run": {
           "session": {
-            "active": false,
+            "active": true,
             "milestones": 0,
             "sessionPoints": 0,
             "lastMilestoneDistance": 0,
@@ -103,11 +104,11 @@
             "classic"
           ],
           "equippedShip": "classic",
-          "bestDistance": 690
+          "bestDistance": 1872
         }
       },
       "claimedMissions": [],
-      "lastArcadeStakeAt": 1781338551447
+      "lastArcadeStakeAt": 1782158180768
     },
     "y666.suf": {
       "dayKey": "2026-06-22",
@@ -141,7 +142,7 @@
           ],
           "equippedSkin": "emerald",
           "bestHeight": 26971,
-          "totalEarned": 60000
+          "totalEarned": 63000
         },
         "nfg_blocks": {
           "session": {
@@ -361,9 +362,10 @@
     "sameya.bx": {
       "dayKey": "2026-06-22",
       "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
+        "rounds": 42,
+        "wins": 27,
+        "lost": 115452,
+        "liveWin": 1
       },
       "games": {
         "nfg_snake_jump": {
@@ -381,8 +383,8 @@
             "classic"
           ],
           "equippedSkin": "classic",
-          "bestHeight": 43522,
-          "totalEarned": 127613
+          "bestHeight": 46536,
+          "totalEarned": 927781
         },
         "nfg_blocks": {
           "bestLevel": 6,
@@ -397,7 +399,7 @@
           "skillLevel": 5
         },
         "nfg_plinko": {
-          "skillLevel": 5
+          "skillLevel": 10
         },
         "nfg_dice": {
           "skillLevel": 10
@@ -466,7 +468,8 @@
           "bestDistance": 7218
         }
       },
-      "claimedMissions": []
+      "claimedMissions": [],
+      "lastArcadeStakeAt": 1782164706274
     },
     "meowcloud__": {
       "dayKey": "2026-06-03",
@@ -783,7 +786,7 @@
           "session": null
         },
         "nfg_snake_jump": {
-          "bestHeight": 31747,
+          "bestHeight": 33387,
           "ownedSkins": [
             "classic",
             "violet_void",
@@ -791,16 +794,16 @@
           ],
           "equippedSkin": "nfg_fire",
           "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
+            "active": true,
+            "milestones": 7,
+            "sessionPoints": 24143,
+            "lastMilestoneHeight": 17500,
+            "lastMilestoneAt": 1782162917914,
+            "peakHeight": 17509,
             "vsMatchId": null,
             "vsDeferred": false
           },
-          "totalEarned": 75000
+          "totalEarned": 164674
         },
         "nfg_mines": {},
         "nfg_vault_run": {
@@ -883,7 +886,7 @@
       "claimedMissions": []
     },
     "madebymanah": {
-      "dayKey": "2026-06-11",
+      "dayKey": "2026-06-22",
       "stats": {
         "rounds": 0,
         "wins": 0,
@@ -911,18 +914,22 @@
             "sessionPoints": 0,
             "lastMilestoneHeight": 0,
             "lastMilestoneAt": 0,
-            "peakHeight": 0
-          }
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "totalEarned": 3449
         }
       },
       "claimedMissions": []
     },
     "cj_hern": {
-      "dayKey": "2026-06-08",
+      "dayKey": "2026-06-22",
       "stats": {
-        "rounds": 1,
-        "wins": 1,
-        "lost": 0
+        "rounds": 177,
+        "wins": 124,
+        "lost": 468533,
+        "liveWin": 1
       },
       "games": {
         "nfg_hilo": {
@@ -983,17 +990,17 @@
           "skillLevel": 2
         },
         "nfg_dice": {
-          "skillLevel": 2
+          "skillLevel": 3
         },
         "nfg_plinko": {
           "skillLevel": 10
         },
         "nfg_mines": {
           "session": null,
-          "skillLevel": 2
+          "skillLevel": 1
         },
         "nfg_snake_jump": {
-          "bestHeight": 8696,
+          "bestHeight": 25486,
           "ownedSkins": [
             "classic"
           ],
@@ -1004,11 +1011,30 @@
             "sessionPoints": 0,
             "lastMilestoneHeight": 0,
             "lastMilestoneAt": 0,
-            "peakHeight": 0
-          }
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "totalEarned": 13796
+        },
+        "nfg_vault_run": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneDistance": 0,
+            "lastMilestoneAt": 0,
+            "peakDistance": 0
+          },
+          "ownedShips": [
+            "classic"
+          ],
+          "equippedShip": "classic",
+          "bestDistance": 334
         }
       },
-      "claimedMissions": []
+      "claimedMissions": [],
+      "lastArcadeStakeAt": 1782160996076
     },
     "akerzk": {
       "dayKey": "2026-06-06",
@@ -1244,32 +1270,47 @@
         "nfg_blocks": {
           "bestLevel": 7,
           "session": {
-            "active": false,
+            "active": true,
             "level": 1,
             "sessionLevels": 0,
             "sessionPoints": 0
           }
         },
         "nfg_snake_jump": {
-          "bestHeight": 35007,
+          "bestHeight": 36784,
           "ownedSkins": [
             "classic"
           ],
           "equippedSkin": "classic",
           "session": {
             "active": true,
-            "milestones": 3,
-            "sessionPoints": 10347,
-            "lastMilestoneHeight": 7500,
-            "lastMilestoneAt": 1782140130142,
-            "peakHeight": 7506,
+            "milestones": 8,
+            "sessionPoints": 27592,
+            "lastMilestoneHeight": 20000,
+            "lastMilestoneAt": 1782165385234,
+            "peakHeight": 20005,
             "vsMatchId": null,
             "vsDeferred": false
           },
-          "totalEarned": 377388
+          "totalEarned": 793696
         },
         "nfg_mines": {
-          "session": null,
+          "session": {
+            "stake": 5000,
+            "minesCount": 3,
+            "mines": [
+              13,
+              8,
+              0
+            ],
+            "revealed": [
+              12,
+              18,
+              24,
+              21
+            ],
+            "mult": 2.1
+          },
           "skillLevel": 10
         },
         "nfg_tower": {
@@ -1365,7 +1406,7 @@
         }
       },
       "claimedMissions": [],
-      "lastArcadeStakeAt": 1781741658420
+      "lastArcadeStakeAt": 1782164074396
     },
     "testuser": {
       "dayKey": "2026-06-08",
@@ -1509,7 +1550,7 @@
       "games": {
         "nfg_blocks": {
           "session": {
-            "active": true,
+            "active": false,
             "level": 1,
             "sessionLevels": 0,
             "sessionPoints": 0
@@ -1531,8 +1572,8 @@
             "classic"
           ],
           "equippedSkin": "classic",
-          "bestHeight": 4983,
-          "totalEarned": 12000
+          "bestHeight": 21727,
+          "totalEarned": 36000
         },
         "nfg_plinko": {
           "skillLevel": 6
@@ -1603,7 +1644,7 @@
             "classic"
           ],
           "equippedShip": "classic",
-          "bestDistance": 113
+          "bestDistance": 361
         }
       },
       "claimedMissions": [],
@@ -1782,8 +1823,18 @@
       {
         "userId": "sameya.bx",
         "displayName": "Sameya🐨",
-        "points": 43522,
-        "updatedAt": 1782085484610,
+        "points": 46536,
+        "updatedAt": 1782163863251,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      },
+      {
+        "userId": "ghi4462",
+        "displayName": "G",
+        "points": 36784,
+        "updatedAt": 1782163452492,
         "jumpSkinId": "classic",
         "jumpSkinName": null,
         "jumpSkinFill": "#596ff2",
@@ -1800,20 +1851,10 @@
         "jumpSkinRing": "#f2c733"
       },
       {
-        "userId": "ghi4462",
-        "displayName": "G",
-        "points": 35007,
-        "updatedAt": 1782124075762,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
-      },
-      {
         "userId": "sk_x120",
         "displayName": "𝓢.𝓴𝓱𝔁𝓷🫶🏽",
-        "points": 31747,
-        "updatedAt": 1782084394537,
+        "points": 33387,
+        "updatedAt": 1782152634411,
         "jumpSkinId": "nfg_fire",
         "jumpSkinName": "NFG Inferno",
         "jumpSkinFill": "#ff6b35",
@@ -1828,6 +1869,22 @@
         "jumpSkinName": "Emerald Elite",
         "jumpSkinFill": "#34d399",
         "jumpSkinRing": "#a7f3d0"
+      },
+      {
+        "userId": "cj_hern",
+        "displayName": "cj_hern",
+        "points": 25486,
+        "updatedAt": 1782148769065
+      },
+      {
+        "userId": "nina.k825",
+        "displayName": "Nina🩵K",
+        "points": 21727,
+        "updatedAt": 1782160047012,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
       },
       {
         "userId": "huma2882",
@@ -1866,26 +1923,10 @@
         "updatedAt": 1780698100713
       },
       {
-        "userId": "cj_hern",
-        "displayName": "cj_hern",
-        "points": 8696,
-        "updatedAt": 1780872650100
-      },
-      {
         "userId": "meowcloud__",
         "displayName": "__CloudMeow",
         "points": 6421,
         "updatedAt": 1780511101968
-      },
-      {
-        "userId": "nina.k825",
-        "displayName": "Nina🩵K",
-        "points": 4983,
-        "updatedAt": 1782084593611,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
       },
       {
         "userId": "madebymanah",
@@ -1940,8 +1981,8 @@
       {
         "userId": "sk.07020",
         "displayName": "SK",
-        "points": 690,
-        "updatedAt": 1782134676895
+        "points": 1872,
+        "updatedAt": 1782159339867
       },
       {
         "userId": "ghi4462",
@@ -1952,8 +1993,14 @@
       {
         "userId": "nina.k825",
         "displayName": "Nina🩵K",
-        "points": 113,
-        "updatedAt": 1782138829713
+        "points": 361,
+        "updatedAt": 1782142510407
+      },
+      {
+        "userId": "cj_hern",
+        "displayName": "cj_hern",
+        "points": 334,
+        "updatedAt": 1782148881464
       }
     ]
   }

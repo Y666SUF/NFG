@@ -52,7 +52,7 @@ rem --- Stop leftover Electron / Node / Hangman / cloudflared from prior runs --
 if "%NFG_KILL_OLD_SESSIONS%"=="1" (
   echo.
   echo Stopping old NFG sessions ^(ports %PORT% / %HANGMAN_PORT%, Electron, cloudflared^)...
-  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports %PORT%,%HANGMAN_PORT%,8001 -KillElectron -KillCloudflared -KillNodeNfg -RepoRoot "%~dp0" -Quiet
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports "%PORT%,%HANGMAN_PORT%,8001" -KillElectron -KillCloudflared -KillNodeNfg -RepoRoot "%~dp0" -Quiet
   timeout /t 2 /nobreak >nul
   echo Ready for fresh launch.
   echo.

@@ -1,5 +1,6 @@
 param(
-  [int[]]$Ports = @(3847, 19876),
+  # Comma-separated from .bat (e.g. 3847,19876,8001) or a single port when called from PowerShell.
+  [string]$Ports = "3847,19876",
   [switch]$Quiet,
   [switch]$KillElectron,
   [switch]$KillCloudflared,
@@ -14,6 +15,16 @@ if ($RepoRoot) {
   $repo = (Resolve-Path -LiteralPath $RepoRoot -ErrorAction SilentlyContinue).Path
   if (-not $repo) { $repo = $RepoRoot.TrimEnd('\', '/') }
 }
+
+function Get-PortNumbers([string]$Raw) {
+  $text = [string]$Raw
+  if (-not $text.Trim()) { return @(3847, 19876) }
+  $nums = @($text -split '[,\s]+' | Where-Object { $_ -match '^\d+$' } | ForEach-Object { [int]$_ })
+  if ($nums.Count -gt 0) { return $nums }
+  return @(3847, 19876)
+}
+
+$portList = Get-PortNumbers $Ports
 
 function Stop-ListenersOnPort([int]$Port) {
   $killed = 0
@@ -72,7 +83,7 @@ function Stop-ProcessesByMatch([string]$NamePattern, [string]$CommandMatch, [str
   return $killed
 }
 
-foreach ($p in $Ports) {
+foreach ($p in $portList) {
   $total += Stop-ListenersOnPort -Port $p
 }
 
@@ -117,7 +128,7 @@ if ($KillCloudflared) {
 }
 
 if (-not $Quiet) {
-  Write-Host "[NFG] Cleared $total stale process(es) on port(s) $($Ports -join ', ')"
+  Write-Host "[NFG] Cleared $total stale process(es) on port(s) $($portList -join ', ')"
 }
 
 exit 0

@@ -14,7 +14,7 @@ echo Platform port %PORT% ^| Hangman %HANGMAN_PORT%
 echo.
 
 :restart_server
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports %PORT%,%HANGMAN_PORT% -Quiet
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports "%PORT%,%HANGMAN_PORT%" -Quiet
 cls
 echo [%date% %time%] Starting node server\index.js ...
 node server\index.js

@@ -90,7 +90,7 @@ echo Mobile Hangman: GET /api/mobile/hangman/state  POST /api/mobile/hangman/gue
 echo Mobile Words:  GET https://y666suf.com/api/word-games/health  POST /api/word-games/players/login
 set "PATH=%~dp0node_modules\.bin;%PATH%"
 echo Clearing stale listeners on %PORT% / %HANGMAN_PORT% before launch...
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports %PORT%,%HANGMAN_PORT% -KillElectron -KillNodeNfg -RepoRoot "%~dp0" -Quiet
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports "%PORT%,%HANGMAN_PORT%" -KillElectron -KillNodeNfg -RepoRoot "%~dp0" -Quiet
 echo Launching Electron ^(Crash + Hangman windows, shared Node server^)...
 echo.
 if "%NFG_AUTO_RESTART%"=="0" (
@@ -124,7 +124,7 @@ if "%NFG_AUTO_RESTART%"=="0" (
     goto :electron_failed
   )
   echo Clearing stale NFG processes before auto-restart...
-  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports %PORT%,%HANGMAN_PORT% -KillElectron -KillNodeNfg -RepoRoot "%~dp0" -Quiet
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports "%PORT%,%HANGMAN_PORT%" -KillElectron -KillNodeNfg -RepoRoot "%~dp0" -Quiet
   timeout /t 3 /nobreak >nul
   cls
   echo Auto-restart attempt %NFG_RESTART_COUNT% / %NFG_AUTO_RESTART_MAX_RETRIES% in %NFG_AUTO_RESTART_DELAY_SECONDS%s...

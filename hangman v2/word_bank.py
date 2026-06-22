@@ -167,8 +167,19 @@ def _read_run_id() -> int:
 
 
 def _write_run_id(n: int) -> None:
-    RUN_ID_FILE.parent.mkdir(parents=True, exist_ok=True)
-    RUN_ID_FILE.write_text(str(n), encoding="utf-8")
+    try:
+        RUN_ID_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = RUN_ID_FILE.with_suffix(".tmp")
+        tmp.write_text(str(n), encoding="utf-8")
+        tmp.replace(RUN_ID_FILE)
+    except OSError as e:
+        import sys
+
+        print(f"[word_bank] Could not persist run id {n}: {e}", file=sys.stderr)
+    except Exception as e:
+        import sys
+
+        print(f"[word_bank] Could not persist run id {n}: {e}", file=sys.stderr)
 
 
 def _load_lines_from_file(path: Path) -> list[str]:

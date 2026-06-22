@@ -91,6 +91,9 @@ struct SnakeJumpGameView: View {
             .task {
                 await bootstrap()
             }
+            .onReceive(NotificationCenter.default.publisher(for: .arcadeOfflineQueueDidChange)) { _ in
+                refreshOfflinePending()
+            }
             .onDisappear {
                 vsClient?.disconnect()
             }
@@ -114,7 +117,7 @@ struct SnakeJumpGameView: View {
                             tint: SnakeJumpTheme.swiftColor(hex: skinRing, fallback: NFGTheme.gold)
                         ),
                         ArcadeSkillLobbyStat(
-                            text: "Run \(displaySessionPoints.formatted())",
+                            text: "Total \(jumpTotalEarned.formatted())",
                             icon: "star.fill",
                             tint: NFGTheme.accent2
                         ),
@@ -161,10 +164,6 @@ struct SnakeJumpGameView: View {
         .id(leaderboardRefresh)
     }
 
-    private var displaySessionPoints: Int {
-        sessionPoints + offlinePendingPoints
-    }
-
     private func preparePlaySession() {
         let w = max(UIScreen.main.bounds.width - 32, 280)
         canvas.resetSteering()
@@ -188,6 +187,8 @@ struct SnakeJumpGameView: View {
         canvas.resetSteering()
         canvas.running = false
         canvas.sessionActive = false
+        sessionPoints = 0
+        canvas.sessionPoints = 0
         leaderboardRefresh += 1
         showPlaySession = false
     }
@@ -343,6 +344,7 @@ struct SnakeJumpGameView: View {
         defer { isLoading = false }
         applyLocalShopFallback()
         refreshOfflinePending()
+        refreshJumpTotals()
         syncPersonalBest(serverBest: 0)
         do {
             let client = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
@@ -390,6 +392,19 @@ struct SnakeJumpGameView: View {
         }
     }
 
+    private func refreshJumpTotals() {
+        let userKey = ArcadeOfflinePointsQueue.userKey()
+        jumpTotalEarned = NFGJumpLocalEarnedStore.load(for: userKey)
+        canvas.lifetimeJumpEarned = jumpTotalEarned
+    }
+
+    private func recordJumpPointsEarned(_ points: Int) {
+        guard points > 0 else { return }
+        let userKey = ArcadeOfflinePointsQueue.userKey()
+        jumpTotalEarned = NFGJumpLocalEarnedStore.add(points, for: userKey)
+        canvas.lifetimeJumpEarned = jumpTotalEarned
+    }
+
     private func refreshOfflinePending() {
         let userKey = ArcadeOfflinePointsQueue.userKey()
         offlinePendingPoints = ArcadeOfflinePointsQueue.pendingPoints(for: "nfg_snake_jump")
@@ -427,11 +442,28 @@ struct SnakeJumpGameView: View {
         if action == "start" {
             sessionPoints = 0
             canvas.engine.milestonesClaimed = 0
+        } else if action == "milestone" {
+            let reward = max(status.gained ?? 0, SnakeJumpEngine.milestoneReward)
+            sessionPoints += reward
+            recordJumpPointsEarned(reward)
+            canvas.engine.milestonesClaimed = status.sessionMilestones ?? canvas.engine.milestonesClaimed
+        } else if action == "game_over" {
+            canvas.engine.milestonesClaimed = status.sessionMilestones ?? canvas.engine.milestonesClaimed
+        } else if showPlaySession && (canvas.sessionActive || canvas.running) {
+            if let sp = status.sessionPoints { sessionPoints = sp }
+            canvas.engine.milestonesClaimed = status.sessionMilestones ?? canvas.engine.milestonesClaimed
         } else {
-            sessionPoints = status.sessionPoints ?? sessionPoints
+            sessionPoints = 0
             canvas.engine.milestonesClaimed = status.sessionMilestones ?? canvas.engine.milestonesClaimed
         }
-        jumpTotalEarned = status.totalJumpEarned ?? jumpTotalEarned
+
+        let userKey = ArcadeOfflinePointsQueue.userKey()
+        refreshJumpTotals()
+        if jumpTotalEarned == 0, let serverTotal = status.totalJumpEarned, serverTotal > 0 {
+            NFGJumpLocalEarnedStore.set(serverTotal, for: userKey)
+            jumpTotalEarned = serverTotal
+            canvas.lifetimeJumpEarned = jumpTotalEarned
+        }
         var serverBest = status.bestLevel ?? 0
         if let score = status.score { serverBest = max(serverBest, score) }
         syncPersonalBest(serverBest: serverBest)
@@ -469,7 +501,7 @@ struct SnakeJumpGameView: View {
                 action: "milestone",
                 payload: ["height": height]
             )
-            applyStatus(res)
+            applyStatus(res, action: "milestone")
             canvas.engine.milestonesClaimed = res.sessionMilestones ?? canvas.engine.milestonesClaimed + 1
             message = res.message ?? "Milestone! +\(SnakeJumpEngine.milestoneReward.formatted()) pts"
             refreshOfflinePending()
@@ -490,9 +522,8 @@ struct SnakeJumpGameView: View {
         )
         canvas.engine.milestonesClaimed += 1
         sessionPoints += reward
-        jumpTotalEarned += reward
+        recordJumpPointsEarned(reward)
         canvas.sessionPoints = sessionPoints
-        canvas.lifetimeJumpEarned = jumpTotalEarned
         refreshOfflinePending()
     }
 
@@ -663,7 +694,7 @@ private struct SnakeJumpPlaySessionView: View {
     let onClose: () -> Void
 
     private var displaySessionPoints: Int {
-        canvas.sessionPoints + offlinePendingPoints
+        canvas.sessionPoints
     }
 
     var body: some View {

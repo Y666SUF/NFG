@@ -94,6 +94,9 @@ struct VaultRunGameScreen: View {
                 .interactiveDismissDisabled()
         }
         .task { await bootstrap() }
+        .onReceive(NotificationCenter.default.publisher(for: .arcadeOfflineQueueDidChange)) { _ in
+            refreshOfflinePending()
+        }
         .alert("Could not load", isPresented: .constant(loadError != nil)) {
             Button("OK") { loadError = nil }
         } message: {

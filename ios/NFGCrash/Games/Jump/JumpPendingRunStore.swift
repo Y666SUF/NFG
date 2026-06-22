@@ -28,6 +28,19 @@ enum JumpPendingRunStore {
         UserDefaults.standard.removeObject(forKey: key(for: u))
     }
 
+    static func migratePendingHeight(from oldUser: String, to newUser: String) {
+        let from = oldUser.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        let to = newUser.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !from.isEmpty, !to.isEmpty, from != to else { return }
+        let pending = pendingHeight(for: from)
+        guard pending > 0 else { return }
+        let existing = pendingHeight(for: to)
+        if pending > existing {
+            UserDefaults.standard.set(pending, forKey: key(for: to))
+        }
+        clear(for: from)
+    }
+
     @discardableResult
     static func flush(api: GameAPI, sync: SyncClient?, user: String? = nil) async -> Bool {
         let u = (user ?? ArcadeOfflinePointsQueue.userKey())

@@ -317,6 +317,50 @@ function creditWin(pointStore, user, amount) {
   return gain;
 }
 
+/** Credits queued mobile offline arcade rewards (idempotent via queueId). */
+function applyOfflineArcadeSync({ pointStore, user, gRec, payload, fields, payloadBuilder, statUpdater }) {
+  const queueId = String(payload.queueId || "").trim().slice(0, 80);
+  const points = Math.max(0, Math.floor(Number(payload.points) || 0));
+  const extra = payloadBuilder ? payloadBuilder(gRec) : {};
+  if (!queueId || points <= 0) {
+    return {
+      ok: false,
+      reason: "invalid_sync",
+      message: "Missing offline queue id or points.",
+      ...fields,
+      ...extra,
+    };
+  }
+  if (!Array.isArray(gRec.syncedOfflineQueueIds)) gRec.syncedOfflineQueueIds = [];
+  if (gRec.syncedOfflineQueueIds.includes(queueId)) {
+    return {
+      ok: true,
+      duplicate: true,
+      gained: 0,
+      offlineSync: true,
+      message: "Offline reward already synced.",
+      ...fields,
+      ...extra,
+    };
+  }
+  const capped = Math.min(points, 500_000);
+  const gained = creditWin(pointStore, user, capped);
+  gRec.syncedOfflineQueueIds.push(queueId);
+  if (gRec.syncedOfflineQueueIds.length > 400) {
+    gRec.syncedOfflineQueueIds = gRec.syncedOfflineQueueIds.slice(-400);
+  }
+  if (typeof statUpdater === "function") statUpdater(gRec, payload, gained);
+  return {
+    ok: true,
+    offlineSync: true,
+    gained,
+    win: gained > 0,
+    message: gained > 0 ? `Synced +${gained.toLocaleString()} offline pts` : "Offline reward synced.",
+    ...fields,
+    ...extra,
+  };
+}
+
 function recordRound(userRec, won, lostAmount) {
   userRec.stats.rounds = (userRec.stats.rounds || 0) + 1;
   if (won) userRec.stats.wins = (userRec.stats.wins || 0) + 1;
@@ -1755,6 +1799,23 @@ function handleBlockBlast(user, userRec, action, payload, pointStore) {
     };
   }
 
+  if (act === "offline_sync") {
+    const out = applyOfflineArcadeSync({
+      pointStore,
+      user,
+      gRec,
+      payload,
+      fields,
+      payloadBuilder: blockBlastPayload,
+      statUpdater: (rec, pl) => {
+        const lv = Math.max(1, Math.floor(Number(pl.level) || 0));
+        if (lv > 0) rec.bestLevel = Math.max(rec.bestLevel || 1, lv);
+      },
+    });
+    userRec.games.nfg_blocks = gRec;
+    return out;
+  }
+
   if (act === "start") {
     gRec.session = {
       active: true,
@@ -1819,7 +1880,7 @@ function handleBlockBlast(user, userRec, action, payload, pointStore) {
   return {
     ok: false,
     reason: "invalid_action",
-    message: "Use start, level_clear, or game_over.",
+    message: "Use start, level_clear, game_over, or offline_sync.",
     ...fields,
     ...blockBlastPayload(gRec),
   };
@@ -1979,6 +2040,24 @@ function handleSnakeJump(user, userRec, action, payload, pointStore) {
       message:
         "NFG Jump — bounce higher. +3,000 pts every 2,500m. Jump VS: winner takes the combined pot.",
     };
+  }
+
+  if (act === "offline_sync") {
+    const out = applyOfflineArcadeSync({
+      pointStore,
+      user,
+      gRec,
+      payload,
+      fields,
+      payloadBuilder: snakeJumpPayload,
+      statUpdater: (rec, pl, gained) => {
+        const height = Math.max(0, Math.floor(Number(pl.height) || 0));
+        if (height > 0) rec.bestHeight = Math.max(rec.bestHeight || 0, height);
+        rec.totalEarned = Math.max(0, Math.floor(Number(rec.totalEarned) || 0)) + Math.max(0, gained);
+      },
+    });
+    userRec.games.nfg_snake_jump = gRec;
+    return out;
   }
 
   if (act === "start") {
@@ -2167,7 +2246,7 @@ function handleSnakeJump(user, userRec, action, payload, pointStore) {
   return {
     ok: false,
     reason: "invalid_action",
-    message: "Use start, milestone, game_over, buy, or equip.",
+    message: "Use start, milestone, game_over, buy, equip, or offline_sync.",
     ...fields,
     ...snakeJumpPayload(gRec),
   };
@@ -2302,6 +2381,23 @@ function handleVaultRun(user, userRec, action, payload, pointStore) {
       message:
         "NFG Rush — 3-lane dash. Swipe lanes, boost, shrink. Milestones every 400m — 3,000 pts scaling up.",
     };
+  }
+
+  if (act === "offline_sync") {
+    const out = applyOfflineArcadeSync({
+      pointStore,
+      user,
+      gRec,
+      payload,
+      fields,
+      payloadBuilder: vaultRunPayload,
+      statUpdater: (rec, pl) => {
+        const dist = Math.max(0, Math.floor(Number(pl.distance ?? pl.height) || 0));
+        if (dist > 0) rec.bestDistance = Math.max(rec.bestDistance || 0, dist);
+      },
+    });
+    userRec.games.nfg_vault_run = gRec;
+    return out;
   }
 
   if (act === "start") {
@@ -2461,7 +2557,7 @@ function handleVaultRun(user, userRec, action, payload, pointStore) {
   return {
     ok: false,
     reason: "invalid_action",
-    message: "Use start, milestone, game_over, buy, or equip.",
+    message: "Use start, milestone, game_over, buy, equip, or offline_sync.",
     ...fields,
     ...vaultRunPayload(gRec),
   };

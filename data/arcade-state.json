@@ -360,22 +360,22 @@
       "claimedMissions": []
     },
     "sameya.bx": {
-      "dayKey": "2026-06-22",
+      "dayKey": "2026-06-23",
       "stats": {
-        "rounds": 42,
-        "wins": 27,
-        "lost": 115452,
+        "rounds": 13,
+        "wins": 10,
+        "lost": 27864,
         "liveWin": 1
       },
       "games": {
         "nfg_snake_jump": {
           "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
+            "active": true,
+            "milestones": 6,
+            "sessionPoints": 20694,
+            "lastMilestoneHeight": 15000,
+            "lastMilestoneAt": 1782172218050,
+            "peakHeight": 15006,
             "vsMatchId": null,
             "vsDeferred": false
           },
@@ -383,8 +383,91 @@
             "classic"
           ],
           "equippedSkin": "classic",
-          "bestHeight": 46536,
-          "totalEarned": 927781
+          "bestHeight": 50126,
+          "totalEarned": 1676214,
+          "syncedOfflineQueueIds": [
+            "E6656E87-E31D-418E-87B8-95CB4E8EE773",
+            "D130F178-580E-42FF-8568-123B128064C0",
+            "7B7383DD-0E9A-4F57-9CD9-FE88CFADE2A5",
+            "2477DE3A-CDD1-4B92-AE38-35D5AC4E4324",
+            "330F4E4E-CA6A-41F3-9F31-D16D297130FB",
+            "CFD8E9E0-28A4-443F-9D41-FC49421C467F",
+            "CB4A4203-BE39-4E20-9424-A795C699441D",
+            "B3C3CE10-C720-437D-98A3-5F24F44F6E8C",
+            "887B22FF-8596-4299-AACF-0A131EF055EC",
+            "ACF2E47D-3F29-4B60-820E-E74D3361B15F",
+            "BD8743D0-989A-4EE8-85A7-A72D9BCDA060",
+            "A0EF9F2B-8434-4DC0-8CE1-89EACB36A5F6",
+            "212BAA5D-9E6A-4089-B2DB-48DFC3C6545C",
+            "B26B1EA5-8EC2-445C-BA09-C4DA36E39B54",
+            "6F113A13-51AA-4633-98DD-4B1520F7AD11",
+            "CCC15FA9-524F-4128-B80D-5AC2F73C3416",
+            "E7E386FB-F9F9-4E2F-94BF-51AB020A84D3",
+            "B9CA0AC4-6CE4-42E8-B27E-FB943D3D4301",
+            "297F69A5-C986-446B-B06D-7CC70F941B03",
+            "2A04E85D-6567-4894-A132-16EC0485834B",
+            "8F19924F-AC70-41DF-9AC8-0C517D864C0D",
+            "5744BB09-EC2A-4CFC-958D-31DDB4070E8A",
+            "B7004CF8-A007-4C5D-BFF2-EFF2B2E6AAD5",
+            "06DD13F1-0EDE-40F5-8D96-74E3F0A97FF4",
+            "4A24C439-6DA2-474F-B137-46597626DD71",
+            "D2B4D0B1-635A-4596-864D-86A3D484FB4F",
+            "78F8A5AE-EDFB-4F82-B48E-E16731024849",
+            "F0EE64AA-532A-47F0-90C7-56D116027D57",
+            "9107C0AD-94B4-4FDB-AB0E-C82C3C7C4128",
+            "7FEF253F-CE72-460F-A4AF-A65DCF4AC53B",
+            "60BF2290-4449-478B-B566-4EBD31BB5711",
+            "76A74003-515C-4129-B1F3-AECEBADB01FC",
+            "E1848A9B-5882-4057-B373-A984AEB7201B",
+            "CCEC42A9-FE52-4ABA-8571-18174722FA0B",
+            "5495BE07-801E-445E-A5AE-108E6EF8C8EF",
+            "D60F235E-5DE7-41AB-B9CF-847B54160956",
+            "DAAA0B7A-A872-440A-B768-4CC81ABF593D",
+            "938D1DA5-CCEA-4235-BE0B-31EDFD07C7BB",
+            "B152EE5D-10B8-4C40-BD71-1C2E44867DAD",
+            "61220961-5473-4C1E-A700-F43DAB094CB2",
+            "C13189CB-6E7E-45F7-A83C-6F1C8A0562C5",
+            "229DE51C-BB34-44BB-A232-3766169470D0",
+            "E0E1795E-5568-4C9C-BCBB-C6AA645AA4DA",
+            "30C20F33-D46F-4E85-8757-3C222EA57CBB",
+            "8C7C9E6E-5322-4363-B2A7-6FBB202A4310",
+            "E4897BF2-4BC7-4395-A68D-02398E12A334",
+            "3F25FBD2-E1AC-4EEA-8D59-E185DFCE342C",
+            "080D51C2-CF6C-435C-B75C-1EEAC9CCC1F8",
+            "0A78885F-8039-4A31-BE7C-872BEBFCDE70",
+            "4C0B3DB5-72F7-451A-878B-588BB7E276A2",
+            "3A0C1D4C-E1BA-4A6A-A1D4-0317D6F7BB22",
+            "3F777482-2D85-4B2C-9150-2985AA877A53",
+            "4B5140B8-1CF3-42B8-A7C1-6CABB1127774",
+            "90A12D95-F04C-4D40-A0D7-6F4A8BDAD975",
+            "AD951C2D-A3EA-48DE-A0CA-8B2A85EBB1A5",
+            "BB264B7C-B5F1-40AD-B095-8A6245BDD63F",
+            "50D8595D-2A22-44EA-B09E-D3A28C2E29B5",
+            "DDBBE10F-4DB0-4C48-B1E8-CDD58AADF2DE",
+            "067EE0CD-C949-4393-BB3A-80A1BBA12CED",
+            "3EBA986B-E3CB-4B3D-9D56-7A12039DE50C",
+            "BB96FC50-A7A6-48A3-B822-2321CB9A6B86",
+            "963B9227-3B3D-4E1B-81EF-6043952F5CD2",
+            "09FF4DC6-7C79-4CCA-AD09-C4EBB63D25A6",
+            "F27BAFBC-CBF8-4C5D-AF93-37D88293C994",
+            "6FE64025-CBC7-451C-86C8-0F6AAA4CA1BC",
+            "ADF04A91-4CF8-4D00-B18D-9BFCB543456B",
+            "904FE705-B241-4C59-8737-B91456558509",
+            "4CEBA503-328A-46FA-9EAF-5DF04F1F1750",
+            "8DD9E7E8-0907-4FD8-906C-E9A214A16562",
+            "73F05721-6892-4CDB-9CF5-1AC555F84A33",
+            "339ED554-9BD2-42E1-996C-059B2D8A31CD",
+            "85C3F742-1ED1-4D72-A281-BB8C3302745D",
+            "54CADAE8-737D-4F7F-8C49-4F90725D5E5D",
+            "51776FF5-D23B-4F9E-996B-D5118901D9A1",
+            "FB093CCC-BF65-4EBD-89F1-B9B6E1465323",
+            "D751CF50-3190-4FA2-BA3C-A21C68E3E216",
+            "823F70EA-0BD8-4EF8-910F-B70E085A82EE",
+            "1658EE6D-9DF8-4302-B21E-1824B55F128C",
+            "198BFCF2-69FD-45D8-A4D9-895E55033E7C",
+            "A19C5DDB-95F0-4234-91B2-B6AA96374A23",
+            "A490BE52-3857-4FE7-8F8D-4AB99D277B9E"
+          ]
         },
         "nfg_blocks": {
           "bestLevel": 6,
@@ -469,7 +552,7 @@
         }
       },
       "claimedMissions": [],
-      "lastArcadeStakeAt": 1782164706274
+      "lastArcadeStakeAt": 1782172022785
     },
     "meowcloud__": {
       "dayKey": "2026-06-03",
@@ -726,7 +809,7 @@
       "claimedMissions": []
     },
     "sk_x120": {
-      "dayKey": "2026-06-22",
+      "dayKey": "2026-06-23",
       "stats": {
         "rounds": 0,
         "wins": 0,
@@ -794,21 +877,21 @@
           ],
           "equippedSkin": "nfg_fire",
           "session": {
-            "active": true,
-            "milestones": 7,
-            "sessionPoints": 24143,
-            "lastMilestoneHeight": 17500,
-            "lastMilestoneAt": 1782162917914,
-            "peakHeight": 17509,
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
             "vsMatchId": null,
             "vsDeferred": false
           },
-          "totalEarned": 164674
+          "totalEarned": 292287
         },
         "nfg_mines": {},
         "nfg_vault_run": {
           "session": {
-            "active": true,
+            "active": false,
             "milestones": 0,
             "sessionPoints": 0,
             "lastMilestoneDistance": 0,
@@ -819,7 +902,7 @@
             "classic"
           ],
           "equippedShip": "classic",
-          "bestDistance": 2056
+          "bestDistance": 4405
         }
       },
       "claimedMissions": []
@@ -924,11 +1007,11 @@
       "claimedMissions": []
     },
     "cj_hern": {
-      "dayKey": "2026-06-22",
+      "dayKey": "2026-06-23",
       "stats": {
-        "rounds": 177,
-        "wins": 124,
-        "lost": 468533,
+        "rounds": 2,
+        "wins": 2,
+        "lost": 0,
         "liveWin": 1
       },
       "games": {
@@ -1015,7 +1098,26 @@
             "vsMatchId": null,
             "vsDeferred": false
           },
-          "totalEarned": 13796
+          "totalEarned": 72429,
+          "syncedOfflineQueueIds": [
+            "7E53CAA0-4001-4842-A095-7B2756525153",
+            "B0262923-8552-40A8-9634-9ACE4C037557",
+            "20E1B6FB-2A33-441D-B0C8-EFA4D678F0F7",
+            "D6806186-69A8-4A6B-A0D4-43AC2FE0E6FC",
+            "05E218CD-631A-4B67-836E-9C0AC7434815",
+            "667A6715-95B0-49D7-98BB-260E9C53FE5D",
+            "A5ADA24A-13EA-47FA-B7F7-26FA033CDB3B",
+            "2BF73C39-1E03-4391-A199-7B6BA45C0982",
+            "FE0548D4-73E9-459D-BAE4-ED2C9749FA74",
+            "AFB1D76C-1747-45D4-B8BD-C5443021D6F7",
+            "AB4E9DD5-9E73-4AC3-92BA-0C7C3CE137C4",
+            "01AA55F1-8BE8-467A-A7E4-7AA9C8625E11",
+            "3487775D-FE66-45C9-B1A8-609EE3387972",
+            "E2860228-91D1-45A7-A218-185ED8CC9EE7",
+            "1B9B4249-1CC6-41B7-B29B-D0EDBFB3B546",
+            "AD99BC59-760E-41CE-B1FA-5373339914D1",
+            "4BD0F365-199A-4980-B333-F21D83C08CBB"
+          ]
         },
         "nfg_vault_run": {
           "session": {
@@ -1034,7 +1136,7 @@
         }
       },
       "claimedMissions": [],
-      "lastArcadeStakeAt": 1782160996076
+      "lastArcadeStakeAt": 1782171745242
     },
     "akerzk": {
       "dayKey": "2026-06-06",
@@ -1260,7 +1362,7 @@
       "claimedMissions": []
     },
     "ghi4462": {
-      "dayKey": "2026-06-22",
+      "dayKey": "2026-06-23",
       "stats": {
         "rounds": 0,
         "wins": 0,
@@ -1270,14 +1372,14 @@
         "nfg_blocks": {
           "bestLevel": 7,
           "session": {
-            "active": true,
+            "active": false,
             "level": 1,
             "sessionLevels": 0,
             "sessionPoints": 0
           }
         },
         "nfg_snake_jump": {
-          "bestHeight": 36784,
+          "bestHeight": 53790,
           "ownedSkins": [
             "classic"
           ],
@@ -1287,12 +1389,12 @@
             "milestones": 8,
             "sessionPoints": 27592,
             "lastMilestoneHeight": 20000,
-            "lastMilestoneAt": 1782165385234,
-            "peakHeight": 20005,
+            "lastMilestoneAt": 1782169835572,
+            "peakHeight": 51212,
             "vsMatchId": null,
             "vsDeferred": false
           },
-          "totalEarned": 793696
+          "totalEarned": 1035126
         },
         "nfg_mines": {
           "session": {
@@ -1724,6 +1826,143 @@
       },
       "games": {},
       "claimedMissions": []
+    },
+    "appuser_9596c3f791b412d1": {
+      "dayKey": "2026-06-23",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "syncedOfflineQueueIds": [
+            "pc-test-001"
+          ],
+          "bestHeight": 2500,
+          "totalEarned": 3449
+        }
+      },
+      "claimedMissions": []
+    },
+    "appuser_3ef475b373a45f86": {
+      "dayKey": "2026-06-23",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "syncedOfflineQueueIds": [
+            "pc-test-dup-001"
+          ],
+          "bestHeight": 2500,
+          "totalEarned": 3449
+        }
+      },
+      "claimedMissions": []
+    },
+    "appuser_81be281f12ae6762": {
+      "dayKey": "2026-06-23",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_blocks": {
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          },
+          "syncedOfflineQueueIds": [
+            "pc-test-blocks-001"
+          ],
+          "bestLevel": 2
+        },
+        "nfg_vault_run": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneDistance": 0,
+            "lastMilestoneAt": 0,
+            "peakDistance": 0
+          },
+          "ownedShips": [
+            "classic"
+          ],
+          "equippedShip": "classic",
+          "syncedOfflineQueueIds": [
+            "pc-test-vault-001"
+          ],
+          "bestDistance": 400
+        }
+      },
+      "claimedMissions": []
+    },
+    "appuser_ac547c178bed935a": {
+      "dayKey": "2026-06-23",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "syncedOfflineQueueIds": [
+            "pc-prod-test-001"
+          ],
+          "bestHeight": 2500,
+          "totalEarned": 3449
+        }
+      },
+      "claimedMissions": []
     }
   },
   "leaderboards": {
@@ -1813,6 +2052,12 @@
         "updatedAt": 1781749967805
       },
       {
+        "userId": "appuser_81be281f12ae6762",
+        "displayName": "App User",
+        "points": 2,
+        "updatedAt": 1782169430073
+      },
+      {
         "userId": "apple_app_review",
         "displayName": "Apple Review",
         "points": 1,
@@ -1821,20 +2066,20 @@
     ],
     "nfg_snake_jump": [
       {
-        "userId": "sameya.bx",
-        "displayName": "Sameya🐨",
-        "points": 46536,
-        "updatedAt": 1782163863251,
+        "userId": "ghi4462",
+        "displayName": "G",
+        "points": 53790,
+        "updatedAt": 1782167760749,
         "jumpSkinId": "classic",
         "jumpSkinName": null,
         "jumpSkinFill": "#596ff2",
         "jumpSkinRing": "#f2c733"
       },
       {
-        "userId": "ghi4462",
-        "displayName": "G",
-        "points": 36784,
-        "updatedAt": 1782163452492,
+        "userId": "sameya.bx",
+        "displayName": "Sameya🐨",
+        "points": 50126,
+        "updatedAt": 1782165540707,
         "jumpSkinId": "classic",
         "jumpSkinName": null,
         "jumpSkinFill": "#596ff2",
@@ -1939,6 +2184,24 @@
         "jumpSkinRing": "#f2c733"
       },
       {
+        "userId": "appuser_9596c3f791b412d1",
+        "displayName": "App User",
+        "points": 2500,
+        "updatedAt": 1782169406901
+      },
+      {
+        "userId": "appuser_3ef475b373a45f86",
+        "displayName": "App User",
+        "points": 2500,
+        "updatedAt": 1782169429822
+      },
+      {
+        "userId": "appuser_ac547c178bed935a",
+        "displayName": "App User",
+        "points": 2500,
+        "updatedAt": 1782169462047
+      },
+      {
         "userId": "f9otp",
         "displayName": "F9",
         "points": 1940,
@@ -1967,16 +2230,20 @@
         "updatedAt": 1782085425206
       },
       {
+        "userId": "sk_x120",
+        "displayName": "𝓢.𝓴𝓱𝔁𝓷🫶🏽",
+        "points": 4405,
+        "updatedAt": 1782170508041,
+        "jumpSkinId": "nfg_fire",
+        "jumpSkinName": "NFG Inferno",
+        "jumpSkinFill": "#ff6b35",
+        "jumpSkinRing": "#ffd700"
+      },
+      {
         "userId": "y666.suf",
         "displayName": "Y666SUF 👨🏾‍🦯",
         "points": 2667,
         "updatedAt": 1780881783148
-      },
-      {
-        "userId": "sk_x120",
-        "displayName": "𝓢.𝓴𝓱𝔁𝓷🫶🏽",
-        "points": 2056,
-        "updatedAt": 1782083452535
       },
       {
         "userId": "sk.07020",
@@ -1989,6 +2256,12 @@
         "displayName": "G",
         "points": 421,
         "updatedAt": 1782113162384
+      },
+      {
+        "userId": "appuser_81be281f12ae6762",
+        "displayName": "App User",
+        "points": 400,
+        "updatedAt": 1782169430337
       },
       {
         "userId": "nina.k825",

@@ -93,6 +93,9 @@ let historyMult = [1];
 let crashChart = null;
 let serverMult = 1;
 let smoothMult = 1;
+let serverSampleMult = 1;
+let serverSampleAt = 0;
+let derivedMultRate = 0.235;
 let lastRoundId = 0;
 let prevPhase = null;
 let lastSummaryRoundId = 0;
@@ -679,6 +682,48 @@ function showSpinOverlay(p) {
   }, Math.max(2200, spinMs + 900));
 }
 
+function estimateMultRate(mult) {
+  const m = Math.max(Number(mult) || 1, 1);
+  let early = 0.56;
+  if (m > 1 && m < 5) early = 0.56 + ((m - 1) / 4) * 0.44;
+  else if (m >= 5) early = 1;
+  const perSec = Number(state?.opts?.multiplierPerSecond) || 0.42;
+  return perSec * early;
+}
+
+function resetMultMotion() {
+  serverMult = 1;
+  smoothMult = 1;
+  serverSampleMult = 1;
+  serverSampleAt = 0;
+  derivedMultRate = estimateMultRate(1);
+}
+
+/** Track server multiplier samples — only reset the clock when mult actually rises. */
+function syncServerMultSample(mult, now = performance.now()) {
+  const m = Math.max(Number(mult) || 1, 1);
+  serverMult = m;
+
+  if (serverSampleAt <= 0 || m < serverSampleMult - 0.001) {
+    serverSampleMult = m;
+    serverSampleAt = now;
+    return;
+  }
+
+  if (m > serverSampleMult + 0.0001) {
+    const dt = (now - serverSampleAt) / 1000;
+    if (dt >= 0.015 && dt <= 0.3) {
+      const measured = (m - serverSampleMult) / dt;
+      if (Number.isFinite(measured) && measured > 0) {
+        derivedMultRate = derivedMultRate * 0.3 + measured * 0.7;
+      }
+    }
+    serverSampleMult = m;
+    serverSampleAt = now;
+  }
+  // Same mult (e.g. cashout-only WS) — keep extrapolating, don't reset the clock.
+}
+
 function displayMultForUi() {
   if (!state) return 1;
   if (state.phase === "ended") return Math.max(Number(state.crashPoint ?? state.multiplier) || 1, 1);
@@ -686,29 +731,40 @@ function displayMultForUi() {
   return 1;
 }
 
-function tickSmoothMult() {
+function tickSmoothMult(now = performance.now()) {
   if (!state) return;
-  serverMult = Number(state.multiplier) || 1;
   if (state.phase !== "running") {
-    smoothMult = state.phase === "ended" ? displayMultForUi() : 1;
+    if (state.phase === "ended") {
+      smoothMult = Math.max(Number(state.crashPoint ?? state.multiplier) || 1, 1);
+    } else {
+      smoothMult = 1;
+    }
     return;
   }
-  const diff = serverMult - smoothMult;
-  if (Math.abs(diff) < 0.006) {
-    smoothMult = serverMult;
-    return;
-  }
-  const step = Math.sign(diff) * Math.min(Math.abs(diff), Math.max(0.012, Math.abs(diff) * 0.38));
-  smoothMult = Math.round((smoothMult + step) * 100) / 100;
+
+  if (serverSampleAt <= 0) syncServerMultSample(serverMult, now);
+
+  const rate = derivedMultRate > 0 ? derivedMultRate : estimateMultRate(serverSampleMult);
+  const elapsed = (now - serverSampleAt) / 1000;
+  let next = serverSampleMult + rate * Math.max(0, elapsed);
+  next = Math.max(next, serverMult);
+  const maxLead = Math.max(rate * 0.1, 0.015);
+  smoothMult = Math.min(next, serverMult + maxLead);
 }
 
 function pushSmoothHistory() {
   if (!state || state.phase !== "running") return;
   const m = displayMultForUi();
-  const last = historyMult[historyMult.length - 1];
-  if (last == null || Math.abs(last - m) > 0.003) {
+  if (historyMult.length === 0) historyMult = [1];
+  if (historyMult.length === 1) {
     historyMult.push(m);
-    if (historyMult.length > 200) historyMult.shift();
+    return;
+  }
+  historyMult[historyMult.length - 1] = m;
+  const anchor = historyMult[historyMult.length - 2];
+  if (Math.abs(m - anchor) > 0.003) {
+    historyMult.push(m);
+    if (historyMult.length > 400) historyMult.shift();
   }
 }
 
@@ -776,13 +832,14 @@ function refreshCrashVisuals() {
 }
 
 function startCrashVisualLoop() {
-  const frame = () => {
-    tickSmoothMult();
+  if (!crashChart) return;
+  crashChart.onFrame = (now) => {
+    tickSmoothMult(now);
     if (state?.phase === "running") pushSmoothHistory();
-    refreshCrashVisuals();
-    requestAnimationFrame(frame);
+    if (multDisplay && state?.phase === "running") {
+      multDisplay.textContent = fmtMult(displayMultForUi());
+    }
   };
-  requestAnimationFrame(frame);
 }
 
 async function initCrashChart() {
@@ -790,6 +847,8 @@ async function initCrashChart() {
   try {
     const { CrashChartRenderer } = await import("/crash-chart.js");
     crashChart = new CrashChartRenderer(crashCanvas, chartWrap);
+    crashChart.getLiveMult = () => displayMultForUi();
+    crashChart.getLiveHistory = () => historyMult;
     startCrashVisualLoop();
     if (state) refreshCrashVisuals();
   } catch (err) {
@@ -896,6 +955,7 @@ function applyState(s) {
   if (s.roundId !== lastRoundId) {
     lastRoundId = s.roundId;
     historyMult = [1];
+    resetMultMotion();
   }
   const phaseBecameEnded = prevPhase !== "ended" && s.phase === "ended";
   state = s;
@@ -905,13 +965,13 @@ function applyState(s) {
   setPhaseLabel(s.phase);
 
   if (s.phase === "betting" || s.phase === "idle") {
-    smoothMult = 1;
-    serverMult = 1;
+    resetMultMotion();
   } else if (s.phase === "running") {
-    serverMult = Number(s.multiplier) || 1;
-    if (smoothMult < 1 || smoothMult > serverMult + 0.5) smoothMult = serverMult;
+    syncServerMultSample(Number(s.multiplier) || 1);
+    if (smoothMult < 1 || smoothMult > serverMult + 0.6) smoothMult = serverMult;
   } else if (s.phase === "ended") {
     smoothMult = Math.max(Number(s.crashPoint ?? s.multiplier) || 1, 1);
+    serverSampleAt = 0;
   }
 
   if (chartWrap) {

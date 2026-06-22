@@ -26,7 +26,8 @@ if ($Merge) {
     git commit -m "PC live: local server tweaks before sync-pull merge $stamp"
   }
   git fetch origin
-  $behind = [int](git rev-list HEAD..origin/main --count 2>$null)
+  $behindRaw = git rev-list HEAD..origin/main --count 2>$null
+  $behind = [int]$behindRaw
   if ($behind -eq 0) {
     Write-Host "Already up to date with origin/main." -ForegroundColor Green
   } else {
@@ -34,8 +35,9 @@ if ($Merge) {
     git merge origin/main -m "Merge origin/main into PC live branch"
     if ($LASTEXITCODE -ne 0) {
       Write-Host ""
-      Write-Host "Merge conflicts — resolve markers, then:" -ForegroundColor Red
-      Write-Host '  git add <resolved files>'      Write-Host "  git commit -m ""Merge origin/main while keeping PC live features"""
+      Write-Host "Merge conflicts - resolve markers, then:" -ForegroundColor Red
+      Write-Host '  git add .   # after resolving conflicts'
+      Write-Host '  git commit -m "Merge origin/main while keeping PC live features"'
       Write-Host ""
       Write-Host "See docs/WINDOWS_MERGE_PULL_PROMPT.txt for conflict rules." -ForegroundColor Yellow
       exit 1
@@ -50,7 +52,7 @@ if ($Merge) {
   } elseif ($dirty) {
     Write-Host "Local changes present. Use one of:" -ForegroundColor Red
     Write-Host "  .\scripts\sync-pull.ps1 -Merge     # commit + merge (recommended on PC)"
-    Write-Host "  git add -A; git commit -m ""...""; .\scripts\sync-pull.ps1 -NoStash"
+    Write-Host '  git add -A; git commit -m "..."; .\scripts\sync-pull.ps1 -NoStash'
     git status -sb
     exit 1
   }

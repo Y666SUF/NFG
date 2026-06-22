@@ -171,7 +171,11 @@ export class CrashChartRenderer {
     this.frozenMult = 1;
     this.crashAnimStart = 0;
     this.raf = 0;
+    this.viewYMax = 1.65;
     this.lastSize = { w: 0, h: 0 };
+    this.getLiveMult = null;
+    this.getLiveHistory = null;
+    this.onFrame = null;
     this.onResize = () => this.resize();
     window.addEventListener("resize", this.onResize);
     if (typeof ResizeObserver !== "undefined") {
@@ -251,6 +255,7 @@ export class CrashChartRenderer {
 
     if (this.phase === "betting" || this.phase === "idle") {
       this.resetCrash();
+      this.viewYMax = 1.65;
     } else if (this.phase === "ended" && (prev === "running" || prev === "ended") && this.crashPhase === "none") {
       this.beginCrash();
     }
@@ -263,6 +268,23 @@ export class CrashChartRenderer {
     this.crashPhase = "none";
     this.crashProgress = 0;
     this.frozenMult = 1;
+  }
+
+  /** Smooth vertical scale so the rocket climb does not jump when yMax grows. */
+  resolveViewYMax(mult, running, historySrc = this.history) {
+    const histPeak = historySrc.length ? Math.max(...historySrc) : 1;
+    const head = Math.max(mult, histPeak, 1);
+    const target = Math.max(head * 1.22, 1.65);
+    if (running) {
+      if (target > this.viewYMax) {
+        this.viewYMax += (target - this.viewYMax) * 0.06;
+      }
+    } else if (this.phase === "ended" || this.crashPhase !== "none") {
+      this.viewYMax += (target - this.viewYMax) * 0.12;
+    } else {
+      this.viewYMax = target;
+    }
+    return Math.max(this.viewYMax, head * 1.08, 1.5);
   }
 
   beginCrash() {
@@ -298,6 +320,7 @@ export class CrashChartRenderer {
   }
 
   loop() {
+    if (typeof this.onFrame === "function") this.onFrame(performance.now());
     this.draw();
     this.raf = requestAnimationFrame(() => this.loop());
   }
@@ -307,11 +330,16 @@ export class CrashChartRenderer {
     const h = this.lastSize.h;
     if (!w || !h) return;
     const ctx = this.ctx;
-    const mult = this.displayMult();
-    const yMax = Math.max(mult * 1.22, 1.5);
+    const liveHistory = typeof this.getLiveHistory === "function" ? this.getLiveHistory() : null;
+    const history = liveHistory && liveHistory.length > 1 ? liveHistory : this.history;
+    const mult =
+      typeof this.getLiveMult === "function"
+        ? Math.max(this.getLiveMult(), 1)
+        : this.displayMult();
+    const running = this.phase === "running" && this.crashPhase === "none";
+    const yMax = this.resolveViewYMax(mult, running, history);
     const layout = new FlightLayout(w, h, yMax);
     const crashed = this.phase === "ended" || this.crashPhase !== "none";
-    const running = this.phase === "running" && this.crashPhase === "none";
 
     drawStarfield(ctx, w, h);
 
@@ -346,7 +374,7 @@ export class CrashChartRenderer {
     }
     ctx.setLineDash([]);
 
-    if (this.history.length > 1 && (running || crashed)) {
+    if (history.length > 1 && (running || crashed)) {
       const grad = ctx.createLinearGradient(layout.padX, 0, w - layout.padX, 0);
       grad.addColorStop(0, THEME.lineViolet);
       grad.addColorStop(1, THEME.linePink);
@@ -355,7 +383,7 @@ export class CrashChartRenderer {
       ctx.shadowColor = crashed ? THEME.danger : THEME.accent;
       ctx.shadowBlur = 8;
       ctx.beginPath();
-      this.history.forEach((m, i) => {
+      history.forEach((m, i) => {
         const p = layout.point(m);
         if (i === 0) ctx.moveTo(p.x, p.y);
         else ctx.lineTo(p.x, p.y);
@@ -367,8 +395,8 @@ export class CrashChartRenderer {
       fill.addColorStop(0, "rgba(94, 234, 212, 0.35)");
       fill.addColorStop(1, "rgba(94, 234, 212, 0)");
       ctx.fillStyle = fill;
-      ctx.lineTo(layout.point(this.history[this.history.length - 1]).x, h - layout.padY);
-      ctx.lineTo(layout.point(this.history[0]).x, h - layout.padY);
+      ctx.lineTo(layout.point(history[history.length - 1]).x, h - layout.padY);
+      ctx.lineTo(layout.point(history[0]).x, h - layout.padY);
       ctx.closePath();
       ctx.globalAlpha = 0.5;
       ctx.fill();
@@ -386,8 +414,12 @@ export class CrashChartRenderer {
     ctx.fillStyle = "rgba(255,255,255,0.12)";
     ctx.fillRect(launch.x - 24, launch.y + 4, 48, 8);
 
-    const pos = this.rocketPosition(layout);
-    const angle = this.crashPhase === "falling" ? 1.7 : layout.flightAngle(mult);
+    const pos =
+      running || (this.crashPhase === "none" && this.phase === "running")
+        ? layout.point(mult)
+        : this.rocketPosition(layout);
+    const angle =
+      this.crashPhase === "falling" ? 1.7 : layout.flightAngle(running ? mult : this.displayMult());
     const showRocket = this.crashPhase !== "wreckage";
     if (showRocket) {
       drawRocket(ctx, pos.x, pos.y, angle, running ? 0.52 : 0.48, running, this.crashPhase === "falling");

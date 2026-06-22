@@ -29,8 +29,24 @@ struct ContentView: View {
                                 }
                                 .background(NFGTheme.background.opacity(0.98))
                             }
+                    } else if sync.isBootstrappingSession || sync.connectionStatus == "Connecting…" {
+                        VStack(spacing: 16) {
+                            ProgressView()
+                                .tint(NFGTheme.accent2)
+                            Text("Starting…")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundStyle(NFGTheme.muted)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
-                        LinkTikTokView()
+                        VStack(spacing: 20) {
+                            Text("Can't reach the game server")
+                                .font(.headline)
+                                .foregroundStyle(NFGTheme.text)
+                            Button("Try again") { sync.connect() }
+                                .buttonStyle(.borderedProminent)
+                        }
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                     }
                 }
 
@@ -79,11 +95,7 @@ struct ContentView: View {
                 }
             }
             .onAppear {
-                if sync.connectionStatus == "Offline" {
-                    sync.connect()
-                } else if PlayerSession.isLoggedIn {
-                    Task { await sync.refreshActiveAppUsers() }
-                }
+                sync.connect()
             }
             .onChange(of: sync.connectionStatus) { _, status in
                 guard PlayerSession.isLoggedIn, status == "Online" else { return }

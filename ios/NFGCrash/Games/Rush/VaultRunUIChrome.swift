@@ -51,9 +51,9 @@ struct VaultRunObstacleLegend: View {
             }
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    legendChip(color: VaultRunObstacleColorsBridge.asteroid, label: "Asteroid", icon: "xmark", hint: "Dodge")
-                    legendChip(color: VaultRunObstacleColorsBridge.debris, label: "Debris", icon: "arrow.up", hint: "Boost ↑")
-                    legendChip(color: VaultRunObstacleColorsBridge.tunnel, label: "Rock tunnel", icon: "arrow.down", hint: "Shrink ↓")
+                    legendChip(color: VaultRunObstacleColorsBridge.asteroid, label: "Bust", icon: "xmark", hint: "Dodge")
+                    legendChip(color: VaultRunObstacleColorsBridge.debris, label: "Card row", icon: "arrow.up", hint: "Jump ↑")
+                    legendChip(color: VaultRunObstacleColorsBridge.tunnel, label: "Table arch", icon: "arrow.down", hint: "Slide ↓")
                 }
             }
         }
@@ -152,10 +152,10 @@ struct VaultRunShopShipPreview: View {
                     .blur(radius: 3)
                     .opacity(glow ? 0.85 : 0.45)
             }
-            VaultRunDraw.previewPath(style: style, in: CGRect(x: 0, y: 0, width: 34, height: 28))
+            VaultRunCasinoDraw.runnerPreviewPath(style: style, in: CGRect(x: 0, y: 0, width: 34, height: 28))
                 .fill(Color.vaultRunHexOptional(hullHex) ?? VaultRunTheme.accentGold)
                 .frame(width: 34, height: 28)
-            VaultRunDraw.previewPath(style: style, in: CGRect(x: 0, y: 0, width: 34, height: 28))
+            VaultRunCasinoDraw.runnerPreviewPath(style: style, in: CGRect(x: 0, y: 0, width: 34, height: 28))
                 .stroke(Color.vaultRunHexOptional(cockpitHex) ?? VaultRunTheme.accentOrange, lineWidth: 1.5)
                 .frame(width: 34, height: 28)
             Circle()
@@ -190,13 +190,13 @@ struct VaultRunShopSheet: View {
                 VStack(alignment: .leading, spacing: 12) {
                     VStack(alignment: .leading, spacing: 6) {
                         HStack(spacing: 6) {
-                            Image(systemName: "airplane.circle.fill")
+                            Image(systemName: "person.crop.circle.fill")
                                 .foregroundStyle(VaultRunTheme.accentGold)
-                            Text("NFG RUSH HANGAR")
+                            Text("VIP RUNNER LOCKER")
                                 .font(.system(size: 16, weight: .black, design: .rounded))
                                 .foregroundStyle(NFGTheme.text)
                         }
-                        Text("Spend Crash points on ship hulls, cockpit glow, and colored engine trails. Your equipped ship shows in-game.")
+                        Text("Spend Crash points on runner outfits — vest colors, gold trim, and chip trails show in-game.")
                             .font(.system(size: 12))
                             .foregroundStyle(NFGTheme.muted)
                     }
@@ -233,7 +233,7 @@ struct VaultRunShopSheet: View {
                 .padding()
             }
             .background(NFGTheme.background.ignoresSafeArea())
-            .navigationTitle("Hangar Shop")
+            .navigationTitle("Runner Shop")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -266,7 +266,7 @@ struct VaultRunShopSheet: View {
                         .foregroundStyle(NFGTheme.muted)
                 }
                 if VaultRunShopCatalog.trailTier(for: item.id) > 0 {
-                    Text("Unlocks richer engine trail")
+                    Text("Unlocks richer chip trail")
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(VaultRunTheme.accentOrange)
                 }

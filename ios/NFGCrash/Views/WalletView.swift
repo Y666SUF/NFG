@@ -15,6 +15,8 @@ struct WalletView: View {
     @State private var displayNameSaving = false
     @State private var displayNameSuccess = false
 
+    @State private var showLinkTikTok = false
+
     private var displayNameMaxLength: Int {
         sync.wallet.displayNameMaxLength ?? 20
     }
@@ -28,7 +30,12 @@ struct WalletView: View {
                             .padding(.top, 40)
                     } else {
                         headerCard
-                        displayNameSection
+                        if !AuthStore.isTikTokLinked {
+                            linkTikTokSection
+                        }
+                        if AuthStore.isTikTokLinked {
+                            displayNameSection
+                        }
                         displayShopSection
                         vaultArcadeSection
                         balanceCard
@@ -102,6 +109,17 @@ struct WalletView: View {
             .fullScreenCover(isPresented: $adCoordinator.showSimulatedAd) {
                 SimulatedRewardedAdView(coordinator: adCoordinator)
             }
+            .sheet(isPresented: $showLinkTikTok) {
+                NavigationStack {
+                    LinkTikTokView()
+                        .environmentObject(sync)
+                        .toolbar {
+                            ToolbarItem(placement: .topBarTrailing) {
+                                Button("Done") { showLinkTikTok = false }
+                            }
+                        }
+                }
+            }
             .onAppear {
                 displayNameDraft = sync.wallet.displayName
                 Task {
@@ -141,6 +159,31 @@ struct WalletView: View {
                 }
             }
         }
+    }
+
+    private var linkTikTokSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("TikTok Live")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(NFGTheme.text)
+            Text("You're playing as App User with app points. Link TikTok later to use your live username and merge progress.")
+                .font(.system(size: 11))
+                .foregroundStyle(NFGTheme.muted)
+            Button {
+                showLinkTikTok = true
+            } label: {
+                Text("Link TikTok account")
+                    .font(.system(size: 14, weight: .bold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(NFGTheme.accent)
+        }
+        .padding(14)
+        .background(NFGTheme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .overlay(RoundedRectangle(cornerRadius: 14).stroke(NFGTheme.border))
     }
 
     private var displayNameSection: some View {
@@ -520,7 +563,7 @@ struct WalletView: View {
                         font: .system(size: 17, weight: .bold)
                     )
                 }
-                Text("@\(sync.wallet.user)")
+                Text(AuthStore.isTikTokLinked ? "@\(sync.wallet.user)" : "App account · not linked to TikTok")
                     .font(.system(size: 13))
                     .foregroundStyle(NFGTheme.muted)
                 HStack(spacing: 6) {

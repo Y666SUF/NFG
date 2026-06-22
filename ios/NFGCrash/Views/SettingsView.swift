@@ -10,6 +10,9 @@ struct SettingsView: View {
     @State private var chatBannerNotificationsEnabled = AppPreferences.chatBannerNotificationsEnabled
 
     private var accountLabel: String {
+        if AuthStore.isAppGuest {
+            return AuthStore.appGuestDisplayName
+        }
         let name = AuthStore.verifiedDisplayName
         let user = AuthStore.verifiedUserId
         if !name.isEmpty, name != user { return "\(name) (@\(user))" }
@@ -17,7 +20,8 @@ struct SettingsView: View {
     }
 
     private var accountKind: String {
-        AuthStore.isAppReviewDemo ? "App Review demo" : "TikTok (live verified)"
+        if AuthStore.isAppGuest { return "App account (TikTok not linked)" }
+        return "TikTok (live verified)"
     }
 
     var body: some View {
@@ -60,10 +64,7 @@ struct SettingsView: View {
     }
 
     private var unlinkConfirmMessage: String {
-        if AuthStore.isAppReviewDemo {
-            return "You will return to the sign-in screen. You can use App Review sign-in again or link a real TikTok account with !link while live."
-        }
-        return "You will return to the TikTok link screen. Use !link on live to sign in with the same or a different TikTok account."
+        return "You will get a fresh app account. Link TikTok anytime from Profile with !link while live."
     }
 
     private var accountSection: some View {
@@ -121,7 +122,7 @@ struct SettingsView: View {
                 .font(.headline)
                 .foregroundStyle(NFGTheme.text)
 
-            Text("Unlink this account to link another TikTok (comment !link on live), or switch from App Review demo to a real account.")
+            Text("Unlink to start a fresh app account, or link a different TikTok with !link on live.")
                 .font(.caption)
                 .foregroundStyle(NFGTheme.muted)
 

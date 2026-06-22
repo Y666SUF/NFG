@@ -4,6 +4,7 @@
 const { isChatAdmin, normChatUser } = require("./mobile-chat-moderation");
 const { normalizeUser } = require("./store");
 const { buildWalletPayload } = require("./mobile-wallet");
+const { setArcadeSkillBest } = require("./mobile-arcade");
 const { GAME_HOST_USER, isGameHost } = require("./host-config");
 
 const PROTECTED_USERS = new Set([GAME_HOST_USER]);
@@ -153,6 +154,35 @@ function registerMobileGameAdminRoutes(app, ctx) {
     const wallet = buildWalletPayload(target, pointStore, game);
     console.log(`[Admin] @${session.userId} updated @${target}: ${changes.join(", ")}`);
     res.json({ ok: true, changes, ...wallet });
+  });
+
+  app.post("/api/mobile/admin/set-arcade-best", (req, res) => {
+    const session = validateBearer(req);
+    if (!requireHostAdmin(session, res)) return;
+
+    const target = targetUserFrom(req.body || {});
+    const gameId = String(req.body?.gameId || "nfg_snake_jump").trim();
+    const score = Number(req.body?.score ?? req.body?.best ?? req.body?.height ?? 0);
+    if (!target) {
+      return res.status(400).json({ ok: false, error: "user_id_required" });
+    }
+    if (!Number.isFinite(score) || score <= 0) {
+      return res.status(400).json({ ok: false, error: "invalid_score", message: "Score must be a positive number." });
+    }
+
+    const result = setArcadeSkillBest(gameId, target, score, pointStore);
+    if (!result.ok) {
+      return res.status(400).json(result);
+    }
+
+    if (typeof pointStore?.ensureAccount === "function") {
+      pointStore.ensureAccount(target);
+    }
+
+    console.log(
+      `[Admin] @${session.userId} set arcade best @${result.userId} ${result.gameId} = ${result.best}`
+    );
+    res.json(result);
   });
 
   app.post("/api/mobile/admin/wipe-player", (req, res) => {

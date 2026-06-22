@@ -45,6 +45,9 @@ _import_Y666SUF_website/frontend/build/
 # Bundled portable Node (Windows launcher only)
 tools/node/
 
+# Local restore snapshots (do not ship)
+.vault-run-restore/
+
 # OS / IDE
 .DS_Store
 Thumbs.db

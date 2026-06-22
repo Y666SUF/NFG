@@ -2,13 +2,13 @@ import Foundation
 import Security
 
 enum AuthStore {
-    /// Server user id for App Store Review demo sessions (`linkedVia: app_review`).
-    static let appReviewUserId = "apple_app_review"
+    static let appGuestDisplayName = "App User"
 
     private static let tokenKey = "nfg_session_token"
     private static let userKey = "nfg_verified_user"
     private static let displayNameKey = "nfg_verified_display_name"
     private static let displayNameLockedKey = "nfg_display_name_locked"
+    private static let linkedViaKey = "nfg_linked_via"
     private static let deviceIdKey = "nfg_device_id"
 
     static var deviceId: String {
@@ -41,6 +41,11 @@ enum AuthStore {
         set { UserDefaults.standard.set(newValue, forKey: displayNameKey) }
     }
 
+    static var linkedVia: String {
+        get { UserDefaults.standard.string(forKey: linkedViaKey) ?? "" }
+        set { UserDefaults.standard.set(newValue, forKey: linkedViaKey) }
+    }
+
     /// When true, TikTok / server nickname updates must not replace the app-chosen display name.
     static var displayNameLocked: Bool {
         get { UserDefaults.standard.bool(forKey: displayNameLockedKey) }
@@ -51,23 +56,54 @@ enum AuthStore {
         !(sessionToken ?? "").isEmpty && !verifiedUserId.isEmpty
     }
 
-    static var isAppReviewDemo: Bool {
-        verifiedUserId == appReviewUserId
+    static var isAppGuest: Bool {
+        linkedVia == "app_guest" || verifiedUserId.lowercased().hasPrefix("appuser_")
+    }
+
+    static var isTikTokLinked: Bool {
+        linkedVia == "tiktok" || (isLinked && !isAppGuest)
+    }
+
+    /// Name shown in UI — "App User" until TikTok is linked.
+    static var appFacingDisplayName: String {
+        if isTikTokLinked {
+            let n = verifiedDisplayName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !n.isEmpty { return n }
+            let u = verifiedUserId.trimmingCharacters(in: .whitespacesAndNewlines)
+            return u.isEmpty ? appGuestDisplayName : u
+        }
+        return appGuestDisplayName
+    }
+
+    static func saveGuestSession(token: String, userId: String, displayName: String = appGuestDisplayName) {
+        sessionToken = token
+        verifiedUserId = userId
+        linkedVia = "app_guest"
+        displayNameLocked = false
+        PlayerSession.tiktokUsername = userId
+        verifiedDisplayName = appGuestDisplayName
+        PlayerSession.displayName = appGuestDisplayName
+    }
+
+    static func saveTikTokSession(token: String, userId: String, displayName: String) {
+        sessionToken = token
+        verifiedUserId = userId
+        linkedVia = "tiktok"
+        displayNameLocked = false
+        PlayerSession.tiktokUsername = userId
+        let cleaned = displayName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let name = cleaned.isEmpty ? userId : cleaned
+        verifiedDisplayName = name
+        PlayerSession.displayName = name
     }
 
     static func saveSession(token: String, userId: String, displayName: String) {
-        sessionToken = token
-        verifiedUserId = userId
-        PlayerSession.tiktokUsername = userId
-        adoptDisplayNameFromServer(displayName, userId: userId)
-        if verifiedDisplayName.isEmpty {
-            verifiedDisplayName = userId
-            PlayerSession.displayName = userId
-        }
+        saveTikTokSession(token: token, userId: userId, displayName: displayName)
     }
 
     /// Keeps the last real TikTok nickname; ignores bare username when we already have a better name.
     static func applyCustomDisplayName(_ name: String) {
+        guard isTikTokLinked else { return }
         let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
         verifiedDisplayName = cleaned
@@ -76,6 +112,7 @@ enum AuthStore {
     }
 
     static func adoptDisplayNameFromServer(_ name: String, userId: String) {
+        if isAppGuest { return }
         if displayNameLocked { return }
         let cleaned = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleaned.isEmpty else { return }
@@ -97,6 +134,7 @@ enum AuthStore {
         sessionToken = nil
         verifiedUserId = ""
         verifiedDisplayName = ""
+        linkedVia = ""
         displayNameLocked = false
         PlayerSession.clearLinkedProfile()
     }

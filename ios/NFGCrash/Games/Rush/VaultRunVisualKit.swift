@@ -1,40 +1,47 @@
 import SwiftUI
 import UIKit
 
-/// Space-flight palette and procedural drawing helpers (no external assets).
+/// Casino runway palette and procedural drawing helpers (no external assets).
 enum VaultRunTheme {
-    static let spaceTop = UIColor(red: 0.05, green: 0.06, blue: 0.18, alpha: 1)
-    static let spaceMid = UIColor(red: 0.08, green: 0.05, blue: 0.14, alpha: 1)
-    static let spaceFloor = UIColor(red: 0.02, green: 0.02, blue: 0.07, alpha: 1)
-    static let nebulaPurple = UIColor(red: 0.38, green: 0.14, blue: 0.58, alpha: 1)
-    static let nebulaCyan = UIColor(red: 0.1, green: 0.42, blue: 0.62, alpha: 1)
-    static let sunGlow = UIColor(red: 0.55, green: 0.75, blue: 1, alpha: 1)
-    static let starWhite = UIColor(red: 0.92, green: 0.94, blue: 1, alpha: 1)
+    static let feltTop = UIColor(red: 0.04, green: 0.09, blue: 0.07, alpha: 1)
+    static let feltFloor = UIColor(red: 0.02, green: 0.05, blue: 0.06, alpha: 1)
+    static let feltLaneLight = UIColor(red: 0.08, green: 0.22, blue: 0.16, alpha: 1)
+    static let feltLaneDark = UIColor(red: 0.05, green: 0.14, blue: 0.11, alpha: 1)
+    static let velvetPurple = UIColor(red: 0.22, green: 0.06, blue: 0.18, alpha: 1)
+    static let chipGold = UIColor(red: 0.95, green: 0.78, blue: 0.2, alpha: 1)
+    static let chipRed = UIColor(red: 0.85, green: 0.15, blue: 0.18, alpha: 1)
+    static let goldTrim = UIColor(red: 0.95, green: 0.78, blue: 0.2, alpha: 1)
+    static let starWhite = UIColor(red: 0.98, green: 0.94, blue: 0.85, alpha: 1)
+    // Legacy aliases used by obstacle drawing
+    static let spaceTop = feltTop
+    static let spaceFloor = feltFloor
+    static let nebulaPurple = velvetPurple
+    static let nebulaCyan = UIColor(red: 0.1, green: 0.35, blue: 0.22, alpha: 1)
+    static let sunGlow = chipGold
     static let stoneLight = UIColor(red: 0.58, green: 0.54, blue: 0.5, alpha: 1)
     static let stoneMid = UIColor(red: 0.42, green: 0.38, blue: 0.34, alpha: 1)
     static let stoneDark = UIColor(red: 0.24, green: 0.22, blue: 0.2, alpha: 1)
-    static let moss = UIColor(red: 0.22, green: 0.48, blue: 0.26, alpha: 1)
-    static let goldTrim = UIColor(red: 0.55, green: 0.82, blue: 1, alpha: 1)
+    static let moss = UIColor(red: 0.12, green: 0.42, blue: 0.28, alpha: 1)
     static let fireBar = UIColor(red: 0.95, green: 0.42, blue: 0.12, alpha: 1)
     static let woodBeam = UIColor(red: 0.45, green: 0.28, blue: 0.14, alpha: 1)
     static let asteroidRock = UIColor(red: 0.48, green: 0.42, blue: 0.38, alpha: 1)
     static let asteroidDark = UIColor(red: 0.26, green: 0.22, blue: 0.2, alpha: 1)
-    static let shipHull = UIColor(red: 0.62, green: 0.78, blue: 0.98, alpha: 1)
-    static let shipHullDark = UIColor(red: 0.28, green: 0.42, blue: 0.68, alpha: 1)
-    static let shipCockpit = UIColor(red: 0.35, green: 0.88, blue: 1, alpha: 1)
-    static let engineGlow = UIColor(red: 0.2, green: 0.9, blue: 1, alpha: 1)
-    static let engineCore = UIColor(red: 0.75, green: 0.95, blue: 1, alpha: 1)
-    static let laneGlow = UIColor(red: 0.4, green: 0.62, blue: 1, alpha: 1)
-    static let debrisField = UIColor(red: 0.72, green: 0.55, blue: 0.38, alpha: 1)
-    static let hazardRed = UIColor(red: 0.95, green: 0.28, blue: 0.24, alpha: 1)
+    static let shipHull = UIColor(red: 0.12, green: 0.45, blue: 0.32, alpha: 1)
+    static let shipHullDark = UIColor(red: 0.08, green: 0.28, blue: 0.2, alpha: 1)
+    static let shipCockpit = UIColor(red: 0.95, green: 0.78, blue: 0.2, alpha: 1)
+    static let engineGlow = UIColor(red: 0.95, green: 0.78, blue: 0.2, alpha: 1)
+    static let engineCore = UIColor(red: 1, green: 0.92, blue: 0.55, alpha: 1)
+    static let laneGlow = UIColor(red: 0.15, green: 0.55, blue: 0.38, alpha: 1)
+    static let debrisField = UIColor(red: 0.95, green: 0.55, blue: 0.15, alpha: 1)
+    static let hazardRed = UIColor(red: 0.92, green: 0.22, blue: 0.2, alpha: 1)
     static let hazardOrange = UIColor(red: 1, green: 0.62, blue: 0.18, alpha: 1)
-    static let hazardPurple = UIColor(red: 0.62, green: 0.42, blue: 0.98, alpha: 1)
+    static let hazardPurple = UIColor(red: 0.45, green: 0.18, blue: 0.55, alpha: 1)
     static let shadow = UIColor(white: 0, alpha: 0.35)
 
-    static let accentOrange = Color(red: 0.35, green: 0.82, blue: 1)
-    static let accentGold = Color(red: 0.55, green: 0.75, blue: 1)
-    static let accentJade = Color(red: 0.45, green: 0.55, blue: 0.98)
-    static let panelStone = Color(red: 0.06, green: 0.07, blue: 0.14)
+    static let accentOrange = Color(red: 0.95, green: 0.42, blue: 0.18)
+    static let accentGold = Color(red: 0.95, green: 0.78, blue: 0.2)
+    static let accentJade = Color(red: 0.22, green: 0.72, blue: 0.48)
+    static let panelStone = Color(red: 0.04, green: 0.08, blue: 0.06)
 }
 
 struct VaultRunShipCosmetics {
@@ -876,7 +883,7 @@ struct VaultRunLiveDistanceBadge: View {
                 HStack(spacing: 4) {
                     Image(systemName: "flame.fill")
                         .font(.system(size: 9, weight: .bold))
-                    Text("Zone \(speedTier + 1)")
+                    Text("Hot streak")
                         .font(.system(size: 9, weight: .heavy, design: .rounded))
                 }
                 .foregroundStyle(VaultRunTheme.accentOrange)
@@ -901,9 +908,9 @@ struct VaultRunMilestoneBanner: View {
 
     var body: some View {
         HStack(spacing: 8) {
-            Image(systemName: "map.fill")
+            Image(systemName: "dollarsign.circle.fill")
                 .foregroundStyle(VaultRunTheme.accentGold)
-            Text("Next relic at \(nextDistance.formatted())m")
+            Text("Next jackpot at \(nextDistance.formatted())m")
                 .font(.system(size: 11, weight: .semibold))
             Spacer()
             Text("+\(reward.formatted()) pts")
@@ -928,9 +935,9 @@ struct VaultRunFullscreenBackdrop: View {
     var body: some View {
         LinearGradient(
             colors: [
-                Color(red: 0.03, green: 0.04, blue: 0.12),
-                Color(red: 0.05, green: 0.03, blue: 0.1),
-                Color(red: 0.02, green: 0.02, blue: 0.06),
+                Color(red: 0.03, green: 0.07, blue: 0.05),
+                Color(red: 0.04, green: 0.09, blue: 0.06),
+                Color(red: 0.02, green: 0.04, blue: 0.03),
             ],
             startPoint: .top,
             endPoint: .bottom

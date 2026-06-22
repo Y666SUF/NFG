@@ -23,14 +23,14 @@ enum BlocksEngine {
 
     static let colors = ["#22d3ee", "#a78bfa", "#4ade80", "#fb7185", "#fbbf24", "#38bdf8"]
 
-    struct Piece: Identifiable, Equatable {
+    struct Piece: Identifiable, Equatable, Codable {
         var id: String
         var shapeId: Int
         var rotation: Int
         var colorIndex: Int
     }
 
-    struct BoardState: Equatable {
+    struct BoardState: Equatable, Codable {
         var grid: [[Int?]]
         var tray: [Piece?]
         var level: Int

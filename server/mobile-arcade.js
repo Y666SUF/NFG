@@ -1937,6 +1937,7 @@ function snakeJumpPayload(gRec) {
     sessionMilestones: s.milestones || 0,
     sessionLevels: s.milestones || 0,
     bestLevel: gRec.bestHeight || 0,
+    totalJumpEarned: Math.max(0, Math.floor(Number(gRec.totalEarned) || 0)),
     levelRewardPreview: snakeJumpReward(),
     ...snakeJumpShopPayload(gRec),
     practiceMode: false,
@@ -2107,6 +2108,7 @@ function handleSnakeJump(user, userRec, action, payload, pointStore) {
       creditWin(pointStore, user, gained);
       gRec.session.sessionPoints = (gRec.session.sessionPoints || 0) + gained;
     }
+    gRec.totalEarned = Math.max(0, Math.floor(Number(gRec.totalEarned) || 0)) + gained;
     gRec.session.milestones = expected;
     gRec.session.lastMilestoneHeight = requiredHeight;
     gRec.session.lastMilestoneAt = now;
@@ -2654,6 +2656,43 @@ function getPublicTowerHero(user) {
   };
 }
 
+function setArcadeSkillBest(gameId, userId, score, pointStore) {
+  const gid = String(gameId || "").trim();
+  const uid = normUser(userId);
+  const pts = Math.max(0, Math.floor(Number(score) || 0));
+  if (!uid || pts <= 0) {
+    return { ok: false, reason: "invalid_args", message: "User and positive score required." };
+  }
+  if (!LEADERBOARD_GAME_IDS.includes(gid)) {
+    return { ok: false, reason: "invalid_game", message: "Unsupported skill game." };
+  }
+
+  const state = loadState();
+  const userRec = ensureUser(state, uid);
+  if (!userRec) {
+    return { ok: false, reason: "invalid_user", message: "Could not create user record." };
+  }
+  if (!userRec.games) userRec.games = {};
+  if (!userRec.games[gid]) userRec.games[gid] = {};
+
+  const g = userRec.games[gid];
+  if (gid === "nfg_snake_jump") {
+    g.bestHeight = Math.max(g.bestHeight || 0, pts);
+  } else if (gid === "nfg_vault_run") {
+    g.bestDistance = Math.max(g.bestDistance || 0, pts);
+  } else if (gid === "nfg_blocks") {
+    g.bestLevel = Math.max(g.bestLevel || 0, pts);
+  }
+
+  recordArcadeLeaderboard(state, gid, uid, pts, pointStore);
+  if (gid === "nfg_snake_jump") {
+    syncJumpLeaderboardEntry(state, uid, pointStore);
+  }
+
+  saveState(state);
+  return { ok: true, userId: uid, gameId: gid, best: pts };
+}
+
 function registerMobileArcadeRoutes(app, ctx) {
   const { validateBearer, pointStore, game } = ctx;
 
@@ -2738,6 +2777,62 @@ function registerMobileArcadeRoutes(app, ctx) {
   });
 }
 
+function mergeArcadeUserRecords(fromUser, toUser, pointStore) {
+  const from = normUser(fromUser);
+  const to = normUser(toUser);
+  if (!from || !to || from === to) return { ok: false };
+  const state = loadState();
+  ensureLeaderboards(state);
+  const fromRec = state.users?.[from];
+  if (!fromRec) return { ok: true, merged: false };
+
+  if (!state.users[to]) {
+    state.users[to] = fromRec;
+  } else {
+    const toRec = state.users[to];
+    for (const [gameId, gFrom] of Object.entries(fromRec.games || {})) {
+      const gTo = toRec.games?.[gameId];
+      if (!gTo) {
+        toRec.games[gameId] = gFrom;
+      } else {
+        const sl = Math.max(gFrom.skillLevel || 1, gTo.skillLevel || 1);
+        gTo.skillLevel = sl;
+        if (gameId === "nfg_snake_jump") {
+          const bhFrom = Math.max(gFrom.bestHeight || 0, gFrom.session?.bestHeight || 0);
+          const bhTo = Math.max(gTo.bestHeight || 0, gTo.session?.bestHeight || 0);
+          if (bhFrom > bhTo) {
+            gTo.bestHeight = bhFrom;
+            if (gTo.session) gTo.session.bestHeight = bhFrom;
+          }
+        }
+      }
+    }
+    toRec.claimedMissions = [
+      ...new Set([...(toRec.claimedMissions || []), ...(fromRec.claimedMissions || [])]),
+    ];
+  }
+  delete state.users[from];
+
+  for (const gameId of LEADERBOARD_GAME_IDS) {
+    const board = state.leaderboards[gameId] || [];
+    for (let i = 0; i < board.length; i++) {
+      if (board[i].userId !== from) continue;
+      const existing = board.find((e) => e.userId === to);
+      if (existing) {
+        existing.points = Math.max(existing.points || 0, board[i].points || 0);
+        existing.displayName = arcadeDisplayName(to, pointStore);
+        board.splice(i, 1);
+        i -= 1;
+      } else {
+        board[i].userId = to;
+        board[i].displayName = arcadeDisplayName(to, pointStore);
+      }
+    }
+  }
+  saveState(state);
+  return { ok: true, merged: true, from, to };
+}
+
 module.exports = {
   registerMobileArcadeRoutes,
   buildCatalog,
@@ -2748,5 +2843,7 @@ module.exports = {
   prepareJumpVsMatch,
   syncJumpVsSessionPoints,
   finalizeJumpVsMatch,
+  setArcadeSkillBest,
+  mergeArcadeUserRecords,
   SNAKE_JUMP_SKINS,
 };

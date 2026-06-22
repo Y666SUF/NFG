@@ -33,7 +33,7 @@ function validateBearer(req) {
 function registerMobileApi(app, ctx) {
   const { game, pointStore, isLocalhost, broadcast, pushState } = ctx;
 
-  registerMobileAuthRoutes(app, { isLocalhost });
+  registerMobileAuthRoutes(app, { isLocalhost, pointStore });
   if (typeof broadcast === "function") {
     registerMobileChatRoutes(app, { broadcast, validateBearer, pointStore });
     registerMobileChatModerationRoutes(app, {

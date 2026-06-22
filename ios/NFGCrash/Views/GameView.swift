@@ -12,6 +12,7 @@ struct GameView: View {
     @StateObject private var keyboard = KeyboardLiftObserver()
     @State private var betAmount = "100"
     @State private var cashoutTarget = "2.00"
+    @State private var repeatLastBet = AppPreferences.repeatLastBetEnabled
 
     var body: some View {
         GeometryReader { geo in
@@ -34,6 +35,29 @@ struct GameView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
+                        if let nearMiss = sync.nearMissMessage {
+                            HStack(spacing: 6) {
+                                Image(systemName: "target")
+                                    .font(.system(size: 10, weight: .bold))
+                                Text(nearMiss)
+                                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.85)
+                            }
+                            .foregroundStyle(NFGTheme.gold)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                                    .fill(NFGTheme.gold.opacity(0.12))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                                    .stroke(NFGTheme.gold.opacity(0.35), lineWidth: 1)
+                            )
+                        }
+
                         CrashChartView(
                             history: sync.multiplierHistory,
                             phase: sync.gameState.phase,
@@ -43,6 +67,7 @@ struct GameView: View {
                             openBets: sync.gameState.openBets,
                             queuedBets: sync.gameState.queuedBets,
                             entriesActionMessage: sync.lastActionMessage,
+                            recentCrashes: sync.gameState.recentCrashes,
                             onCrashAnimationFinished: {
                                 sync.presentPendingRoundResultPopup()
                             }
@@ -102,6 +127,11 @@ struct GameView: View {
         }
         .onAppear {
             if sync.connectionStatus == "Offline" { sync.connect() }
+            repeatLastBet = AppPreferences.repeatLastBetEnabled
+            if let last = LastBetStore.load() {
+                betAmount = last.amountText
+                cashoutTarget = String(format: "%.2f", last.cashout)
+            }
             Task {
                 await sync.refreshProfile()
                 await sync.refreshLeaderboard()
@@ -111,15 +141,8 @@ struct GameView: View {
     }
 
     private var topProfilesSection: some View {
-        VStack(spacing: 6) {
-            TopProfilesStrip(rows: sync.topBalances, compact: true) {
-                showLeaderboard = true
-            }
-            RecentCrashesStrip(
-                crashes: sync.gameState.recentCrashes,
-                inline: false,
-                showAllFive: true
-            )
+        TopProfilesStrip(rows: sync.topBalances, compact: true) {
+            showLeaderboard = true
         }
     }
 
@@ -171,6 +194,15 @@ struct GameView: View {
         return max(0, keyboard.height - safeAreaBottom)
     }
 
+    private var displayBalance: Int {
+        if sync.liveBalance > 0 { return sync.liveBalance }
+        if sync.wallet.balance > 0 { return sync.wallet.balance }
+        return sync.profile.balance
+    }
+
+    private let quickStakeAmounts = [1000, 5000, 10000, 25000]
+    private let quickCashoutTargets = [1.5, 2.0, 3.0, 5.0]
+
     private var betDock: some View {
         VStack(spacing: NFGSpacing.sm) {
             HStack(spacing: 4) {
@@ -182,13 +214,38 @@ struct GameView: View {
                     .tracking(1.4)
                     .foregroundStyle(NFGTheme.muted)
                 Spacer()
+                if PlayerSession.isLoggedIn, sync.wallet.inventory.stealCharges > 0 {
+                    Button {
+                        showLeaderboard = true
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "bolt.fill")
+                                .font(.system(size: 9, weight: .bold))
+                            Text("\(sync.wallet.inventory.stealCharges)")
+                                .font(NFGFont.numeric(11, weight: .heavy))
+                        }
+                        .foregroundStyle(NFGTheme.gold)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(NFGTheme.gold.opacity(0.12))
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
                 if PlayerSession.isLoggedIn {
-                    let balance = sync.wallet.balance > 0 ? sync.wallet.balance : sync.profile.balance
-                    NFGChip(text: "\(balance.formatted()) pts", icon: "wallet.pass.fill", tint: NFGTheme.accent2)
-            } else {
-                    Text("Link TikTok to bet")
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(NFGTheme.danger.opacity(0.85))
+                    HStack(spacing: 4) {
+                        Image(systemName: "wallet.pass.fill")
+                            .font(.system(size: 10, weight: .bold))
+                        Text("\(displayBalance.formatted()) pts")
+                            .font(NFGFont.numeric(13, weight: .heavy))
+                            .contentTransition(.numericText())
+                    }
+                    .foregroundStyle(NFGTheme.accent2)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(NFGTheme.accent2.opacity(0.12))
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(NFGTheme.accent2.opacity(0.35), lineWidth: 1))
                 }
             }
 
@@ -229,6 +286,24 @@ struct GameView: View {
                     .nfgInputBackground(focused: focusedBetField == .cashout)
                 }
                 .frame(width: 110)
+            }
+
+            quickStakeRow
+            quickCashoutRow
+
+            Toggle(isOn: $repeatLastBet) {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 11, weight: .bold))
+                    Text("Repeat last bet")
+                        .font(.system(size: 12, weight: .semibold, design: .rounded))
+                }
+                .foregroundStyle(NFGTheme.muted)
+            }
+            .toggleStyle(SwitchToggleStyle(tint: NFGTheme.accent))
+            .disabled(!PlayerSession.isLoggedIn)
+            .onChange(of: repeatLastBet) { _, enabled in
+                AppPreferences.repeatLastBetEnabled = enabled
             }
 
             HStack(spacing: NFGSpacing.sm) {
@@ -278,8 +353,70 @@ struct GameView: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: NFGRadius.lg, style: .continuous)
-                .stroke(NFGTheme.accent.opacity(0.22), lineWidth: 1)
+                .stroke(
+                    LinearGradient(
+                        colors: [NFGTheme.accent.opacity(0.45), NFGTheme.accent.opacity(0.08)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
-        .shadow(color: NFGTheme.accent.opacity(0.12), radius: 14, y: -2)
+        .shadow(color: NFGTheme.accent.opacity(0.14), radius: 16, y: -4)
+    }
+
+    private var quickStakeRow: some View {
+        HStack(spacing: 6) {
+            ForEach(quickStakeAmounts, id: \.self) { amount in
+                betQuickChip(label: formatQuickStake(amount), enabled: PlayerSession.isLoggedIn) {
+                    betAmount = "\(amount)"
+                }
+            }
+            betQuickChip(label: "Max", enabled: PlayerSession.isLoggedIn && displayBalance > 0) {
+                betAmount = "\(displayBalance)"
+            }
+        }
+    }
+
+    private var quickCashoutRow: some View {
+        HStack(spacing: 6) {
+            ForEach(quickCashoutTargets, id: \.self) { mult in
+                betQuickChip(
+                    label: String(format: "%.1f×", mult),
+                    enabled: PlayerSession.isLoggedIn,
+                    tint: NFGTheme.accent
+                ) {
+                    cashoutTarget = String(format: "%.2f", mult)
+                }
+            }
+        }
+    }
+
+    private func betQuickChip(
+        label: String,
+        enabled: Bool,
+        tint: Color = NFGTheme.muted,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(enabled ? tint : NFGTheme.muted.opacity(0.5))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 7)
+                .background(NFGTheme.panel2)
+                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .stroke(NFGTheme.border, lineWidth: 1)
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
+    }
+
+    private func formatQuickStake(_ amount: Int) -> String {
+        if amount >= 1000 { return "\(amount / 1000)k" }
+        return "\(amount)"
     }
 }

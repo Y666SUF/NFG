@@ -1,0 +1,125 @@
+Fix Pixel Jump on my Windows live server so the iPhone app can use multiplayer rooms, global leaderboard, and co-op leaderboard.
+
+The iPhone app calls:
+- https://y666suf.com/api/pixel-jump/mp/rooms  (create/join rooms)
+- https://y666suf.com/api/pixel-jump/leaderboard  (global + co-op scores)
+- wss://y666suf.com/api/ws/mp/{roomId}  (multiplayer WebSocket)
+
+Right now those return 404 HTML because y666suf.com (NFG Crash Node on port 3847) does not proxy /api/pixel-jump/* to the Pixel Jump FastAPI on port 8001.
+
+Repos on this PC:
+- %USERPROFILE%\Documents\nfg-crash  (main public server — MUST proxy pixel-jump)
+- %USERPROFILE%\Documents\NFG-JUMP-MULTIPLAYER  (Pixel Jump API docker/uvicorn on port 8001)
+
+NEVER delete nfg-crash data\points.live.json, data\points.json, or data\shields.json.
+
+---
+
+## STEP 1 — Pull latest nfg-crash (includes pixel-jump proxy)
+
+PowerShell:
+cd $env:USERPROFILE\Documents\nfg-crash
+git stash push -m "pc-local" 2>$null
+git pull origin main
+
+Confirm these files exist after pull:
+Test-Path server\pixel-jump-proxy.js
+Test-Path server\pixel-jump-process.js
+Select-String -Path server\index.js -Pattern "registerPixelJumpHttpProxy"
+Select-String -Path server\hangman-proxy.js -Pattern "tryPixelJumpUpgrade"
+
+If pixel-jump-proxy.js is missing, the pull failed or repo path is wrong — stop and report.
+
+---
+
+## STEP 2 — Start / update Pixel Jump API on port 8001
+
+PowerShell:
+cd $env:USERPROFILE\Documents\NFG-JUMP-MULTIPLAYER
+git stash push -m "pc-local" 2>$null
+git pull origin main
+
+Start API (pick one that works on this machine):
+
+Option A — Docker (preferred):
+docker compose up -d --build
+
+Option B — Python directly:
+cd backend
+python -m uvicorn server:app --host 127.0.0.1 --port 8001
+
+Health check (must pass before continuing):
+curl http://127.0.0.1:8001/api/
+
+Expected: {"app":"retro-pixel-jump","status":"ok"}
+
+If Mongo/docker fails, check .env has MONGO_URL and docker is running. Report the exact error.
+
+---
+
+## STEP 3 — Restart NFG Crash server (applies proxy)
+
+Close ALL old Electron/Node server windows first, then start ONE instance:
+cd $env:USERPROFILE\Documents\nfg-crash
+.\run-electron-cloudflare.bat
+
+Wait for startup. Console should mention:
+"Pixel Jump API: port 8001 (HTTP proxy: /api/pixel-jump/*, WS: /api/ws/mp/*)"
+"[PixelJump] Ready (proxied through this server)." OR a warning if 8001 not up yet.
+
+---
+
+## STEP 4 — Smoke tests (all must pass)
+
+# 1) Local Pixel Jump API
+curl http://127.0.0.1:8001/api/
+
+# 2) Through NFG proxy (local)
+curl http://127.0.0.1:3847/api/pixel-jump/
+
+# 3) Public HTTPS (what the iPhone uses)
+curl https://y666suf.com/api/pixel-jump/
+
+All three should return retro-pixel-jump health JSON (not HTML "Cannot GET").
+
+# 4) Create room (POST body must work)
+curl -X POST https://y666suf.com/api/pixel-jump/mp/rooms -H "Content-Type: application/json" -d "{\"hostName\":\"TestHost\",\"character\":\"char-cat-0\"}"
+
+Expected JSON with: roomId, playerId, seed, wsUrl, voiceEnabled
+NOT: 404 HTML, NOT: 502 pixel_jump_unreachable
+
+# 5) Leaderboard (may be empty array — that is OK)
+curl "https://y666suf.com/api/pixel-jump/leaderboard?mode=solo&limit=5"
+
+Expected: JSON array [] or list of scores — NOT HTML 404.
+
+# 6) Optional — submit a test score
+curl -X POST https://y666suf.com/api/pixel-jump/leaderboard -H "Content-Type: application/json" -d "{\"name\":\"TEST_server\",\"score\":1234,\"mode\":\"solo\"}"
+
+---
+
+## STEP 5 — If something still fails
+
+502 pixel_jump_unreachable → Pixel Jump API not running on 8001. Fix STEP 2.
+
+404 Cannot POST /api/pixel-jump/... → nfg-crash not updated or not restarted. Re-do STEP 1 + 3.
+
+502 with HTML from main site → Cloudflare/tunnel pointing wrong; confirm run-electron-cloudflare.bat is the active process.
+
+POST create room returns 422 → proxy body issue; confirm server\pixel-jump-proxy.js has JSON body re-forwarding (latest git pull).
+
+Do NOT point /api/pixel-jump at the Crash game leaderboard (/api/leaderboard) — that is a different API.
+
+---
+
+## STEP 6 — Report back
+
+Paste output of:
+- git pull results (both repos)
+- curl http://127.0.0.1:8001/api/
+- curl https://y666suf.com/api/pixel-jump/
+- curl POST create room (step 4)
+- curl leaderboard (step 5)
+- Whether iPhone Pixel Jump app can CREATE ROOM and see GLOBAL leaderboard
+
+Fix anything broken until all smoke tests pass.

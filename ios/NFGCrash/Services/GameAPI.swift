@@ -66,13 +66,14 @@ struct LinkStatusResponse: Decodable {
     var expiresAt: Int64?
 }
 
-struct AppReviewLoginResponse: Decodable {
+struct AppGuestBootstrapResponse: Decodable {
     var ok: Bool?
     var token: String?
     var userId: String?
     var displayName: String?
+    var linkedVia: String?
+    var starterGranted: Bool?
     var balance: Int?
-    var purpose: String?
 }
 
 struct GameAPI {
@@ -566,6 +567,21 @@ struct GameAPI {
         try validateMobileResponse(data: data, response: response, endpoint: endpoint)
     }
 
+    func bootstrapAppGuest(deviceId: String) async throws -> AppGuestBootstrapResponse {
+        let req = try authorizedRequest(
+            url: baseURL.appending(path: "/api/mobile/auth/app-guest"),
+            method: "POST",
+            jsonBody: ["deviceId": deviceId]
+        )
+        let (data, response) = try await GameHTTP.data(for: req)
+        try validateMobileResponse(data: data, response: response, endpoint: "auth/app-guest")
+        let decoded = try JSONDecoder().decode(AppGuestBootstrapResponse.self, from: data)
+        guard decoded.ok == true, let token = decoded.token, let userId = decoded.userId else {
+            throw GameAPIError.serverError("Could not start app session.")
+        }
+        return decoded
+    }
+
     func startTikTokLink(deviceId: String) async throws -> LinkStartResponse {
         let req = try authorizedRequest(
             url: baseURL.appending(path: "/api/mobile/link/start"),
@@ -598,31 +614,6 @@ struct GameAPI {
         req.setValue(AuthStore.deviceId, forHTTPHeaderField: "X-Device-Id")
         req.timeoutInterval = GameHTTP.requestTimeout
         _ = try? await GameHTTP.data(for: req)
-    }
-
-    /// App Store Review only — server validates code from `MOBILE_APP_REVIEW_CODE` (no TikTok LIVE).
-    func appReviewLogin(deviceId: String, code: String) async throws -> AppReviewLoginResponse {
-        let req = try authorizedRequest(
-            url: baseURL.appending(path: "/api/mobile/auth/app-review"),
-            method: "POST",
-            jsonBody: ["deviceId": deviceId, "code": code]
-        )
-        let (data, response) = try await GameHTTP.data(for: req)
-        guard let http = response as? HTTPURLResponse else {
-            throw GameAPIError.serverError("No response from server")
-        }
-        if http.statusCode == 404 {
-            throw GameAPIError.serverError("App Review sign-in is not enabled on the server.")
-        }
-        if http.statusCode == 401 {
-            throw GameAPIError.serverError("Invalid App Review code.")
-        }
-        try validateMobileResponse(data: data, response: response, endpoint: "auth/app-review")
-        let decoded = try JSONDecoder().decode(AppReviewLoginResponse.self, from: data)
-        guard decoded.ok == true, let token = decoded.token, let userId = decoded.userId else {
-            throw GameAPIError.serverError("Could not sign in for App Review.")
-        }
-        return decoded
     }
 
     private func validateMobileResponse(data: Data, response: URLResponse, endpoint: String) throws {
@@ -810,5 +801,76 @@ struct GameAPI {
             throw GameAPIError.serverError("Could not load arcade leaderboard.")
         }
         return try JSONDecoder().decode(ArcadeLeaderboardResponse.self, from: data)
+    }
+
+    // MARK: - Host game admin (y666.suf)
+
+    func fetchAdminPlayer(userId: String) async throws -> PlayerWallet {
+        guard authToken != nil else { throw GameAPIError.notLoggedIn }
+        var comp = URLComponents(url: baseURL.appending(path: "/api/mobile/admin/player"), resolvingAgainstBaseURL: false)!
+        comp.queryItems = [URLQueryItem(name: "userId", value: userId)]
+        let req = try authorizedRequest(url: comp.url!)
+        let (data, response) = try await GameHTTP.data(for: req)
+        try validateAdminResponse(data: data, response: response)
+        return try JSONDecoder().decode(PlayerWallet.self, from: data)
+    }
+
+    func updateAdminPlayer(_ body: AdminPlayerUpdateBody) async throws -> PlayerWallet {
+        guard authToken != nil else { throw GameAPIError.notLoggedIn }
+        var payload: [String: Any] = ["userId": body.userId]
+        if let balance = body.balance { payload["balance"] = balance }
+        if let allTime = body.allTime { payload["allTime"] = allTime }
+        if let stealCharges = body.stealCharges { payload["stealCharges"] = stealCharges }
+        if let shieldBreakCharges = body.shieldBreakCharges { payload["shieldBreakCharges"] = shieldBreakCharges }
+        if let jetLockCharges = body.jetLockCharges { payload["jetLockCharges"] = jetLockCharges }
+        if let shieldAction = body.shieldAction { payload["shieldAction"] = shieldAction }
+        if let shieldHours = body.shieldHours { payload["shieldHours"] = shieldHours }
+        if let jetLockAction = body.jetLockAction { payload["jetLockAction"] = jetLockAction }
+        if let jetLockMinutes = body.jetLockMinutes { payload["jetLockMinutes"] = jetLockMinutes }
+        let req = try authorizedRequest(
+            url: baseURL.appending(path: "/api/mobile/admin/update-player"),
+            method: "POST",
+            jsonBody: payload
+        )
+        let (data, response) = try await GameHTTP.data(for: req)
+        try validateAdminResponse(data: data, response: response)
+        return try JSONDecoder().decode(PlayerWallet.self, from: data)
+    }
+
+    func wipeAdminPlayer(userId: String) async throws {
+        guard authToken != nil else { throw GameAPIError.notLoggedIn }
+        let req = try authorizedRequest(
+            url: baseURL.appending(path: "/api/mobile/admin/wipe-player"),
+            method: "POST",
+            jsonBody: ["userId": userId]
+        )
+        let (data, response) = try await GameHTTP.data(for: req)
+        try validateAdminResponse(data: data, response: response)
+    }
+
+    private func validateAdminResponse(data: Data, response: URLResponse) throws {
+        guard let http = response as? HTTPURLResponse else {
+            throw GameAPIError.serverError("No response from server")
+        }
+        if http.statusCode == 401 {
+            AuthStore.clearSession()
+            throw GameAPIError.notLoggedIn
+        }
+        if http.statusCode == 404 {
+            throw GameAPIError.serverError(
+                "Host admin API not on server yet. Copy mobile-game-admin.js to your PC and restart Node."
+            )
+        }
+        if http.statusCode == 403 {
+            struct AdminErr: Decodable { var message: String?; var error: String? }
+            let err = try? JSONDecoder().decode(AdminErr.self, from: data)
+            throw GameAPIError.serverError(err?.message ?? "Only the game host can use admin tools.")
+        }
+        if http.statusCode >= 400 {
+            struct AdminErr: Decodable { var message: String?; var error: String? }
+            let err = try? JSONDecoder().decode(AdminErr.self, from: data)
+            let text = err?.message ?? err?.error ?? String(data: data, encoding: .utf8) ?? "HTTP \(http.statusCode)"
+            throw GameAPIError.serverError(text)
+        }
     }
 }

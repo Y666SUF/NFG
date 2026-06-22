@@ -44,6 +44,7 @@ struct VaultRunEngine {
     var speed: CGFloat = baseSpeed
     private var targetSpeed: CGFloat = baseSpeed
     var elapsed: CGFloat = 0
+    var runPhase: CGFloat = 0
     var alive = true
     var gameOver = false
     var maxDistance: Int = 0
@@ -125,6 +126,7 @@ struct VaultRunEngine {
         speed = Self.baseSpeed
         targetSpeed = Self.baseSpeed
         elapsed = 0
+        runPhase = 0
         alive = true
         gameOver = false
         maxDistance = 0
@@ -160,6 +162,7 @@ struct VaultRunEngine {
         guard alive, !gameOver else { return }
         let step = min(dt, 1 / 30)
         elapsed += step
+        runPhase += step * speed * 0.11
 
         difficultyTier = Self.difficultyTier(distance: currentDistance, elapsed: elapsed)
         targetSpeed = Self.targetSpeed(for: difficultyTier)

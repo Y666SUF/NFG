@@ -9,10 +9,14 @@ enum JumpPlayMode: String, CaseIterable, Identifiable {
 
 struct SnakeJumpGameView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var sync: SyncClient
     @StateObject private var canvas = SnakeJumpCanvasController()
     @State private var api: GameAPI?
     @State private var playStatus: ArcadePlayResponse?
     @State private var sessionPoints = 0
+    @State private var jumpTotalEarned = 0
+    @State private var offlinePendingPoints = 0
+    @State private var offlinePendingHeight = 0
     @State private var bestHeight = 0
     @State private var rewardPreview = SnakeJumpEngine.milestoneReward
     @State private var balance = 0
@@ -28,110 +32,194 @@ struct SnakeJumpGameView: View {
     @State private var vsMatchSeed: Int?
     @State private var vsMatchId: String?
     @State private var showShop = false
-    @State private var shopMessage = ""
     @State private var isLoading = true
     @State private var loadError: String?
+    @State private var showPlaySession = false
+    @State private var showRunSummary = false
+    @State private var lastRunHeight = 0
+    @State private var lastRunPointsEarned = 0
+    @State private var leaderboardRefresh = 0
 
     var body: some View {
-        VStack(spacing: 0) {
-            modePicker
-            hudRow
-            SnakeJumpCanvasHost(controller: canvas)
-                .frame(maxWidth: .infinity)
-                .frame(height: min(420, UIScreen.main.bounds.width * 1.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .padding(.horizontal, 12)
-
-            if playMode == .vs {
-                vsLobbyPanel
-            }
-
-            if !message.isEmpty {
-                Text(message)
-                    .font(.system(size: 12))
-                    .foregroundStyle(NFGTheme.muted)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 6)
-            }
-
-            controlsRow
-        }
-        .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 5 / 255, green: 8 / 255, blue: 16 / 255),
-                    NFGTheme.background,
-                ],
-                startPoint: .top,
-                endPoint: .bottom
+        lobbyContent
+            .background(
+                LinearGradient(
+                    colors: [
+                        Color(red: 5 / 255, green: 8 / 255, blue: 16 / 255),
+                        NFGTheme.background,
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .ignoresSafeArea()
             )
-            .ignoresSafeArea()
-        )
-        .navigationTitle("NFG Jump")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                Button("Back") { dismiss() }
+            .navigationTitle("NFG Jump")
+            .navigationBarTitleDisplayMode(.inline)
+            .arcadeGameNavigationLock()
+            .arcadeGameBackButton { dismiss() }
+            .preferredColorScheme(.dark)
+            .sheet(isPresented: $showShop) {
+                JumpShopSheet(
+                    balance: balance,
+                    items: shopItems,
+                    onBuy: { itemId in await buySkin(itemId) },
+                    onEquip: { itemId in await equipSkin(itemId) },
+                    onDismiss: { showShop = false }
+                )
             }
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    showShop = true
-                } label: {
-                    Label("Shop", systemImage: "bag.fill")
+            .sheet(isPresented: $showRunSummary) {
+                SnakeJumpRunSummarySheet(
+                    peakHeight: lastRunHeight,
+                    pointsEarned: lastRunPointsEarned,
+                    jumpTotalEarned: jumpTotalEarned,
+                    personalBest: bestHeight,
+                    isNewBest: lastRunHeight >= bestHeight && lastRunHeight > 0
+                )
+            }
+            .fullScreenCover(isPresented: $showPlaySession) {
+                SnakeJumpPlaySessionView(
+                    canvas: canvas,
+                    skinFill: skinFill,
+                    skinRing: skinRing,
+                    offlinePendingPoints: offlinePendingPoints,
+                    rewardPreview: rewardPreview,
+                    bestHeight: bestHeight,
+                    onClose: { closePlaySession() }
+                )
+                .interactiveDismissDisabled()
+            }
+            .task {
+                await bootstrap()
+            }
+            .onDisappear {
+                vsClient?.disconnect()
+            }
+    }
+
+    private var lobbyContent: some View {
+        ScrollView {
+            VStack(spacing: 16) {
+                ArcadeSkillLobbyChrome(
+                    gameId: "nfg_snake_jump",
+                    title: "NFG JUMP",
+                    subtitle: "Emoji climb · +3,000 pts every 2,500m · slide thumb to steer",
+                    titleColors: [
+                        SnakeJumpTheme.swiftColor(hex: skinFill, fallback: NFGTheme.accent),
+                        .white,
+                    ],
+                    stats: [
+                        ArcadeSkillLobbyStat(
+                            text: "Best \(bestHeight)m",
+                            icon: "trophy.fill",
+                            tint: SnakeJumpTheme.swiftColor(hex: skinRing, fallback: NFGTheme.gold)
+                        ),
+                        ArcadeSkillLobbyStat(
+                            text: "Run \(displaySessionPoints.formatted())",
+                            icon: "star.fill",
+                            tint: NFGTheme.accent2
+                        ),
+                        ArcadeSkillLobbyStat(
+                            text: "+\(rewardPreview)/\(SnakeJumpEngine.milestoneStep.formatted())m",
+                            icon: "gift.fill",
+                            tint: NFGTheme.gold
+                        ),
+                    ],
+                    previewSystemImage: "hand.draw.fill",
+                    previewTitle: "Tap Play for a locked game window",
+                    previewSubtitle: "No page scroll during play — fixed stage, smooth touch",
+                    previewAccent: SnakeJumpTheme.swiftColor(hex: skinRing, fallback: NFGTheme.gold),
+                    playTint: SnakeJumpTheme.swiftColor(hex: skinFill, fallback: NFGTheme.accent),
+                    isLoading: isLoading,
+                    offlinePendingPoints: offlinePendingPoints,
+                    offlinePendingHeight: offlinePendingHeight,
+                    onPlay: { Task { await openPlaySession() } },
+                    middleContent: { hudRow }
+                )
+                jumpLeaderboard
+                if playMode == .vs {
+                    vsLobbyPanel
+                }
+                if !message.isEmpty {
+                    Text(message)
+                        .font(.system(size: 12))
+                        .foregroundStyle(NFGTheme.muted)
+                        .multilineTextAlignment(.center)
                 }
             }
-        }
-        .preferredColorScheme(.dark)
-        .sheet(isPresented: $showShop) {
-            jumpShopSheet
-        }
-        .task {
-            await bootstrap()
-        }
-        .onDisappear {
-            vsClient?.disconnect()
+            .padding(.horizontal, 12)
+            .padding(.bottom, 20)
         }
     }
 
-    private var modePicker: some View {
-        Picker("Mode", selection: $playMode) {
-            ForEach(JumpPlayMode.allCases) { mode in
-                Text(mode.rawValue).tag(mode)
-            }
+    private var jumpLeaderboard: some View {
+        ArcadeInGameLeaderboard(
+            gameId: "nfg_snake_jump",
+            scoreSuffix: "m",
+            showJumpSkins: true,
+            fetchLimit: 10
+        )
+        .id(leaderboardRefresh)
+    }
+
+    private var displaySessionPoints: Int {
+        sessionPoints + offlinePendingPoints
+    }
+
+    private func preparePlaySession() {
+        let w = max(UIScreen.main.bounds.width - 32, 280)
+        canvas.resetSteering()
+        canvas.running = false
+        canvas.sessionActive = false
+        canvas.resetSteering()
+        canvas.configureMatchSeed(playMode == .vs ? vsMatchSeed : nil)
+        canvas.resetEngine(viewWidth: Double(w))
+        canvas.skinFill = skinFill
+        canvas.skinRing = skinRing
+        canvas.sessionPoints = sessionPoints
+        canvas.lifetimeJumpEarned = jumpTotalEarned
+        canvas.engine.milestonesClaimed = playStatus?.sessionMilestones ?? 0
+    }
+
+    private func closePlaySession() {
+        if canvas.running || canvas.sessionActive {
+            let height = canvas.engine.currentHeight
+            Task { await endRun(height: height) }
         }
-        .pickerStyle(.segmented)
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .onChange(of: playMode) { _, mode in
-            if mode == .solo {
-                leaveVs()
-            } else if vsClient == nil {
-                joinVs()
-            }
+        canvas.resetSteering()
+        canvas.running = false
+        canvas.sessionActive = false
+        leaderboardRefresh += 1
+        showPlaySession = false
+    }
+
+    private func toggleVsMode() {
+        if playMode == .solo {
+            playMode = .vs
+            joinVs()
+        } else {
+            playMode = .solo
+            leaveVs()
         }
     }
 
     private var hudRow: some View {
-        HStack(spacing: 10) {
-            Text("\(canvas.engine.currentHeight)m")
-                .font(.system(size: 15, weight: .bold, design: .rounded))
-                .foregroundStyle(SnakeJumpTheme.swiftColor(hex: skinFill, fallback: NFGTheme.accent))
-            Text("Best \(bestHeight)m")
-            Text("Session \(sessionPoints.formatted()) pts")
-            Text("+\(rewardPreview) @ \(canvas.engine.nextMilestoneHeight)m")
-                .foregroundStyle(NFGTheme.gold)
-            if playMode == .vs, let vsSnapshot {
-                Text("VS \(vsSnapshot.opponents.count)")
-                    .foregroundStyle(NFGTheme.accent2)
+        HStack(spacing: 8) {
+            JumpVsToggleButton(isVS: playMode == .vs) {
+                toggleVsMode()
             }
+            if playMode == .vs, let vsSnapshot {
+                Text("VS lobby · \(vsSnapshot.opponents.count) waiting")
+                    .foregroundStyle(NFGTheme.accent2)
+            } else {
+                Text("Solo climb")
+            }
+            Spacer(minLength: 0)
+            JumpShopButton { showShop = true }
         }
-        .font(.system(size: 11, weight: .medium))
+        .font(.system(size: 11, weight: .semibold))
         .foregroundStyle(NFGTheme.muted)
-        .lineLimit(1)
-        .minimumScaleFactor(0.7)
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
     }
 
     private var vsLobbyPanel: some View {
@@ -185,97 +273,38 @@ struct SnakeJumpGameView: View {
         .padding(.top, 8)
     }
 
-    private var controlsRow: some View {
-        HStack(spacing: 16) {
-            holdButton(label: "◀", active: $canvas.moveLeft)
-            Button {
-                Task { await startRun() }
-            } label: {
-                Text("New Run")
-                    .font(.system(size: 15, weight: .bold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(SnakeJumpTheme.swiftColor(hex: skinFill, fallback: NFGTheme.accent))
-            holdButton(label: "▶", active: $canvas.moveRight)
-        }
-        .padding(16)
+    @MainActor
+    private func openPlaySession() async {
+        await startRunOnServer()
+        preparePlaySession()
+        showPlaySession = true
     }
 
-    private func holdButton(label: String, active: Binding<Bool>) -> some View {
-        Text(label)
-            .font(.system(size: 22, weight: .bold))
-            .frame(width: 64, height: 52)
-            .background(NFGTheme.panel2)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(RoundedRectangle(cornerRadius: 12).stroke(NFGTheme.border))
-            .gesture(
-                DragGesture(minimumDistance: 0)
-                    .onChanged { _ in active.wrappedValue = true }
-                    .onEnded { _ in active.wrappedValue = false }
-            )
-    }
-
-    private var jumpShopSheet: some View {
-        NavigationStack {
-            List {
-                Section {
-                    Text("Balance: \(balance.formatted()) pts")
-                        .foregroundStyle(NFGTheme.muted)
-                    if !shopMessage.isEmpty {
-                        Text(shopMessage)
-                            .foregroundStyle(NFGTheme.accent2)
-                    }
-                }
-                Section("Circle Shop") {
-                    ForEach(shopItems) { item in
-                        HStack(spacing: 12) {
-                            Circle()
-                                .fill(SnakeJumpTheme.swiftColor(hex: item.fill, fallback: NFGTheme.accent))
-                                .frame(width: 28, height: 28)
-                                .overlay(
-                                    Circle().stroke(SnakeJumpTheme.swiftColor(hex: item.ring, fallback: NFGTheme.gold), lineWidth: 2)
-                                )
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.name ?? item.id)
-                                    .font(.system(size: 14, weight: .semibold))
-                                Text(item.desc ?? "")
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(NFGTheme.muted)
-                            }
-                            Spacer()
-                            if item.equipped == true {
-                                Text("Equipped")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(NFGTheme.accent2)
-                            } else if item.owned == true {
-                                Button("Equip") {
-                                    Task { await equipSkin(item.id) }
-                                }
-                                .font(.system(size: 12, weight: .semibold))
-                            } else {
-                                let cost = item.cost ?? 0
-                                Button(cost == 0 ? "Free" : "Buy \(cost.formatted())") {
-                                    Task { await buySkin(item.id) }
-                                }
-                                .font(.system(size: 12, weight: .semibold))
-                                .disabled(balance < cost)
-                            }
-                        }
-                    }
-                }
+    @MainActor
+    private func startRunOnServer() async {
+        if let api {
+            await ArcadeOfflinePointsQueue.flushBeforePlay(api: api, sync: sync)
+            await JumpPendingRunStore.flush(api: api, sync: sync)
+            refreshOfflinePending()
+            var payload: [String: Any] = [:]
+            if playMode == .vs, let vsMatchId {
+                payload["vsMatchId"] = vsMatchId
             }
-            .scrollContentBackground(.hidden)
-            .background(NFGTheme.background.ignoresSafeArea())
-            .navigationTitle("Circle Shop")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button("Done") { showShop = false }
-                }
+            do {
+                let res = try await api.arcadePlay(
+                    gameId: "nfg_snake_jump",
+                    action: "start",
+                    payload: payload
+                )
+                applyStatus(res, action: "start")
+            } catch {
+                sessionPoints = 0
+                canvas.engine.milestonesClaimed = 0
+                message = error.localizedDescription
             }
-            .preferredColorScheme(.dark)
+        } else {
+            sessionPoints = 0
+            canvas.engine.milestonesClaimed = 0
         }
     }
 
@@ -312,10 +341,23 @@ struct SnakeJumpGameView: View {
     private func bootstrap() async {
         isLoading = true
         defer { isLoading = false }
+        applyLocalShopFallback()
+        refreshOfflinePending()
+        syncPersonalBest(serverBest: 0)
         do {
             let client = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
             api = client
             wireCanvasCallbacks()
+            let synced = await ArcadeOfflinePointsQueue.flush(api: client, sync: sync)
+            if synced > 0 {
+                message = "Synced \(synced) offline arcade reward\(synced == 1 ? "" : "s")."
+            }
+            refreshOfflinePending()
+            if await JumpPendingRunStore.flush(api: client, sync: sync) {
+                let status = try await client.arcadePlay(gameId: "nfg_snake_jump", action: "status")
+                applyStatus(status)
+                message = "Synced local Jump high score to the server."
+            }
             let status = try await client.arcadePlay(gameId: "nfg_snake_jump", action: "status")
             applyStatus(status)
             if let data = try? await client.fetchProfileAvatar(), let img = UIImage(data: data) {
@@ -323,7 +365,8 @@ struct SnakeJumpGameView: View {
             }
         } catch {
             loadError = error.localizedDescription
-            message = error.localizedDescription
+            message = "Offline mode — points save locally and sync later."
+            applyLocalShopFallback()
         }
     }
 
@@ -331,17 +374,67 @@ struct SnakeJumpGameView: View {
         canvas.skinFill = skinFill
         canvas.skinRing = skinRing
         canvas.onMilestone = { await claimMilestone() }
-        canvas.onGameOver = { height in await endRun(height: height) }
+        canvas.onGameOver = { height in
+            let earnedThisRun = sessionPoints
+            await endRun(height: height)
+            await MainActor.run {
+                lastRunHeight = height
+                lastRunPointsEarned = earnedThisRun
+                showRunSummary = true
+            }
+        }
         canvas.onProgressTick = { height, points in
+            let userKey = ArcadeOfflinePointsQueue.userKey()
+            NFGJumpPersonalBest.save(for: userKey, height: height)
             vsClient?.reportProgress(height: height, sessionPoints: points)
         }
     }
 
+    private func refreshOfflinePending() {
+        let userKey = ArcadeOfflinePointsQueue.userKey()
+        offlinePendingPoints = ArcadeOfflinePointsQueue.pendingPoints(for: "nfg_snake_jump")
+        offlinePendingHeight = JumpPendingRunStore.pendingHeight(for: userKey)
+    }
+
+    private func syncPersonalBest(serverBest: Int) {
+        let userKey = ArcadeOfflinePointsQueue.userKey()
+        bestHeight = NFGJumpPersonalBest.merged(serverBest: serverBest, for: userKey)
+    }
+
+    private func applyLocalShopFallback() {
+        let userKey = ArcadeOfflinePointsQueue.userKey()
+        let local = JumpShopLocalStore.load(for: userKey)
+        ownedSkins = Array(local.owned).sorted()
+        equippedSkin = local.equipped
+        shopItems = JumpShopCatalog.withOwnership(equippedId: equippedSkin, ownedSkins: local.owned)
+        if let cosmetics = JumpShopCatalog.cosmetics(for: equippedSkin) {
+            skinFill = cosmetics.fill
+            skinRing = cosmetics.ring
+            canvas.skinFill = skinFill
+            canvas.skinRing = skinRing
+        }
+    }
+
+    private func persistShopLocally() {
+        let userKey = ArcadeOfflinePointsQueue.userKey()
+        JumpShopLocalStore.save(ownedIds: Set(ownedSkins), equippedId: equippedSkin, for: userKey)
+    }
+
     @MainActor
-    private func applyStatus(_ status: ArcadePlayResponse) {
+    private func applyStatus(_ status: ArcadePlayResponse, action: String? = nil) {
+        ArcadePointsBridge.applyToGlobalWallet(status, sync: sync)
         playStatus = status
-        sessionPoints = status.sessionPoints ?? 0
-        bestHeight = status.bestLevel ?? 0
+        if action == "start" {
+            sessionPoints = 0
+            canvas.engine.milestonesClaimed = 0
+        } else {
+            sessionPoints = status.sessionPoints ?? sessionPoints
+            canvas.engine.milestonesClaimed = status.sessionMilestones ?? canvas.engine.milestonesClaimed
+        }
+        jumpTotalEarned = status.totalJumpEarned ?? jumpTotalEarned
+        var serverBest = status.bestLevel ?? 0
+        if let score = status.score { serverBest = max(serverBest, score) }
+        syncPersonalBest(serverBest: serverBest)
         rewardPreview = status.levelRewardPreview ?? SnakeJumpEngine.milestoneReward
         balance = status.balance ?? balance
         shopItems = JumpShopCatalog.merged(
@@ -356,38 +449,20 @@ struct SnakeJumpGameView: View {
         canvas.skinFill = skinFill
         canvas.skinRing = skinRing
         canvas.sessionPoints = sessionPoints
-        canvas.engine.milestonesClaimed = status.sessionMilestones ?? 0
-    }
-
-    @MainActor
-    private func startRun() async {
-        guard let api else { return }
-        do {
-            var payload: [String: Any] = [:]
-            if playMode == .vs, let vsMatchId {
-                payload["vsMatchId"] = vsMatchId
-            }
-            let res = try await api.arcadePlay(gameId: "nfg_snake_jump", action: "start", payload: payload)
-            applyStatus(res)
-            message = res.message ?? "Climb!"
-            let width = max(UIScreen.main.bounds.width - 24, 280)
-            if playMode == .vs, let vsMatchSeed {
-                canvas.resetEngine(viewWidth: width, matchSeed: vsMatchSeed)
-            } else {
-                canvas.resetEngine(viewWidth: width)
-            }
-            canvas.engine.milestonesClaimed = res.sessionMilestones ?? 0
-            canvas.sessionActive = true
-            canvas.running = true
-        } catch {
-            message = error.localizedDescription
-        }
+        canvas.lifetimeJumpEarned = jumpTotalEarned
+        persistShopLocally()
+        refreshOfflinePending()
+        leaderboardRefresh += 1
     }
 
     @MainActor
     private func claimMilestone() async {
-        guard let api else { return }
         let height = canvas.engine.currentHeight
+        guard let api else {
+            queueOfflineMilestone(height: height)
+            return
+        }
+        await ArcadeOfflinePointsQueue.flushBeforePlay(api: api, sync: sync)
         do {
             let res = try await api.arcadePlay(
                 gameId: "nfg_snake_jump",
@@ -396,54 +471,106 @@ struct SnakeJumpGameView: View {
             )
             applyStatus(res)
             canvas.engine.milestonesClaimed = res.sessionMilestones ?? canvas.engine.milestonesClaimed + 1
-            message = res.message ?? "Milestone!"
+            message = res.message ?? "Milestone! +\(SnakeJumpEngine.milestoneReward.formatted()) pts"
+            refreshOfflinePending()
         } catch {
-            message = error.localizedDescription
+            queueOfflineMilestone(height: height)
+            message = "+\(SnakeJumpEngine.milestoneReward.formatted()) pts saved offline"
         }
+    }
+
+    private func queueOfflineMilestone(height: Int? = nil) {
+        let h = height ?? canvas.engine.currentHeight
+        let reward = SnakeJumpEngine.milestoneReward
+        ArcadeOfflinePointsQueue.enqueue(
+            gameId: "nfg_snake_jump",
+            action: "milestone",
+            payload: ["height": h],
+            estimatedPoints: reward
+        )
+        canvas.engine.milestonesClaimed += 1
+        sessionPoints += reward
+        jumpTotalEarned += reward
+        canvas.sessionPoints = sessionPoints
+        canvas.lifetimeJumpEarned = jumpTotalEarned
+        refreshOfflinePending()
     }
 
     @MainActor
     private func endRun(height: Int) async {
-        guard let api else { return }
         if playMode == .vs {
             vsClient?.sendForfeit()
         }
+
+        let userKey = ArcadeOfflinePointsQueue.userKey()
+        NFGJumpPersonalBest.save(for: userKey, height: height)
+        syncPersonalBest(serverBest: max(bestHeight, height))
+
+        guard let api else {
+            JumpPendingRunStore.enqueue(height: height, for: userKey)
+            refreshOfflinePending()
+            message = "Run over at \(height)m — saved locally, will sync when online."
+            return
+        }
+
         do {
             let res = try await api.arcadePlay(
                 gameId: "nfg_snake_jump",
                 action: "game_over",
                 payload: ["height": height]
             )
-            applyStatus(res)
+            applyStatus(res, action: "game_over")
+            let peak = res.score ?? height
+            NFGJumpPersonalBest.save(for: userKey, height: peak)
+            syncPersonalBest(serverBest: max(bestHeight, peak))
+            if await JumpPendingRunStore.flush(api: api, sync: sync) {
+                let status = try await api.arcadePlay(gameId: "nfg_snake_jump", action: "status")
+                applyStatus(status)
+            }
             message = res.message ?? "Run over at \(height)m"
+            refreshOfflinePending()
         } catch {
-            message = error.localizedDescription
+            JumpPendingRunStore.enqueue(height: height, for: userKey)
+            refreshOfflinePending()
+            message = "Run over at \(height)m — saved locally, will sync when online."
         }
     }
 
     @MainActor
-    private func buySkin(_ itemId: String) async {
-        guard let api else { return }
+    private func buySkin(_ itemId: String) async -> SnakeJumpShopOutcome {
+        guard let api else {
+            guard let item = shopItems.first(where: { $0.id == itemId }),
+                  let cost = item.cost, balance >= cost || cost == 0 else {
+                return .failure("Not enough points.")
+            }
+            JumpShopLocalStore.recordPurchase(itemId: itemId, for: ArcadeOfflinePointsQueue.userKey())
+            applyLocalShopFallback()
+            return .success("Purchased offline — will sync when online.")
+        }
         do {
             let res = try await api.arcadePlay(gameId: "nfg_snake_jump", action: "buy", payload: ["itemId": itemId])
             applyStatus(res)
-            shopMessage = res.message ?? "Purchased!"
             vsClient?.updateHooks(makeVsHooks())
+            return .success(res.message ?? "Purchased!")
         } catch {
-            shopMessage = error.localizedDescription
+            return .failure(error.localizedDescription)
         }
     }
 
     @MainActor
-    private func equipSkin(_ itemId: String) async {
-        guard let api else { return }
+    private func equipSkin(_ itemId: String) async -> SnakeJumpShopOutcome {
+        guard let api else {
+            JumpShopLocalStore.recordEquip(itemId: itemId, for: ArcadeOfflinePointsQueue.userKey())
+            applyLocalShopFallback()
+            return .success("Equipped locally.")
+        }
         do {
             let res = try await api.arcadePlay(gameId: "nfg_snake_jump", action: "equip", payload: ["itemId": itemId])
             applyStatus(res)
-            shopMessage = res.message ?? "Equipped!"
             vsClient?.updateHooks(makeVsHooks())
+            return .success(res.message ?? "Equipped!")
         } catch {
-            shopMessage = error.localizedDescription
+            return .failure(error.localizedDescription)
         }
     }
 
@@ -462,7 +589,8 @@ struct SnakeJumpGameView: View {
                 vsSnapshot = state
                 vsMatchSeed = state.matchSeed
                 vsMatchId = state.matchId
-                canvas.ghostOpponents = JumpVSClient.ghostOpponents(from: state.opponents)
+                canvas.configureMatchSeed(state.matchSeed)
+            canvas.ghostOpponents = JumpVSClient.ghostOpponents(from: state.opponents)
             }
         }
         hooks.onOpponents = { opponents in
@@ -520,5 +648,98 @@ struct SnakeJumpGameView: View {
         vsMatchSeed = nil
         vsMatchId = nil
         canvas.ghostOpponents = []
+    }
+}
+
+// MARK: - Fixed full-screen play window (no scroll, locked stage)
+
+private struct SnakeJumpPlaySessionView: View {
+    @ObservedObject var canvas: SnakeJumpCanvasController
+    let skinFill: String
+    let skinRing: String
+    let offlinePendingPoints: Int
+    let rewardPreview: Int
+    let bestHeight: Int
+    let onClose: () -> Void
+
+    private var displaySessionPoints: Int {
+        canvas.sessionPoints + offlinePendingPoints
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let safeW = geo.size.width
+            let maxStageH = safeW * (16 / 10)
+            let stageH = min(geo.size.height - 72, maxStageH)
+
+            ZStack {
+                Color(red: 5 / 255, green: 8 / 255, blue: 14 / 255)
+                    .ignoresSafeArea()
+
+                VStack(spacing: 0) {
+                    playSessionHeader
+                        .frame(height: 44)
+
+                    Spacer(minLength: 0)
+
+                    ArcadeSkillStageFrame(gameId: "nfg_snake_jump") {
+                        SnakeJumpCanvasHost(controller: canvas)
+                            .frame(width: safeW - 16, height: stageH)
+                    }
+                    .frame(width: safeW - 16, height: stageH)
+                    .padding(.horizontal, 8)
+
+                    Spacer(minLength: 0)
+
+                    playSessionFooter
+                        .frame(height: 28)
+                }
+                .frame(width: safeW, height: geo.size.height)
+            }
+            .frame(width: geo.size.width, height: geo.size.height)
+        }
+        .preferredColorScheme(.dark)
+    }
+
+    private var playSessionHeader: some View {
+        HStack(spacing: 10) {
+            Button(action: onClose) {
+                Label("Close", systemImage: "xmark")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(NFGTheme.text)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(NFGTheme.panel)
+                    .clipShape(Capsule())
+            }
+            Spacer(minLength: 0)
+            Text("\(canvas.engine.currentHeight)m")
+                .font(.system(size: 16, weight: .bold, design: .rounded))
+                .foregroundStyle(SnakeJumpTheme.swiftColor(hex: skinFill, fallback: NFGTheme.accent))
+                .monospacedDigit()
+            Text("Best \(bestHeight)m")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundStyle(NFGTheme.muted)
+            VStack(alignment: .trailing, spacing: 1) {
+                Text("This run \(displaySessionPoints.formatted())")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(NFGTheme.accent2)
+                Text("Jump total \(canvas.lifetimeJumpEarned.formatted())")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(NFGTheme.muted)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 8)
+    }
+
+    private var playSessionFooter: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "hand.draw.fill")
+            Text("Slide thumb on stage — emoji follows under your finger")
+        }
+        .font(.system(size: 10, weight: .semibold, design: .rounded))
+        .foregroundStyle(NFGTheme.muted)
+        .padding(.horizontal, 12)
     }
 }

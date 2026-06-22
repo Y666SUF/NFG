@@ -167,6 +167,16 @@ struct RoundResultSummary: Identifiable, Equatable {
     }
 
     var hasEntries: Bool { !wins.isEmpty || !losses.isEmpty }
+
+    func personalOutcome(for userId: String) -> RoundOutcome? {
+        let key = userId
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "@", with: "")
+            .lowercased()
+        guard !key.isEmpty else { return nil }
+        if let win = wins.first(where: { $0.user.lowercased() == key }) { return win }
+        return losses.first(where: { $0.user.lowercased() == key })
+    }
 }
 
 struct CrashGameState: Codable, Equatable {
@@ -305,6 +315,14 @@ struct PlayerLookupResponse: Codable, Equatable {
     var highestBet: Int?
     var totalWagered: Int?
     var towerHero: PublicTowerHero?
+    var shieldActive: Bool?
+    var shieldMsLeft: Int?
+    var shieldUntil: Int?
+    var jetLockActive: Bool?
+    var jetLockMsLeft: Int?
+    var jetLockSecondsLeft: Int?
+    var jetLockUntil: Int?
+    var inventory: PowerupInventory?
 
     var resolvedTotalBet: Int {
         totalBet ?? totalWagered ?? 0
@@ -386,6 +404,10 @@ struct ChatActionResult: Codable {
         var cooldown: Bool?
         var secondsLeft: Int?
         var inventory: PowerupInventory?
+        var target: String?
+        var targetDisplayName: String?
+        var stolen: Int?
+        var stealsReady: Int?
     }
 }
 
@@ -488,7 +510,12 @@ struct PlayerWallet: Codable, Equatable {
     var shieldMsLeft: Int
     var jetLockActive: Bool
     var jetLockSecondsLeft: Int
+    var jetLockMsLeft: Int?
+    var jetLockUntil: Int?
+    var shieldUntil: Int?
     var inventory: PowerupInventory
+    var isGameHost: Bool?
+    var changes: [String]?
 
     static let empty = PlayerWallet(
         ok: nil, user: "", displayName: "", balance: 0, allTime: 0,
@@ -496,10 +523,27 @@ struct PlayerWallet: Codable, Equatable {
         ownedNameStyles: [], ownedBadges: [],
         superFan: false, superFanLevel: 0,
         shieldActive: false, shieldMsLeft: 0, jetLockActive: false,
-        jetLockSecondsLeft: 0, inventory: .empty
+        jetLockSecondsLeft: 0, jetLockMsLeft: nil, jetLockUntil: nil, shieldUntil: nil,
+        inventory: .empty, isGameHost: nil, changes: nil
     )
 
     var shieldSecondsLeft: Int { max(0, shieldMsLeft / 1000) }
+
+    func shieldMsRemaining(at date: Date = Date()) -> Int {
+        if let until = shieldUntil, until > 0 {
+            let ms = until - Int(date.timeIntervalSince1970 * 1000)
+            return max(0, ms)
+        }
+        return max(0, shieldMsLeft)
+    }
+
+    func jetLockMsRemaining(at date: Date = Date()) -> Int {
+        if let ms = jetLockMsLeft, ms > 0 { return ms }
+        if let until = jetLockUntil, until > 0 {
+            return max(0, until - Int(date.timeIntervalSince1970 * 1000))
+        }
+        return max(0, jetLockSecondsLeft * 1000)
+    }
 
     init(
         ok: Bool?, user: String, displayName: String, balance: Int, allTime: Int,
@@ -507,7 +551,8 @@ struct PlayerWallet: Codable, Equatable {
         ownedNameStyles: [String], ownedBadges: [String],
         superFan: Bool, superFanLevel: Int = 0,
         shieldActive: Bool, shieldMsLeft: Int, jetLockActive: Bool, jetLockSecondsLeft: Int,
-        inventory: PowerupInventory
+        jetLockMsLeft: Int? = nil, jetLockUntil: Int? = nil, shieldUntil: Int? = nil,
+        inventory: PowerupInventory, isGameHost: Bool? = nil, changes: [String]? = nil
     ) {
         self.ok = ok
         self.user = user
@@ -526,7 +571,12 @@ struct PlayerWallet: Codable, Equatable {
         self.shieldMsLeft = shieldMsLeft
         self.jetLockActive = jetLockActive
         self.jetLockSecondsLeft = jetLockSecondsLeft
+        self.jetLockMsLeft = jetLockMsLeft
+        self.jetLockUntil = jetLockUntil
+        self.shieldUntil = shieldUntil
         self.inventory = inventory
+        self.isGameHost = isGameHost
+        self.changes = changes
     }
 
     init(from decoder: Decoder) throws {
@@ -550,14 +600,54 @@ struct PlayerWallet: Codable, Equatable {
         shieldMsLeft = try c.decodeIfPresent(Int.self, forKey: .shieldMsLeft) ?? 0
         jetLockActive = try c.decodeIfPresent(Bool.self, forKey: .jetLockActive) ?? false
         jetLockSecondsLeft = try c.decodeIfPresent(Int.self, forKey: .jetLockSecondsLeft) ?? 0
+        jetLockMsLeft = try c.decodeIfPresent(Int.self, forKey: .jetLockMsLeft)
+        jetLockUntil = try c.decodeIfPresent(Int.self, forKey: .jetLockUntil)
+        shieldUntil = try c.decodeIfPresent(Int.self, forKey: .shieldUntil)
         inventory = try c.decodeIfPresent(PowerupInventory.self, forKey: .inventory) ?? .empty
+        isGameHost = try c.decodeIfPresent(Bool.self, forKey: .isGameHost)
+        changes = try c.decodeIfPresent([String].self, forKey: .changes)
     }
 
     private enum CodingKeys: String, CodingKey {
         case ok, user, displayName, displayNameLocked, displayNameMaxLength, balance, allTime, level, rank, nameStyle, nameBadge
         case ownedNameStyles, ownedBadges, superFan, superFanLevel
-        case shieldActive, shieldMsLeft, jetLockActive, jetLockSecondsLeft, inventory
+        case shieldActive, shieldMsLeft, shieldUntil, jetLockActive, jetLockSecondsLeft, jetLockMsLeft, jetLockUntil
+        case inventory, isGameHost, changes
     }
+}
+
+struct AdminPlayerSeed: Equatable {
+    var balance: Int
+    var allTime: Int
+    var stealCharges: Int = 0
+    var shieldBreakCharges: Int = 0
+    var jetLockCharges: Int = 0
+
+    static func from(row: LeaderboardRow, lookup: PlayerLookupResponse?) -> AdminPlayerSeed {
+        let balance = lookup?.balance ?? row.balance
+        let allTime = lookup?.allTime ?? row.allTime ?? balance
+        let inv = lookup?.inventory ?? .empty
+        return AdminPlayerSeed(
+            balance: balance,
+            allTime: allTime,
+            stealCharges: inv.stealCharges,
+            shieldBreakCharges: inv.shieldBreakCharges,
+            jetLockCharges: inv.jetLockCharges
+        )
+    }
+}
+
+struct AdminPlayerUpdateBody: Encodable {
+    var userId: String
+    var balance: Int?
+    var allTime: Int?
+    var stealCharges: Int?
+    var shieldBreakCharges: Int?
+    var jetLockCharges: Int?
+    var shieldAction: String?
+    var shieldHours: Double?
+    var jetLockAction: String?
+    var jetLockMinutes: Int?
 }
 
 struct NameStyleShopItem: Codable, Identifiable, Hashable {

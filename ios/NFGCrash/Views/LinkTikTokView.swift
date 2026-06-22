@@ -260,7 +260,7 @@ struct LinkTikTokView: View {
                    let token = status.token,
                    let userId = status.userId {
                     await MainActor.run {
-                        AuthStore.saveSession(
+                        AuthStore.saveTikTokSession(
                             token: token,
                             userId: userId,
                             displayName: status.displayName ?? userId

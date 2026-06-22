@@ -303,7 +303,7 @@ final class VaultRunPlayUIView: UIView {
     override init(frame: CGRect) {
         super.init(frame: frame)
         isOpaque = true
-        backgroundColor = VaultRunTheme.spaceFloor
+        backgroundColor = VaultRunTheme.feltFloor
         isMultipleTouchEnabled = false
         contentMode = .redraw
     }
@@ -357,8 +357,8 @@ final class VaultRunPlayUIView: UIView {
 
         drawEnvironment(in: rect, context: ctx)
         let layout = VaultRunPerspectiveLayout(width: w, height: h)
-        drawDriftingAsteroids(layout: layout, context: ctx)
-        drawFlightCorridor(layout: layout, context: ctx)
+        VaultRunCasinoDraw.drawFloatingChips(ctx: ctx, layout: layout, phase: ambientPhase)
+        VaultRunCasinoDraw.drawCasinoCorridor(ctx: ctx, layout: layout, scrollPhase: scrollPhase)
         drawObstacles(layout: layout, context: ctx)
         let shipCenter = layout.pointAtNorm(engine.displayLane - 1, depth: 0.92)
         visualFX.draw(in: ctx, shipCenter: shipCenter, cosmetics: shipCosmetics)
@@ -367,113 +367,12 @@ final class VaultRunPlayUIView: UIView {
     }
 
     private func drawEnvironment(in rect: CGRect, context ctx: CGContext) {
-        VaultRunDraw.fillGradient(ctx, in: rect, top: VaultRunTheme.spaceTop, bottom: VaultRunTheme.spaceFloor)
-
-        // Nebula washes
-        ctx.setFillColor(VaultRunTheme.nebulaPurple.withAlphaComponent(0.22).cgColor)
-        ctx.fillEllipse(in: CGRect(x: rect.width * 0.55, y: rect.height * 0.08, width: rect.width * 0.55, height: rect.height * 0.35))
-        ctx.setFillColor(VaultRunTheme.nebulaCyan.withAlphaComponent(0.16).cgColor)
-        ctx.fillEllipse(in: CGRect(x: -rect.width * 0.1, y: rect.height * 0.2, width: rect.width * 0.5, height: rect.height * 0.3))
-
-        // Distant planet
-        let planetCenter = CGPoint(x: rect.width * 0.78, y: rect.height * 0.18)
-        ctx.setFillColor(UIColor(red: 0.35, green: 0.28, blue: 0.55, alpha: 0.55).cgColor)
-        ctx.fillEllipse(in: CGRect(x: planetCenter.x - 28, y: planetCenter.y - 28, width: 56, height: 56))
-        ctx.setFillColor(UIColor(red: 0.55, green: 0.45, blue: 0.75, alpha: 0.35).cgColor)
-        ctx.fillEllipse(in: CGRect(x: planetCenter.x - 18, y: planetCenter.y - 22, width: 24, height: 18))
-
-        // Starfield with parallax twinkle
-        for i in 0..<95 {
-            let seed = CGFloat(i)
-            let fx = VaultRunDraw.fract(sin(seed * 78.233) * 43758.5453)
-            let fy = VaultRunDraw.fract(sin(seed * 12.9898) * 43758.5453)
-            let depth = VaultRunDraw.fract(sin(seed * 39.425) * 23421.631)
-            let drift = sin(ambientPhase + seed) * (1 + depth * 2)
-            let x = rect.width * fx
-            let y = rect.height * (0.04 + fy * 0.88) + drift
-            let r = 0.6 + depth * 1.8
-            let twinkle = 0.35 + depth * 0.55 + sin(ambientPhase * 2 + seed * 1.7) * 0.15
-            VaultRunDraw.drawStar(ctx, at: CGPoint(x: x, y: y), radius: r, alpha: twinkle)
-        }
-    }
-
-    private func drawDriftingAsteroids(layout: VaultRunPerspectiveLayout, context ctx: CGContext) {
-        for side: CGFloat in [-1, 1] {
-            for i in 0..<4 {
-                let depth = 0.12 + CGFloat(i) * 0.2
-                let p = layout.pointAtNorm(side * VaultRunPerspectiveLayout.trackEdgeNorm * 1.55, depth: depth)
-                let scale = layout.scale(depth: depth)
-                let rockW = (22 + CGFloat(i) * 6) * scale
-                let rockH = rockW * 0.82
-                VaultRunDraw.drawAsteroidChunk(
-                    ctx,
-                    center: CGPoint(x: p.x, y: p.y - rockH * 0.3),
-                    width: rockW,
-                    height: rockH,
-                    seed: side * 10 + CGFloat(i)
-                )
-            }
-        }
-    }
-
-    private func drawFlightCorridor(layout: VaultRunPerspectiveLayout, context ctx: CGContext) {
-        let edge = VaultRunPerspectiveLayout.trackEdgeNorm
-        let bands = 14
-        for i in 0..<bands {
-            let t0 = CGFloat(i) / CGFloat(bands)
-            let t1 = CGFloat(i + 1) / CGFloat(bands)
-            let phase = (t0 + scrollPhase * 0.18).truncatingRemainder(dividingBy: 1)
-            let streakAlpha = 0.06 + phase * 0.1
-
-            let top = layout.pointAtNorm(-edge, depth: t0)
-            let bottom = layout.pointAtNorm(-edge, depth: t1)
-            let topR = layout.pointAtNorm(edge, depth: t0)
-            let bottomR = layout.pointAtNorm(edge, depth: t1)
-
-            ctx.setFillColor(VaultRunTheme.laneGlow.withAlphaComponent(streakAlpha).cgColor)
-            ctx.beginPath()
-            ctx.move(to: top)
-            ctx.addLine(to: topR)
-            ctx.addLine(to: bottomR)
-            ctx.addLine(to: bottom)
-            ctx.closePath()
-            ctx.fillPath()
-
-            // Speed streaks
-            if Int(phase * 14) % 3 == 0, t1 > 0.2, t1 < 0.92 {
-                let laneOff = sin((t0 + t1) * 14 + scrollPhase * 4) * 0.65
-                let streakCenter = layout.pointAtNorm(laneOff, depth: (t0 + t1) * 0.5)
-                let sw = layout.laneCellWidth(depth: t1) * 0.08
-                ctx.setFillColor(VaultRunTheme.starWhite.withAlphaComponent(0.25 + phase * 0.2).cgColor)
-                ctx.fill(CGRect(x: streakCenter.x - sw * 0.5, y: streakCenter.y - 1, width: sw, height: 2))
-            }
-        }
-
-        // Lane guide lines
-        ctx.setStrokeColor(VaultRunTheme.laneGlow.withAlphaComponent(0.22).cgColor)
-        ctx.setLineWidth(1.2)
-        ctx.setLineDash(phase: scrollPhase * 12, lengths: [5, 7])
-        for dividerNorm in VaultRunPerspectiveLayout.laneDividerNorms {
-            let top = layout.pointAtNorm(dividerNorm, depth: 0)
-            let bottom = layout.pointAtNorm(dividerNorm, depth: 1)
-            ctx.beginPath()
-            ctx.move(to: top)
-            ctx.addLine(to: bottom)
-            ctx.strokePath()
-        }
-        ctx.setLineDash(phase: 0, lengths: [])
-
-        // Corridor edge rails
-        ctx.setStrokeColor(VaultRunTheme.goldTrim.withAlphaComponent(0.55).cgColor)
-        ctx.setLineWidth(2)
-        for railNorm: CGFloat in [-edge, edge] {
-            let top = layout.pointAtNorm(railNorm, depth: 0)
-            let bottom = layout.pointAtNorm(railNorm, depth: 1)
-            ctx.beginPath()
-            ctx.move(to: top)
-            ctx.addLine(to: bottom)
-            ctx.strokePath()
-        }
+        VaultRunCasinoDraw.drawEnvironment(
+            ctx: ctx,
+            rect: rect,
+            elapsed: ambientPhase,
+            scrollPhase: scrollPhase
+        )
     }
 
     private func drawObstacles(layout: VaultRunPerspectiveLayout, context ctx: CGContext) {
@@ -486,17 +385,11 @@ final class VaultRunPlayUIView: UIView {
 
             switch obs.kind {
             case .block:
-                VaultRunDraw.drawAsteroidObstacle(
-                    ctx,
-                    center: center,
-                    laneWidth: laneW,
-                    scale: scale,
-                    seed: CGFloat(obs.lane) + obs.z * 0.1
-                )
+                VaultRunCasinoDraw.drawSlotBust(ctx: ctx, center: center, laneWidth: laneW, scale: scale)
             case .jumpBar:
-                VaultRunDraw.drawDebrisBelt(ctx, center: center, laneWidth: laneW, scale: scale)
+                VaultRunCasinoDraw.drawCardRow(ctx: ctx, center: center, laneWidth: laneW, scale: scale)
             case .slideBar:
-                VaultRunDraw.drawRockTunnel(ctx, center: center, laneWidth: laneW, scale: scale)
+                VaultRunCasinoDraw.drawTableArch(ctx: ctx, center: center, laneWidth: laneW, scale: scale)
             }
         }
     }
@@ -506,14 +399,16 @@ final class VaultRunPlayUIView: UIView {
         let displayCenter = layout.pointAtNorm(engine.displayLane - 1, depth: depth)
         let scale = layout.scale(depth: depth)
 
-        VaultRunDraw.drawSpaceship(
-            ctx,
+        let laneLean = CGFloat(engine.lane) - engine.displayLane
+        VaultRunCasinoDraw.drawRunner(
+            ctx: ctx,
             center: displayCenter,
             scale: scale,
             action: engine.action,
             jumpLift: engine.jumpY,
             cosmetics: shipCosmetics,
-            phase: ambientPhase
+            runPhase: engine.runPhase,
+            laneLean: laneLean
         )
     }
 
@@ -541,7 +436,7 @@ final class VaultRunPlayUIView: UIView {
     }
 }
 
-private struct VaultRunPerspectiveLayout {
+struct VaultRunPerspectiveLayout {
     /// Track edge in lane-normal space (lane 0 = −1, lane 1 = 0, lane 2 = +1).
     static let trackEdgeNorm: CGFloat = 1.0
     static let laneDividerNorms: [CGFloat] = [-0.333, 0.333]

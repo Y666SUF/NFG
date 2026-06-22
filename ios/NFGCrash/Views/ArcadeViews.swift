@@ -13,8 +13,12 @@ struct VaultArcadeHubView: View {
     @State private var blocksLeaderboard: ArcadeLeaderboardResponse?
     @State private var jumpLeaderboard: ArcadeLeaderboardResponse?
 
+    @State private var rushLeaderboard: ArcadeLeaderboardResponse?
+
     private var displayGames: [ArcadeGameInfo] {
-        ArcadeBundledCatalog.merge(serverGames: catalog?.games)
+        ArcadeBundledCatalog.hubDisplayOrder(
+            ArcadeBundledCatalog.merge(serverGames: catalog?.games)
+        )
     }
 
     var body: some View {
@@ -75,8 +79,13 @@ struct VaultArcadeHubView: View {
         .navigationDestination(item: $selectedGame) { game in
             if game.id == ArcadeBundledCatalog.jumpGameId {
                 SnakeJumpGameView()
+                    .environmentObject(sync)
             } else if game.id == ArcadeBundledCatalog.rushGameId {
                 VaultRunGameScreen()
+                    .environmentObject(sync)
+            } else if game.id == "nfg_blocks" {
+                BlocksGameScreen()
+                    .environmentObject(sync)
             } else {
                 VaultArcadeGameView(game: game)
                     .environmentObject(sync)
@@ -97,39 +106,44 @@ struct VaultArcadeHubView: View {
 
     private var arcadeLeaderboardsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("LEADERBOARDS")
+            Text("SKILL GAME LEADERBOARDS")
                 .font(.system(size: 11, weight: .bold))
                 .foregroundStyle(NFGTheme.muted)
             if let blocks = blocksLeaderboard?.top, !blocks.isEmpty {
-                arcadeLeaderboardCard(title: "NFG Blocks top", rows: blocks, scoreSuffix: " Lv")
+                hubLeaderboardCard(gameId: "nfg_blocks", title: "NFG Blocks", rows: blocks, scoreSuffix: " Lv")
             }
             if let jump = jumpLeaderboard?.top, !jump.isEmpty {
-                arcadeLeaderboardCard(title: "NFG Jump top", rows: jump, scoreSuffix: "m", showJumpSkins: true)
+                hubLeaderboardCard(gameId: "nfg_snake_jump", title: "NFG Jump", rows: jump, scoreSuffix: "m", showJumpSkins: true)
             }
-            if (blocksLeaderboard?.top ?? []).isEmpty && (jumpLeaderboard?.top ?? []).isEmpty {
-                Text("Play Blocks or Jump to appear on the board.")
+            if let rush = rushLeaderboard?.top, !rush.isEmpty {
+                hubLeaderboardCard(gameId: "nfg_vault_run", title: "NFG Rush", rows: rush, scoreSuffix: "m")
+            }
+            if (blocksLeaderboard?.top ?? []).isEmpty
+                && (jumpLeaderboard?.top ?? []).isEmpty
+                && (rushLeaderboard?.top ?? []).isEmpty {
+                Text("Play Blocks, Jump, or Rush to appear on the board.")
                     .font(.system(size: 11))
                     .foregroundStyle(NFGTheme.muted)
             }
         }
     }
 
-    private func arcadeLeaderboardCard(title: String, rows: [ArcadeLadderRow], scoreSuffix: String, showJumpSkins: Bool = false) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(NFGTheme.text)
+    private func hubLeaderboardCard(gameId: String, title: String, rows: [ArcadeLadderRow], scoreSuffix: String, showJumpSkins: Bool = false) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                ArcadeSkillGameIcon(gameId: gameId, size: 34)
+                Text(title)
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(NFGTheme.text)
+            }
             ForEach(Array(rows.prefix(5).enumerated()), id: \.element.id) { idx, row in
                 HStack(spacing: 8) {
                     Text("\(idx + 1).")
                         .font(.system(size: 11, weight: .bold, design: .monospaced))
-                        .foregroundStyle(NFGTheme.muted)
+                        .foregroundStyle(idx < 3 ? NFGTheme.gold : NFGTheme.muted)
                         .frame(width: 18, alignment: .trailing)
                     if showJumpSkins, let fill = row.jumpSkinFill {
-                        Circle()
-                            .fill(SnakeJumpTheme.swiftColor(hex: fill, fallback: NFGTheme.accent))
-                            .overlay(Circle().stroke(SnakeJumpTheme.swiftColor(hex: row.jumpSkinRing ?? "#f2c733", fallback: NFGTheme.gold), lineWidth: 2))
-                            .frame(width: 14, height: 14)
+                        JumpCirclePreview(fill: fill, ring: row.jumpSkinRing ?? "#f2c733", size: 16)
                     }
                     VStack(alignment: .leading, spacing: 1) {
                         Text(row.label)
@@ -149,13 +163,18 @@ struct VaultArcadeHubView: View {
         }
         .padding(10)
         .background(NFGTheme.panel)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(ArcadeGameTheme.accent(for: gameId).opacity(0.25), lineWidth: 1)
+        )
     }
 
     private func loadLeaderboards() async {
         guard let api = sync.apiForArcade() else { return }
         blocksLeaderboard = try? await api.fetchArcadeLeaderboard(gameId: "nfg_blocks", limit: 5)
         jumpLeaderboard = try? await api.fetchArcadeLeaderboard(gameId: "nfg_snake_jump", limit: 5)
+        rushLeaderboard = try? await api.fetchArcadeLeaderboard(gameId: "nfg_vault_run", limit: 5)
     }
 
     private var header: some View {
@@ -300,6 +319,7 @@ struct VaultArcadeHubView: View {
 // MARK: - Game screen
 
 struct VaultArcadeGameView: View {
+    @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var sync: SyncClient
     let game: ArcadeGameInfo
 
@@ -350,13 +370,12 @@ struct VaultArcadeGameView: View {
     @State private var minesMultiplier = 1.0
     @State private var plinkoLastBucket: Int?
     @State private var plinkoLastMult: Double?
-    @State private var towerRPG: ArcadeTowerState = .empty
-    @State private var towerStatusEpoch = 0
     @State private var blocksSessionActive = false
     @State private var blocksLevel = 1
     @State private var blocksSessionPoints = 0
     @State private var blocksLinesTarget = 6
     @State private var blocksRewardPreview = 5000
+    @State private var blocksOfflinePending = 0
     @State private var playVisual: ArcadePlayVisual?
     @State private var minesHitCell: Int?
     @State private var minesAllPositions: [Int] = []
@@ -371,8 +390,13 @@ struct VaultArcadeGameView: View {
     @State private var missions: [ArcadeMissionInfo] = []
     @State private var messageRevealGen = 0
     @State private var cooldownSecondsLeft = 0
+    @State private var showPlaySession = false
+    @State private var lockedStake = 2000
 
     private var onArcadeCooldown: Bool { cooldownSecondsLeft > 0 }
+    private var isStakedCasinoGame: Bool {
+        ["nfg_dice", "nfg_hilo", "nfg_mines", "nfg_plinko", "nfg_wheel"].contains(arcadeApiGameId)
+    }
 
     var body: some View {
         ZStack {
@@ -382,7 +406,7 @@ struct VaultArcadeGameView: View {
 
             ScrollView {
                 VStack(spacing: 16) {
-                    gameControls
+                    lobbyGameControls
                     ArcadeCooldownBanner(secondsLeft: cooldownSecondsLeft)
                     ArcadeBusyOverlay(busy: busy)
                     ArcadeResultBanner(text: message, isError: message.hasPrefix("-"), isGain: message.hasPrefix("+"))
@@ -395,13 +419,25 @@ struct VaultArcadeGameView: View {
         }
         .navigationTitle(game.title)
         .navigationBarTitleDisplayMode(.inline)
+        .arcadeGameNavigationLock()
+        .arcadeGameBackButton { dismiss() }
+        .fullScreenCover(isPresented: $showPlaySession) {
+            stakedPlaySession
+                .interactiveDismissDisabled()
+        }
         .task(id: game.id) {
             let epoch = minesStatusEpoch
-            let towerEpoch = towerStatusEpoch
+            refreshBlocksOfflinePending()
+            if let api = sync.apiForArcade() {
+                let synced = await ArcadeOfflinePointsQueue.flush(api: api, sync: sync)
+                if synced > 0, game.id == "nfg_blocks" {
+                    message = "Synced \(synced) offline Blocks reward\(synced == 1 ? "" : "s")."
+                }
+                refreshBlocksOfflinePending()
+            }
             await play(
                 action: "status",
-                minesEpoch: game.id == "nfg_mines" ? epoch : nil,
-                towerEpoch: game.id == "nfg_tower" ? towerEpoch : nil
+                minesEpoch: game.id == "nfg_mines" ? epoch : nil
             )
         }
         .preferredColorScheme(.dark)
@@ -428,7 +464,116 @@ struct VaultArcadeGameView: View {
     }
 
     @ViewBuilder
-    private var gameControls: some View {
+    private var lobbyGameControls: some View {
+        switch arcadeApiGameId {
+        case "nfg_dice":
+            ArcadeStakedGameLobbyCard(
+                gameId: "nfg_dice", title: "Roll Line", icon: "🎯",
+                busy: busy, stake: $stakeAmount, minStake: stakeMin, maxStake: stakeMax,
+                suggestedStake: suggestedStake, balance: sync.liveBalance,
+                openDisabled: onArcadeCooldown,
+                onOpen: { lockedStake = stakeAmount; showPlaySession = true }
+            )
+        case "nfg_hilo":
+            ArcadeStakedGameLobbyCard(
+                gameId: "nfg_hilo", title: "Hi-Lo", icon: "🃏",
+                busy: busy, stake: $stakeAmount, minStake: stakeMin, maxStake: stakeMax,
+                suggestedStake: suggestedStake, balance: sync.liveBalance,
+                openDisabled: onArcadeCooldown,
+                openTitle: "Start & play",
+                onOpen: {
+                    Task {
+                        lockedStake = stakeAmount
+                        hiloStatusEpoch += 1
+                        await play(action: "start", payload: ["stake": stakeAmount], hiloEpoch: hiloStatusEpoch)
+                        showPlaySession = true
+                    }
+                }
+            )
+        case "nfg_mines":
+            ArcadeStakedGameLobbyCard(
+                gameId: "nfg_mines", title: "Mines", icon: "💣",
+                busy: busy, stake: $stakeAmount, minStake: stakeMin, maxStake: stakeMax,
+                suggestedStake: suggestedStake, balance: sync.liveBalance,
+                openDisabled: onArcadeCooldown,
+                openTitle: "Start & play",
+                onOpen: {
+                    Task {
+                        lockedStake = stakeAmount
+                        minesStatusEpoch += 1
+                        await play(action: "start", payload: ["stake": stakeAmount, "mines": 3], minesEpoch: minesStatusEpoch)
+                        showPlaySession = true
+                    }
+                }
+            )
+        case "nfg_plinko":
+            ArcadeStakedGameLobbyCard(
+                gameId: "nfg_plinko", title: "Plinko", icon: "⚪",
+                busy: busy, stake: $stakeAmount, minStake: stakeMin, maxStake: stakeMax,
+                suggestedStake: suggestedStake, balance: sync.liveBalance,
+                openDisabled: onArcadeCooldown,
+                onOpen: { lockedStake = stakeAmount; showPlaySession = true }
+            )
+        case "nfg_wheel":
+            ArcadeStakedGameLobbyCard(
+                gameId: "nfg_wheel", title: "Vault Wheel", icon: "🎡",
+                busy: busy, stake: $stakeAmount, minStake: stakeMin, maxStake: stakeMax,
+                suggestedStake: suggestedStake, balance: sync.liveBalance,
+                openDisabled: onArcadeCooldown,
+                onOpen: { lockedStake = stakeAmount; showPlaySession = true }
+            )
+        case "nfg_blocks":
+            Text("Open NFG Blocks from the Arcade hub.")
+                .font(.system(size: 12))
+                .foregroundStyle(NFGTheme.muted)
+        default:
+            ArcadeStageCard(gameId: game.id, icon: game.icon, title: game.title, subtitle: game.subtitle) {
+                ArcadePrimaryButton(title: "Refresh", icon: "arrow.clockwise", tint: NFGTheme.accent2, disabled: busy) {
+                    Task { await play(action: "status") }
+                }
+            }
+        }
+    }
+
+    private var stakedPlaySession: some View {
+        ArcadePlaySessionChrome(
+            gameId: arcadeApiGameId,
+            onClose: { closeStakedSession() },
+            useStageFrame: false,
+            headerTrailing: {
+                HStack(spacing: 8) {
+                    ArcadeLockedStakeChip(stake: lockedStake)
+                    Text("\(sync.liveBalance.formatted()) pts")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(NFGTheme.muted)
+                }
+            },
+            content: { sessionGameView },
+            footer: {
+                if isStakedCasinoGame {
+                    Text("Stake locked for this table — close to change amount")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(NFGTheme.muted)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 12)
+                }
+            },
+            bottomBar: {
+                if hiloSessionActive || minesSessionActive {
+                    ArcadeSecondaryButton(title: "Cash out & close") {
+                        Task {
+                            await play(action: "cashout")
+                            showPlaySession = false
+                        }
+                    }
+                    .disabled(busy)
+                }
+            }
+        )
+    }
+
+    @ViewBuilder
+    private var sessionGameView: some View {
         switch arcadeApiGameId {
         case "nfg_dice":
             NFGDiceGameView(
@@ -440,9 +585,11 @@ struct VaultArcadeGameView: View {
                 suggestedStake: suggestedStake,
                 balance: sync.liveBalance,
                 lastRoll: diceLastRoll,
-                playVisual: playVisual
+                playVisual: playVisual,
+                inPlaySession: true,
+                lockedStake: lockedStake
             ) { mode, target in
-                await play(action: "play", payload: ["stake": stakeAmount, "mode": mode, "target": target])
+                await play(action: "play", payload: ["stake": lockedStake, "mode": mode, "target": target])
             }
         case "nfg_hilo":
             NFGHiLoGameView(
@@ -462,15 +609,18 @@ struct VaultArcadeGameView: View {
                 flipTick: hiloFlipTick,
                 lastGuessCorrect: hiloLastGuessCorrect,
                 playVisual: hiloShowOutcome ? playVisual : nil,
+                inPlaySession: true,
+                lockedStake: lockedStake,
                 onStart: {
                     hiloStatusEpoch += 1
-                    await play(action: "start", payload: ["stake": stakeAmount], hiloEpoch: hiloStatusEpoch)
+                    await play(action: "start", payload: ["stake": lockedStake], hiloEpoch: hiloStatusEpoch)
                 },
                 onGuess: { direction in
                     await play(action: "guess", payload: ["direction": direction])
                 },
                 onCashOut: {
                     await play(action: "cashout")
+                    showPlaySession = false
                 }
             )
         case "nfg_mines":
@@ -491,16 +641,19 @@ struct VaultArcadeGameView: View {
                 roundEnded: minesRoundEnded,
                 livesRemaining: minesLivesRemaining,
                 playVisual: minesShowOutcome ? playVisual : nil,
+                inPlaySession: true,
+                lockedStake: lockedStake,
                 revealingIndex: minesRevealingIndex,
                 onStart: { mines in
                     minesStatusEpoch += 1
-                    await play(action: "start", payload: ["stake": stakeAmount, "mines": mines], minesEpoch: minesStatusEpoch)
+                    await play(action: "start", payload: ["stake": lockedStake, "mines": mines], minesEpoch: minesStatusEpoch)
                 },
                 onReveal: { index in
                     await playMinesReveal(index: index)
                 },
                 onCashOut: {
                     await play(action: "cashout")
+                    showPlaySession = false
                 }
             )
         case "nfg_plinko":
@@ -514,9 +667,11 @@ struct VaultArcadeGameView: View {
                 balance: sync.liveBalance,
                 lastBucket: plinkoLastBucket,
                 lastMult: plinkoLastMult,
-                playVisual: playVisual
+                playVisual: playVisual,
+                inPlaySession: true,
+                lockedStake: lockedStake
             ) { risk in
-                await playPlinkoDrop(risk: risk)
+                await playPlinkoDrop(risk: risk, stake: lockedStake)
             }
         case "nfg_wheel":
             VaultWheelGameView(
@@ -527,66 +682,24 @@ struct VaultArcadeGameView: View {
                 maxStake: stakeMax,
                 suggestedStake: suggestedStake,
                 balance: sync.liveBalance,
-                playVisual: playVisual
+                playVisual: playVisual,
+                inPlaySession: true,
+                lockedStake: lockedStake
             ) {
-                await playWheelSpin()
+                await playWheelSpin(stake: lockedStake)
             }
-        case "nfg_blocks":
-            BlocksGameView(
-                busy: busy,
-                serverLevel: blocksLevel,
-                sessionPoints: blocksSessionPoints,
-                linesTarget: blocksLinesTarget,
-                rewardPreview: blocksRewardPreview,
-                sessionActive: blocksSessionActive,
-                onStart: {
-                    await play(action: "start")
-                },
-                onLevelClear: {
-                    await play(action: "level_clear")
-                },
-                onGameOver: {
-                    await play(action: "game_over")
-                }
-            )
-        case "nfg_tower":
-            DragonTowerRPGView(
-                busy: busy,
-                tower: towerRPG,
-                lastMessage: message.isEmpty ? nil : message,
-                onCustomize: { payload, finalize in
-                    await play(action: "customize", payload: payload)
-                },
-                onEnter: {
-                    towerStatusEpoch += 1
-                    await play(action: "enter", towerEpoch: towerStatusEpoch)
-                },
-                onAttack: {
-                    await play(action: "attack")
-                },
-                onDefend: {
-                    await play(action: "defend")
-                },
-                onPotion: {
-                    await play(action: "potion")
-                },
-                onFlee: {
-                    await play(action: "flee")
-                },
-                onBuy: { kind, itemId in
-                    await play(action: "buy", payload: ["kind": kind, "itemId": itemId])
-                },
-                onEquip: { kind, itemId in
-                    await play(action: "equip", payload: ["kind": kind, "itemId": itemId])
-                }
-            )
         default:
-            ArcadeStageCard(gameId: game.id, icon: game.icon, title: game.title, subtitle: game.subtitle) {
-                ArcadePrimaryButton(title: "Refresh", icon: "arrow.clockwise", tint: NFGTheme.accent2, disabled: busy) {
-                    Task { await play(action: "status") }
-                }
-            }
+            EmptyView()
         }
+    }
+
+    private func closeStakedSession() {
+        if hiloSessionActive && !hiloRoundEnded {
+            Task { await play(action: "cashout") }
+        } else if minesSessionActive && !minesRoundEnded {
+            Task { await play(action: "cashout") }
+        }
+        showPlaySession = false
     }
 
     private func playMinesReveal(index: Int) async {
@@ -596,16 +709,18 @@ struct VaultArcadeGameView: View {
         await play(action: "reveal", payload: ["index": index], minesEpoch: minesStatusEpoch)
     }
 
-    private func playPlinkoDrop(risk: String) async -> (bucket: Int, mult: Double)? {
-        let result = await play(action: "play", payload: ["stake": stakeAmount, "risk": risk])
+    private func playPlinkoDrop(risk: String, stake: Int? = nil) async -> (bucket: Int, mult: Double)? {
+        let useStake = stake ?? stakeAmount
+        let result = await play(action: "play", payload: ["stake": useStake, "risk": risk])
         guard let idx = result?.segmentIndex, let mult = result?.multiplier else { return nil }
         plinkoLastBucket = idx
         plinkoLastMult = mult
         return (idx, mult)
     }
 
-    private func playWheelSpin() async -> (index: Int, label: String, mult: Double, won: Bool) {
-        let result = await play(action: "spin", payload: ["stake": stakeAmount])
+    private func playWheelSpin(stake: Int? = nil) async -> (index: Int, label: String, mult: Double, won: Bool) {
+        let useStake = stake ?? stakeAmount
+        let result = await play(action: "spin", payload: ["stake": useStake])
         let idx = result?.segmentIndex ?? 0
         let layout = ArcadeWheelLayout.segments
         let safeIdx = max(0, min(layout.count - 1, idx))
@@ -617,7 +732,51 @@ struct VaultArcadeGameView: View {
     }
 
     @discardableResult
-    private func play(action: String, payload: [String: Any] = [:], minesEpoch: Int? = nil, hiloEpoch: Int? = nil, towerEpoch: Int? = nil) async -> ArcadePlayResponse? {
+    private func playBlocks(action: String) async -> ArcadePlayResponse? {
+        if let api = sync.apiForArcade(), action != "status" {
+            await ArcadeOfflinePointsQueue.flushBeforePlay(api: api, sync: sync)
+            refreshBlocksOfflinePending()
+        }
+        if let result = await play(action: action) {
+            refreshBlocksOfflinePending()
+            return result
+        }
+        guard arcadeApiGameId == "nfg_blocks" else { return nil }
+        switch action {
+        case "start":
+            blocksSessionActive = true
+            blocksSessionPoints = 0
+            error = nil
+            message = "Playing offline — points save locally."
+        case "level_clear":
+            let reward = blocksRewardPreview
+            ArcadeOfflinePointsQueue.enqueue(
+                gameId: "nfg_blocks",
+                action: "level_clear",
+                estimatedPoints: reward
+            )
+            blocksSessionActive = true
+            blocksLevel += 1
+            blocksLinesTarget = BlocksEngine.linesTarget(for: blocksLevel)
+            blocksRewardPreview = min(25000, 5000 + (blocksLevel - 1) * 450)
+            message = "+\(reward.formatted()) pts saved offline"
+            error = nil
+        case "game_over":
+            blocksSessionActive = false
+            BlocksLocalStore.clear(user: ArcadeOfflinePointsQueue.userKey())
+        default:
+            break
+        }
+        refreshBlocksOfflinePending()
+        return nil
+    }
+
+    private func refreshBlocksOfflinePending() {
+        blocksOfflinePending = ArcadeOfflinePointsQueue.pendingPoints(for: "nfg_blocks")
+    }
+
+    @discardableResult
+    private func play(action: String, payload: [String: Any] = [:], minesEpoch: Int? = nil, hiloEpoch: Int? = nil) async -> ArcadePlayResponse? {
         guard let api = sync.apiForArcade() else {
             if action == "status" {
                 message = "Link TikTok in Profile to sync arcade plays."
@@ -640,10 +799,16 @@ struct VaultArcadeGameView: View {
             }
         }
         defer { busy = false }
+        if action != "status", let api = sync.apiForArcade() {
+            await ArcadeOfflinePointsQueue.flushBeforePlay(api: api, sync: sync)
+            if arcadeApiGameId == "nfg_blocks" {
+                refreshBlocksOfflinePending()
+            }
+        }
         do {
             let result = try await api.arcadePlay(gameId: arcadeApiGameId, action: action, payload: payload)
             error = nil
-            applyResult(result, action: action, minesEpoch: minesEpoch, hiloEpoch: hiloEpoch, towerEpoch: towerEpoch)
+            applyResult(result, action: action, minesEpoch: minesEpoch, hiloEpoch: hiloEpoch)
             return result
         } catch let err {
             let msg: String
@@ -662,8 +827,8 @@ struct VaultArcadeGameView: View {
         }
     }
 
-    private func applyResult(_ result: ArcadePlayResponse, action: String, minesEpoch: Int? = nil, hiloEpoch: Int? = nil, towerEpoch: Int? = nil) {
-        if let w = result.wallet { sync.applyWalletFromServer(w) }
+    private func applyResult(_ result: ArcadePlayResponse, action: String, minesEpoch: Int? = nil, hiloEpoch: Int? = nil) {
+        ArcadePointsBridge.applyToGlobalWallet(result, sync: sync)
         syncCooldown(from: result)
 
         if let lv = result.skillLevel { skillLevel = lv }
@@ -684,10 +849,6 @@ struct VaultArcadeGameView: View {
 
         if arcadeApiGameId == "nfg_hilo" {
             applyHiLoResult(result, action: action, hiloEpoch: hiloEpoch)
-        }
-
-        if arcadeApiGameId == "nfg_tower" {
-            applyTowerResult(result, action: action, towerEpoch: towerEpoch)
         }
 
         if arcadeApiGameId == "nfg_blocks" {
@@ -933,15 +1094,6 @@ struct VaultArcadeGameView: View {
         }
     }
 
-    private func applyTowerResult(_ result: ArcadePlayResponse, action: String, towerEpoch: Int?) {
-        if action == "status", let towerEpoch, towerEpoch < towerStatusEpoch {
-            return
-        }
-        if let tower = result.tower {
-            towerRPG = tower
-        }
-    }
-
     private func applyBlockBlastResult(_ result: ArcadePlayResponse, action: String) {
         if let active = result.sessionActive ?? result.runActive {
             blocksSessionActive = active
@@ -967,6 +1119,7 @@ struct VaultArcadeGameView: View {
         default:
             break
         }
+        refreshBlocksOfflinePending()
     }
 
     private func syncStakeBounds(from result: ArcadePlayResponse, resetToSuggested: Bool) {

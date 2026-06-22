@@ -1,6 +1,6 @@
 {
   "sk.07020": {
-    "until": 1783187152160,
+    "until": 1783359952160,
     "reason": "host_admin"
   },
   "ghi4462": {
@@ -26,5 +26,13 @@
   "sk_x120": {
     "until": 1782252292688,
     "reason": "host_admin"
+  },
+  "ishh.244": {
+    "until": 1782310097823,
+    "reason": "racing_debut"
+  },
+  "madebymanah": {
+    "until": 1782312418374,
+    "reason": "racing_debut"
   }
 }

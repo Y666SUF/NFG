@@ -1,5 +1,5 @@
 ﻿---
-cross_device_status: pending
+cross_device_status: done
 from_device: mac
 target_device: pc
 created_at: 2026-05-26T16:05:00Z

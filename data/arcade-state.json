@@ -83,11 +83,27 @@
           "ownedSkins": [
             "classic"
           ],
-          "equippedSkin": "classic"
+          "equippedSkin": "classic",
+          "totalEarned": 139347
         },
         "nfg_hilo": {
           "session": null,
           "skillLevel": 3
+        },
+        "nfg_vault_run": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneDistance": 0,
+            "lastMilestoneAt": 0,
+            "peakDistance": 0
+          },
+          "ownedShips": [
+            "classic"
+          ],
+          "equippedShip": "classic",
+          "bestDistance": 690
         }
       },
       "claimedMissions": [],
@@ -96,8 +112,8 @@
     "y666.suf": {
       "dayKey": "2026-06-22",
       "stats": {
-        "rounds": 7,
-        "wins": 5,
+        "rounds": 9,
+        "wins": 7,
         "lost": 14256,
         "liveWin": 1
       },
@@ -124,7 +140,8 @@
             "neon_cyan"
           ],
           "equippedSkin": "emerald",
-          "bestHeight": 26971
+          "bestHeight": 26971,
+          "totalEarned": 60000
         },
         "nfg_blocks": {
           "session": {
@@ -239,7 +256,7 @@
           "skillLevel": 2
         },
         "nfg_plinko": {
-          "skillLevel": 7
+          "skillLevel": 9
         },
         "nfg_vault_run": {
           "bestDistance": 2667,
@@ -259,7 +276,7 @@
         }
       },
       "claimedMissions": [],
-      "lastArcadeStakeAt": 1782091702078
+      "lastArcadeStakeAt": 1782134833223
     },
     "fatimahxm": {
       "dayKey": "2026-06-12",
@@ -351,12 +368,12 @@
       "games": {
         "nfg_snake_jump": {
           "session": {
-            "active": true,
-            "milestones": 12,
-            "sessionPoints": 41388,
-            "lastMilestoneHeight": 30000,
-            "lastMilestoneAt": 1782085484609,
-            "peakHeight": 30003,
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
             "vsMatchId": null,
             "vsDeferred": false
           },
@@ -364,7 +381,8 @@
             "classic"
           ],
           "equippedSkin": "classic",
-          "bestHeight": 43522
+          "bestHeight": 43522,
+          "totalEarned": 127613
         },
         "nfg_blocks": {
           "bestLevel": 6,
@@ -781,7 +799,8 @@
             "peakHeight": 0,
             "vsMatchId": null,
             "vsDeferred": false
-          }
+          },
+          "totalEarned": 75000
         },
         "nfg_mines": {},
         "nfg_vault_run": {
@@ -1232,21 +1251,22 @@
           }
         },
         "nfg_snake_jump": {
-          "bestHeight": 31623,
+          "bestHeight": 35007,
           "ownedSkins": [
             "classic"
           ],
           "equippedSkin": "classic",
           "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
+            "active": true,
+            "milestones": 3,
+            "sessionPoints": 10347,
+            "lastMilestoneHeight": 7500,
+            "lastMilestoneAt": 1782140130142,
+            "peakHeight": 7506,
             "vsMatchId": null,
             "vsDeferred": false
-          }
+          },
+          "totalEarned": 377388
         },
         "nfg_mines": {
           "session": null,
@@ -1334,7 +1354,8 @@
             "lastMilestoneDistance": 0,
             "lastMilestoneAt": 0,
             "peakDistance": 0
-          }
+          },
+          "bestDistance": 421
         },
         "nfg_plinko": {
           "skillLevel": 3
@@ -1488,7 +1509,7 @@
       "games": {
         "nfg_blocks": {
           "session": {
-            "active": false,
+            "active": true,
             "level": 1,
             "sessionLevels": 0,
             "sessionPoints": 0
@@ -1510,7 +1531,8 @@
             "classic"
           ],
           "equippedSkin": "classic",
-          "bestHeight": 4983
+          "bestHeight": 4983,
+          "totalEarned": 12000
         },
         "nfg_plinko": {
           "skillLevel": 6
@@ -1567,6 +1589,21 @@
         },
         "nfg_hilo": {
           "session": null
+        },
+        "nfg_vault_run": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneDistance": 0,
+            "lastMilestoneAt": 0,
+            "peakDistance": 0
+          },
+          "ownedShips": [
+            "classic"
+          ],
+          "equippedShip": "classic",
+          "bestDistance": 113
         }
       },
       "claimedMissions": [],
@@ -1635,6 +1672,16 @@
           "bestHeight": 1154
         }
       },
+      "claimedMissions": []
+    },
+    "appuser_61545f23024d05b6": {
+      "dayKey": "2026-06-22",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {},
       "claimedMissions": []
     }
   },
@@ -1753,6 +1800,16 @@
         "jumpSkinRing": "#f2c733"
       },
       {
+        "userId": "ghi4462",
+        "displayName": "G",
+        "points": 35007,
+        "updatedAt": 1782124075762,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      },
+      {
         "userId": "sk_x120",
         "displayName": "𝓢.𝓴𝓱𝔁𝓷🫶🏽",
         "points": 31747,
@@ -1761,16 +1818,6 @@
         "jumpSkinName": "NFG Inferno",
         "jumpSkinFill": "#ff6b35",
         "jumpSkinRing": "#ffd700"
-      },
-      {
-        "userId": "ghi4462",
-        "displayName": "G",
-        "points": 31623,
-        "updatedAt": 1782085972047,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
       },
       {
         "userId": "y666.suf",
@@ -1889,6 +1936,24 @@
         "displayName": "𝓢.𝓴𝓱𝔁𝓷🫶🏽",
         "points": 2056,
         "updatedAt": 1782083452535
+      },
+      {
+        "userId": "sk.07020",
+        "displayName": "SK",
+        "points": 690,
+        "updatedAt": 1782134676895
+      },
+      {
+        "userId": "ghi4462",
+        "displayName": "G",
+        "points": 421,
+        "updatedAt": 1782113162384
+      },
+      {
+        "userId": "nina.k825",
+        "displayName": "Nina🩵K",
+        "points": 113,
+        "updatedAt": 1782138829713
       }
     ]
   }

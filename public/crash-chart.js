@@ -6,7 +6,7 @@ const THEME = {
   danger2: "#ec4899",
   muted: "#9fb3c9",
   border: "rgba(255,255,255,0.14)",
-  space: "#0d0a38",
+  space: "#030208",
   lineViolet: "#8b5cf6",
   linePink: "#ec4899",
 };
@@ -67,17 +67,23 @@ function drawStarfield(ctx, w, h) {
   ctx.fillRect(0, 0, w, h);
 
   const g1 = ctx.createRadialGradient(w * 0.22, h * 0.28, 0, w * 0.22, h * 0.28, w * 0.65);
-  g1.addColorStop(0, "rgba(148, 82, 255, 0.78)");
-  g1.addColorStop(0.45, "rgba(56, 107, 242, 0.42)");
+  g1.addColorStop(0, "rgba(72, 38, 130, 0.22)");
+  g1.addColorStop(0.45, "rgba(28, 48, 88, 0.14)");
   g1.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g1;
   ctx.fillRect(0, 0, w, h);
 
   const g2 = ctx.createRadialGradient(w * 0.78, h * 0.42, 0, w * 0.78, h * 0.42, w * 0.58);
-  g2.addColorStop(0, "rgba(209, 71, 199, 0.62)");
-  g2.addColorStop(0.5, "rgba(31, 128, 250, 0.3)");
+  g2.addColorStop(0, "rgba(96, 36, 92, 0.16)");
+  g2.addColorStop(0.5, "rgba(24, 56, 96, 0.1)");
   g2.addColorStop(1, "rgba(0,0,0,0)");
   ctx.fillStyle = g2;
+  ctx.fillRect(0, 0, w, h);
+
+  const vignette = ctx.createRadialGradient(w * 0.5, h * 0.55, 0, w * 0.5, h * 0.55, Math.max(w, h) * 0.72);
+  vignette.addColorStop(0, "rgba(0,0,0,0)");
+  vignette.addColorStop(1, "rgba(0,0,0,0.55)");
+  ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, w, h);
 
   const scale = Math.min(w, h) < 200 ? 2.3 : 1.7;
@@ -87,7 +93,7 @@ function drawStarfield(ctx, w, h) {
     const y = ((Math.cos(seed * 1.31) * 0.5 + 0.5) * h) | 0;
     const tier = i % 11;
     const r = (tier === 0 ? 2.6 : tier < 4 ? 1.7 : 1.0) * scale * 0.45;
-    const alpha = tier === 0 ? 1 : 0.55 + (i % 7) * 0.06;
+    const alpha = tier === 0 ? 0.72 : 0.35 + (i % 7) * 0.04;
     ctx.fillStyle = i % 19 === 0 ? `rgba(235, 220, 255, ${alpha})` : `rgba(255,255,255,${alpha})`;
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
@@ -317,7 +323,7 @@ export class CrashChartRenderer {
       ctx.fillRect(0, 0, w, h);
     } else if (crashed) {
       const g = ctx.createRadialGradient(w * 0.3, h * 0.8, 0, w * 0.3, h * 0.8, 280);
-      g.addColorStop(0, "rgba(255, 107, 107, 0.28)");
+      g.addColorStop(0, "rgba(255, 107, 107, 0.14)");
       g.addColorStop(1, "rgba(0,0,0,0)");
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);

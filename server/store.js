@@ -1311,27 +1311,134 @@ class PointStore {
     return bal <= this.defaultStarter && all === 0 && lowRiskProgress;
   }
 
+  _unionStringLists(a, b, limit = 200) {
+    return [...new Set([...(Array.isArray(a) ? a : []), ...(Array.isArray(b) ? b : [])])].slice(0, limit);
+  }
+
+  _mergePowerupInventories(a, b, mode = "max") {
+    const left = this._normalizePowerupInventory(a);
+    const right = this._normalizePowerupInventory(b);
+    const out = { ...left };
+    for (const [key, value] of Object.entries(right)) {
+      const l = Math.max(0, Math.floor(Number(out[key]) || 0));
+      const r = Math.max(0, Math.floor(Number(value) || 0));
+      out[key] = mode === "sum" ? l + r : Math.max(l, r);
+    }
+    return out;
+  }
+
+  _mergeMissionProgress(a, b) {
+    const left = a && typeof a === "object" ? a : {};
+    const right = b && typeof b === "object" ? b : {};
+    const keys = new Set([...Object.keys(left), ...Object.keys(right)]);
+    const out = {};
+    for (const key of keys) {
+      out[key] = Math.max(
+        Math.max(0, Math.floor(Number(left[key]) || 0)),
+        Math.max(0, Math.floor(Number(right[key]) || 0))
+      );
+    }
+    return out;
+  }
+
+  _mergeProfilesForAccount(fromProfile, toProfile, reason) {
+    const combine = reason === "tiktok_link";
+    const mergedXp = Math.max(
+      Math.max(0, Math.floor(Number(fromProfile.xp) || 0)),
+      Math.max(0, Math.floor(Number(toProfile.xp) || 0))
+    );
+    const mergedLevel = getLevelFromXp(mergedXp);
+    const pickDisplayFields = () => {
+      if (!combine) return { nameStyle: toProfile.nameStyle, nameBadge: toProfile.nameBadge };
+      const fromBadge = resolveBadgeId(fromProfile.nameBadge || "none");
+      const toBadge = resolveBadgeId(toProfile.nameBadge || "none");
+      const fromStyle = String(fromProfile.nameStyle || "none").toLowerCase();
+      const toStyle = String(toProfile.nameStyle || "none").toLowerCase();
+      return {
+        nameStyle: toStyle !== "none" ? toStyle : fromStyle,
+        nameBadge: toBadge !== "none" ? toBadge : fromBadge,
+      };
+    };
+    const displayFields = pickDisplayFields();
+    const sumNum = (a, b) =>
+      Math.max(0, Math.floor(Number(a) || 0)) + Math.max(0, Math.floor(Number(b) || 0));
+    const maxNum = (a, b) =>
+      Math.max(Math.max(0, Math.floor(Number(a) || 0)), Math.max(0, Math.floor(Number(b) || 0)));
+
+    return {
+      ...fromProfile,
+      ...toProfile,
+      ...displayFields,
+      ownedBadges: this._unionStringLists(fromProfile.ownedBadges, toProfile.ownedBadges, 50),
+      superFan: combine ? fromProfile.superFan === true || toProfile.superFan === true : toProfile.superFan === true,
+      superFanLevel: maxNum(fromProfile.superFanLevel, toProfile.superFanLevel),
+      superFanIcon: maxNum(fromProfile.superFanIcon, toProfile.superFanIcon),
+      superFanWelcomeBonusGranted:
+        fromProfile.superFanWelcomeBonusGranted === true || toProfile.superFanWelcomeBonusGranted === true,
+      superFanDailyBonusDay:
+        String(toProfile.superFanDailyBonusDay || "") || String(fromProfile.superFanDailyBonusDay || ""),
+      xp: mergedXp,
+      level: mergedLevel,
+      rank: getRankFromLevel(mergedLevel),
+      dailyStreak: maxNum(fromProfile.dailyStreak, toProfile.dailyStreak),
+      lastDailyClaimAt: maxNum(fromProfile.lastDailyClaimAt, toProfile.lastDailyClaimAt),
+      achievements: this._unionStringLists(fromProfile.achievements, toProfile.achievements, 200),
+      completedMissions: this._unionStringLists(fromProfile.completedMissions, toProfile.completedMissions, 200),
+      missionProgress: this._mergeMissionProgress(fromProfile.missionProgress, toProfile.missionProgress),
+      totalWagered: combine
+        ? sumNum(fromProfile.totalWagered, toProfile.totalWagered)
+        : maxNum(fromProfile.totalWagered, toProfile.totalWagered),
+      highStakeBetCount: combine
+        ? sumNum(fromProfile.highStakeBetCount, toProfile.highStakeBetCount)
+        : maxNum(fromProfile.highStakeBetCount, toProfile.highStakeBetCount),
+      highStakeBonusClaims: combine
+        ? sumNum(fromProfile.highStakeBonusClaims, toProfile.highStakeBonusClaims)
+        : maxNum(fromProfile.highStakeBonusClaims, toProfile.highStakeBonusClaims),
+      totalRakebackClaimed: combine
+        ? sumNum(fromProfile.totalRakebackClaimed, toProfile.totalRakebackClaimed)
+        : maxNum(fromProfile.totalRakebackClaimed, toProfile.totalRakebackClaimed),
+      powerups: this._mergePowerupInventories(fromProfile.powerups, toProfile.powerups, combine ? "sum" : "max"),
+      challengeLog: [
+        ...(Array.isArray(fromProfile.challengeLog) ? fromProfile.challengeLog : []),
+        ...(Array.isArray(toProfile.challengeLog) ? toProfile.challengeLog : []),
+      ].slice(-400),
+      challengeState: toProfile.challengeState || fromProfile.challengeState || null,
+    };
+  }
+
   _mergeUserAccount(fromUser, toUser, reason = "display_name_restore") {
     const from = normalizeUser(fromUser);
     const to = normalizeUser(toUser);
     if (!from || !to || from === to) return { ok: false, reason: "invalid_merge" };
+    const combine = reason === "tiktok_link";
     const fromBalance = Math.max(0, this.getBalance(from));
     const fromAllTime = Math.max(0, this.getAllTime(from));
-    if (fromBalance <= 0 && fromAllTime <= 0 && !this.points.profiles[from]) {
+    const toBalance = Math.max(0, this.getBalance(to));
+    const toAllTime = Math.max(0, this.getAllTime(to));
+    const fromProfile = this.points.profiles[from];
+    const hasFromProgress =
+      !!fromProfile ||
+      fromBalance > 0 ||
+      fromAllTime > 0 ||
+      (combine && String(from).toLowerCase().startsWith("appuser_"));
+    if (!hasFromProgress) {
       return { ok: false, reason: "source_empty" };
     }
 
     const toProfile = this._ensureProfileShape(to);
-    const fromProfile = this._ensureProfileShape(from);
-    const mergedAliases = [...this._profileDisplayAliases(toProfile), ...this._profileDisplayAliases(fromProfile)];
-    if (fromProfile.displayName) mergedAliases.push(fromProfile.displayName);
+    const fromProfileShape = this._ensureProfileShape(from);
+    const mergedAliases = [...this._profileDisplayAliases(toProfile), ...this._profileDisplayAliases(fromProfileShape)];
+    if (fromProfileShape.displayName) mergedAliases.push(fromProfileShape.displayName);
     if (toProfile.displayName) mergedAliases.push(toProfile.displayName);
 
-    this.points.balances[to] = Math.max(Math.max(0, this.getBalance(to)), fromBalance);
-    this.points.allTime[to] = Math.max(Math.max(0, this.getAllTime(to)), fromAllTime);
+    const mergedBalance = combine ? toBalance + fromBalance : Math.max(toBalance, fromBalance);
+    const mergedAllTime = combine ? toAllTime + fromAllTime : Math.max(toAllTime, fromAllTime);
+    const mergedProfile = this._mergeProfilesForAccount(fromProfileShape, toProfile, reason);
+
+    this.points.balances[to] = mergedBalance;
+    this.points.allTime[to] = mergedAllTime;
     this.points.profiles[to] = {
-      ...fromProfile,
-      ...toProfile,
+      ...mergedProfile,
       displayAliases: [...new Set(mergedAliases)].slice(-50),
       lastRestoredFrom: from,
       lastRestoreReason: reason,
@@ -1352,7 +1459,19 @@ class PointStore {
     delete this.shields[from];
     this._savePoints();
     this._saveShields();
-    return { ok: true, from, to, restoredBalance: fromBalance, restoredAllTime: fromAllTime };
+    this.updateRank(to);
+    return {
+      ok: true,
+      from,
+      to,
+      reason,
+      combined: combine,
+      previousBalance: toBalance,
+      mergedFromBalance: fromBalance,
+      mergedBalance,
+      mergedAllTime,
+      mergedLevel: this.points.profiles[to].level,
+    };
   }
 
   _attemptAutoRestoreByDisplayName(user, displayName) {

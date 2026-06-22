@@ -35,8 +35,7 @@ if ($Merge) {
     if ($LASTEXITCODE -ne 0) {
       Write-Host ""
       Write-Host "Merge conflicts — resolve markers, then:" -ForegroundColor Red
-      Write-Host '  git add <resolved files>'
-      Write-Host "  git commit -m ""Merge origin/main while keeping PC live features"""
+      Write-Host '  git add <resolved files>'      Write-Host "  git commit -m ""Merge origin/main while keeping PC live features"""
       Write-Host ""
       Write-Host "See docs/WINDOWS_MERGE_PULL_PROMPT.txt for conflict rules." -ForegroundColor Yellow
       exit 1

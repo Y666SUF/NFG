@@ -1,0 +1,166 @@
+# Windows PC — safe merge pull (keep local work + get Mac commits)
+
+You are on the **Windows NFG live server** repo at `C:\Users\Yusef\test`.
+
+**Situation:** PC is **3 commits behind** `origin/main` but has **important local edits** (portrait layout, follow bonus, toasts, etc.). A blind pull failed because of uncommitted/stashed conflicts on `server/index.js`, `server/game.js`, `public/app.js`, etc.
+
+**Goal:** Get Mac commits (especially `6d1ff84e` — app-guest auth, mobile server, crash/iOS support) **without losing** PC-only live features.
+
+---
+
+## Step 0 — one-time cleanup
+
+```powershell
+cd C:\Users\Yusef\test
+
+# Remove stale lock if present
+if (Test-Path .git\index.lock) { Remove-Item .git\index.lock -Force }
+
+git status
+```
+
+---
+
+## Step 1 — commit ALL current PC work first (do NOT stash)
+
+This preserves portrait layout, follow bonus, toasts, and any other live tweaks.
+
+```powershell
+git add -A
+git commit -m "PC live: portrait layout, follow bonus, toasts, and local server tweaks"
+```
+
+If commit says "nothing to commit", that's OK — continue.
+
+---
+
+## Step 2 — merge remote (not rebase)
+
+```powershell
+git fetch origin
+git merge origin/main -m "Merge origin/main: app-guest auth, mobile server, iOS crash polish"
+```
+
+Expect **merge conflicts** in files both sides touched, likely:
+- `server/index.js`
+- `server/game.js`
+- `public/app.js`
+- possibly `server/store.js`, `server/mobile-auth.js`, `server/mobile-arcade.js`
+
+---
+
+## Step 3 — resolve conflicts (rules)
+
+For each conflicted file, open it and resolve `<<<<<<<` markers:
+
+### `server/index.js`
+- **KEEP** PC live routes/proxy/toast/portrait-related wiring
+- **ADD/Take from Mac** (`origin/main` / theirs):
+  - Mobile API registration if missing
+  - Pixel Jump proxy fixes from commits `a6bf1529`, `44775ad8`
+  - Any `/api/mobile/*` route wiring
+
+### `server/game.js`
+- **KEEP** PC follow-bonus / toast / portrait-related game logic
+- **KEEP** existing steal/shield/bet logic (Mac didn't replace core game loop)
+- Do **not** delete PC-only handlers; merge new Mac helpers if any appear in the same regions
+
+### `public/app.js`
+- **KEEP** PC portrait layout + toast UI changes (YOUR side)
+- Take Mac changes only if they're clearly mobile-unrelated bugfixes in shared code
+
+### New Mac-only files — take theirs entirely (no conflict expected)
+These should merge cleanly; verify they exist after merge:
+- `server/mobile-auth.js` — must include `POST /api/mobile/auth/app-guest`
+- `server/store.js` — must include `ensureAppGuestAccount()` (100k starter)
+- `server/mobile-arcade.js`, `server/mobile-game-admin.js`
+- `docs/WINDOWS_SERVER_UPDATE_PROMPT.txt`
+
+After editing each file:
+```powershell
+git add server/index.js server/game.js public/app.js
+# add any other resolved files
+```
+
+---
+
+## Step 4 — finish merge
+
+```powershell
+git status   # should show conflicts resolved
+git commit -m "Merge origin/main while keeping PC live features"
+```
+
+If merge already auto-completed, skip the commit.
+
+---
+
+## Step 5 — install deps + restart
+
+```powershell
+npm install
+```
+
+Restart the **single** live process (`run-electron-cloudflare.bat` or pm2). Do not run a second instance.
+
+---
+
+## Step 6 — verify production
+
+```powershell
+# App guest auth (new — required for iOS)
+curl -X POST https://y666suf.com/api/mobile/auth/app-guest -H "Content-Type: application/json" -d "{\"deviceId\":\"pc-verify-001\"}"
+
+# Mobile arcade catalog (bearer token from above if needed)
+curl https://y666suf.com/api/mobile/arcade/catalog
+```
+
+**Manual checks on live stream UI:**
+- [ ] Portrait layout still works
+- [ ] Follow bonus still works
+- [ ] Toasts still work
+- [ ] iOS app-guest sign-in works (App User, ~100k pts)
+- [ ] iOS steals / repeat bet / near-miss (server state + /api/chat)
+
+---
+
+## Step 7 — push merged result back (optional but recommended)
+
+```powershell
+git push origin main
+```
+
+This syncs Mac next time it pulls.
+
+Set `docs/cross-device/pending-on-pc.md` frontmatter `cross_device_status: done` when verified.
+
+---
+
+## If merge is too messy
+
+Abort and try file-by-file:
+
+```powershell
+git merge --abort
+git fetch origin
+```
+
+Then for **new Mac files only**:
+```powershell
+git checkout origin/main -- server/mobile-auth.js server/mobile-arcade.js server/mobile-game-admin.js docs/WINDOWS_SERVER_UPDATE_PROMPT.txt
+git checkout origin/main -- ios/
+```
+
+Manually cherry-pick `ensureAppGuestAccount` into `server/store.js` from Mac version (search for `ensureAppGuestAccount`).
+
+**Do NOT** overwrite `public/app.js` or PC-specific sections of `server/index.js` / `server/game.js` without reading both sides.
+
+---
+
+## The 3 commits you're pulling
+
+1. `6d1ff84e` — Server + iOS: app-guest auth, crash polish, arcade, steals
+2. `44775ad8` — Fix Pixel Jump proxy POST body forwarding
+3. `a6bf1529` — Proxy Pixel Jump API through main NFG server
+
+Your PC commit from Step 1 sits on top after merge.

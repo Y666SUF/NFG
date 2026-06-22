@@ -1,0 +1,16 @@
+/** Host-only iOS features (build 98+). */
+const HOST_GAME_USER = "y666.suf";
+
+function normHostUser(id) {
+  return String(id || "")
+    .trim()
+    .replace(/^@+/, "")
+    .toLowerCase()
+    .slice(0, 40);
+}
+
+function isGameHost(userId) {
+  return normHostUser(userId) === normHostUser(HOST_GAME_USER);
+}
+
+module.exports = { isGameHost, HOST_GAME_USER, normHostUser };

@@ -1,17 +1,37 @@
 ---
-cross_device_status: none
-from_device: none
+cross_device_status: pending
+from_device: pc
 target_device: mac
-created_at: ""
-title: ""
+created_at: 2026-06-10T14:00:00Z
+title: Retro Pixel Jump iOS — y666suf.com + black screen fix
+related_paths:
+ - .env
+ - app.config.js
+ - app.config.ts
+ - app/_layout.tsx
+ - src/
 ---
 
-# No pending Mac task
+# Mac companion task: Retro Pixel Jump iOS (backend URL + black screen)
 
-When the PC agent needs Mac/iOS/Xcode work, it will replace this file with a ready-to-run companion prompt.
+## Context (PC — already done)
 
-**On Mac after `git pull`:** run `./scripts/run-pending-task.sh` or tell Cursor Agent:
+Retro Pixel Jump backend is proxied through the **same Cloudflare tunnel as NFG Crash**:
 
-> Run the pending cross-device task in @docs/cross-device/pending-on-mac.md
+| Layer | Value |
+|-------|--------|
+| Public base | `https://y666suf.com/api/pixel-jump` |
+| Health | `GET https://y666suf.com/api/pixel-jump/` |
+| Leaderboard | `GET/POST https://y666suf.com/api/pixel-jump/leaderboard` |
+| Multiplayer | `POST https://y666suf.com/api/pixel-jump/mp/rooms` |
+| WebSocket | `wss://y666suf.com/api/pixel-jump/ws/mp/{roomId}?playerId=...` |
+| PC launcher | `run-electron-cloudflare.bat` (Node 3847 → uvicorn 8001) |
 
-When the Mac task is finished, set `cross_device_status: done` in the frontmatter above and push.
+**Do NOT use** old `trycloudflare.com` URLs — they expire when cloudflared restarts.
+
+Room API returns relative `wsUrl` like `/api/pixel-jump/ws/mp/ABCD?playerId=...` — resolve against `https://y666suf.com` (not against backend base with an extra `/api`).
+
+## When done
+
+- Set `cross_device_status: done` in frontmatter
+- `./scripts/sync-push.sh`

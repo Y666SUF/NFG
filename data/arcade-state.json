@@ -1,0 +1,1895 @@
+{
+  "users": {
+    "sk.07020": {
+      "dayKey": "2026-06-22",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_blocks": {
+          "session": {
+            "active": true,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          },
+          "bestLevel": 5
+        },
+        "nfg_mines": {
+          "session": null,
+          "skillLevel": 3
+        },
+        "nfg_tower": {
+          "hero": {
+            "level": 16,
+            "xp": 269,
+            "gold": 1241,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 2,
+            "bestFloor": 16,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "female",
+              "skinTone": 2,
+              "hairStyle": 1,
+              "hairColor": 3,
+              "beard": false,
+              "heroName": "SK"
+            }
+          },
+          "session": null,
+          "skillLevel": 10
+        },
+        "nfg_plinko": {
+          "skillLevel": 4
+        },
+        "nfg_snake_jump": {
+          "bestHeight": 35010,
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic"
+        },
+        "nfg_hilo": {
+          "session": null,
+          "skillLevel": 3
+        }
+      },
+      "claimedMissions": [],
+      "lastArcadeStakeAt": 1781338551447
+    },
+    "y666.suf": {
+      "dayKey": "2026-06-22",
+      "stats": {
+        "rounds": 7,
+        "wins": 5,
+        "lost": 14256,
+        "liveWin": 1
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic",
+            "nfg_fire",
+            "crimson",
+            "ghost",
+            "emerald",
+            "violet_void",
+            "solar_gold",
+            "neon_cyan"
+          ],
+          "equippedSkin": "emerald",
+          "bestHeight": 26971
+        },
+        "nfg_blocks": {
+          "session": {
+            "active": true,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          },
+          "bestLevel": 8
+        },
+        "nfg_tower": {
+          "session": {
+            "floor": 59,
+            "monster": {
+              "id": "ace_shade",
+              "name": "Ace of Spades Shade",
+              "emoji": "♠️",
+              "theme": "cards",
+              "hp": 686.85,
+              "maxHp": 1021,
+              "atk": 104,
+              "def": 33,
+              "floor": 59,
+              "isBoss": false,
+              "tier": 1
+            },
+            "playerHp": 1315.6,
+            "turn": "player",
+            "defending": false,
+            "log": [
+              "Victory! +236 gold, +300 bonus XP.",
+              "LEVEL UP! Now level 80!",
+              "— Floor 58: 🪙 Copper Chip Slime —",
+              "You hit 🪙 Copper Chip Slime for 334.6! (+121 XP)",
+              "🪙 Copper Chip Slime hits you for 1!",
+              "You hit 🪙 Copper Chip Slime for 333.6! (+121 XP)",
+              "🪙 Copper Chip Slime hits you for 1!",
+              "You hit 🪙 Copper Chip Slime for 333.6! (+121 XP)",
+              "Victory! +240 gold, +305 bonus XP.",
+              "— Floor 59: ♠️ Ace of Spades Shade —",
+              "You hit ♠️ Ace of Spades Shade for 334.15! (+123 XP)",
+              "♠️ Ace of Spades Shade hits you for 2.3999999999999915!"
+            ],
+            "lastEvent": {
+              "kind": "attack",
+              "playerDamage": 334.15,
+              "monsterDamage": 2.3999999999999915,
+              "xpGained": 123,
+              "levelUp": false
+            }
+          },
+          "hero": {
+            "level": 80,
+            "xp": 943,
+            "gold": 9419,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "shield_gen_14",
+              "weapon": "weapon_gen_12",
+              "cape": "velvet_cape"
+            },
+            "weaponId": "weapon_gen_12",
+            "armorId": "gambler_tunic",
+            "potions": 0,
+            "bestFloor": 80,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak",
+              "velvet_cape",
+              "chip_blade",
+              "weapon_gen_12",
+              "shield_gen_14"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger",
+              "chip_blade",
+              "weapon_gen_12"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "male",
+              "skinTone": 5,
+              "hairStyle": 3,
+              "hairColor": 4,
+              "beard": true,
+              "heroName": "Yusuf"
+            }
+          },
+          "skillLevel": 10
+        },
+        "nfg_hilo": {
+          "session": null,
+          "skillLevel": 3
+        },
+        "nfg_wheel": {
+          "skillLevel": 4
+        },
+        "nfg_mines": {
+          "session": null,
+          "skillLevel": 2
+        },
+        "nfg_dice": {
+          "skillLevel": 2
+        },
+        "nfg_plinko": {
+          "skillLevel": 7
+        },
+        "nfg_vault_run": {
+          "bestDistance": 2667,
+          "ownedShips": [
+            "classic",
+            "solar_flare"
+          ],
+          "equippedShip": "solar_flare",
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneDistance": 0,
+            "lastMilestoneAt": 0,
+            "peakDistance": 0
+          }
+        }
+      },
+      "claimedMissions": [],
+      "lastArcadeStakeAt": 1782091702078
+    },
+    "fatimahxm": {
+      "dayKey": "2026-06-12",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_blocks": {
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          },
+          "bestLevel": 12
+        },
+        "nfg_tower": {
+          "hero": {
+            "level": 1,
+            "xp": 0,
+            "gold": 25,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 2,
+            "bestFloor": 0,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "female",
+              "skinTone": 3,
+              "hairStyle": 4,
+              "hairColor": 3,
+              "beard": false,
+              "heroName": "Fatimah"
+            }
+          },
+          "session": null
+        },
+        "nfg_snake_jump": {
+          "bestHeight": 14016,
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          }
+        }
+      },
+      "claimedMissions": []
+    },
+    "sameya.bx": {
+      "dayKey": "2026-06-22",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": true,
+            "milestones": 12,
+            "sessionPoints": 41388,
+            "lastMilestoneHeight": 30000,
+            "lastMilestoneAt": 1782085484609,
+            "peakHeight": 30003,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "bestHeight": 43522
+        },
+        "nfg_blocks": {
+          "bestLevel": 6,
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          }
+        },
+        "nfg_wheel": {
+          "skillLevel": 5
+        },
+        "nfg_plinko": {
+          "skillLevel": 5
+        },
+        "nfg_dice": {
+          "skillLevel": 10
+        },
+        "nfg_mines": {
+          "session": null,
+          "skillLevel": 1
+        },
+        "nfg_tower": {
+          "session": null,
+          "hero": {
+            "level": 18,
+            "xp": 330,
+            "gold": 1493,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 0,
+            "bestFloor": 19,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "female",
+              "skinTone": 2,
+              "hairStyle": 1,
+              "hairColor": 1,
+              "beard": false,
+              "heroName": "🐨"
+            }
+          },
+          "skillLevel": 10
+        },
+        "nfg_vault_run": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneDistance": 0,
+            "lastMilestoneAt": 0,
+            "peakDistance": 0
+          },
+          "ownedShips": [
+            "classic"
+          ],
+          "equippedShip": "classic",
+          "bestDistance": 7218
+        }
+      },
+      "claimedMissions": []
+    },
+    "meowcloud__": {
+      "dayKey": "2026-06-03",
+      "stats": {
+        "rounds": 2,
+        "wins": 2,
+        "lost": 0
+      },
+      "games": {
+        "nfg_tower": {
+          "hero": {
+            "level": 1,
+            "xp": 0,
+            "gold": 25,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 2,
+            "bestFloor": 0,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": false,
+              "bodyStyle": "male",
+              "skinTone": 2,
+              "hairStyle": 1,
+              "hairColor": 3,
+              "beard": false,
+              "heroName": ""
+            }
+          }
+        },
+        "nfg_snake_jump": {
+          "bestHeight": 6421,
+          "session": {
+            "active": false,
+            "height": 0,
+            "sessionPoints": 0,
+            "sessionLevels": 0,
+            "lastMilestoneHeight": 0
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic"
+        },
+        "nfg_blocks": {
+          "bestLevel": 2,
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          }
+        },
+        "nfg_dice": {
+          "skillLevel": 2
+        },
+        "nfg_plinko": {
+          "skillLevel": 2
+        }
+      },
+      "claimedMissions": []
+    },
+    "huma2882": {
+      "dayKey": "2026-06-14",
+      "stats": {
+        "rounds": 15,
+        "wins": 5,
+        "lost": 27451
+      },
+      "games": {
+        "nfg_hilo": {
+          "session": null,
+          "skillLevel": 9
+        },
+        "nfg_dice": {
+          "skillLevel": 10
+        },
+        "nfg_wheel": {
+          "skillLevel": 3
+        },
+        "nfg_tower": {
+          "hero": {
+            "level": 95,
+            "xp": 2324,
+            "gold": 48841,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 0,
+            "bestFloor": 80,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "female",
+              "skinTone": 2,
+              "hairStyle": 2,
+              "hairColor": 2,
+              "beard": false,
+              "heroName": "Bulldog"
+            }
+          },
+          "session": null,
+          "skillLevel": 10
+        },
+        "nfg_blocks": {
+          "bestLevel": 6,
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          }
+        },
+        "nfg_plinko": {
+          "skillLevel": 10
+        },
+        "nfg_mines": {
+          "session": null,
+          "skillLevel": 10
+        },
+        "nfg_snake_jump": {
+          "bestHeight": 19737,
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          }
+        }
+      },
+      "claimedMissions": [
+        "win_5",
+        "play_10"
+      ],
+      "lastArcadeStakeAt": 1781443942536
+    },
+    "moinazarin": {
+      "dayKey": "2026-06-03",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_tower": {
+          "hero": {
+            "level": 5,
+            "xp": 136,
+            "gold": 125,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 0,
+            "bestFloor": 5,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "male",
+              "skinTone": 5,
+              "hairStyle": 3,
+              "hairColor": 5,
+              "beard": true,
+              "heroName": "Moinaa"
+            }
+          },
+          "session": null,
+          "skillLevel": 6
+        },
+        "nfg_blocks": {
+          "bestLevel": 2,
+          "session": {
+            "active": true,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          }
+        },
+        "nfg_snake_jump": {
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic"
+        }
+      },
+      "claimedMissions": []
+    },
+    "sk_x120": {
+      "dayKey": "2026-06-22",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_blocks": {
+          "bestLevel": 5,
+          "session": {
+            "active": true,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          }
+        },
+        "nfg_tower": {
+          "hero": {
+            "level": 1,
+            "xp": 17,
+            "gold": 25,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 1,
+            "bestFloor": 0,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "female",
+              "skinTone": 2,
+              "hairStyle": 2,
+              "hairColor": 1,
+              "beard": false,
+              "heroName": "Sheely"
+            }
+          },
+          "session": null
+        },
+        "nfg_snake_jump": {
+          "bestHeight": 31747,
+          "ownedSkins": [
+            "classic",
+            "violet_void",
+            "nfg_fire"
+          ],
+          "equippedSkin": "nfg_fire",
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          }
+        },
+        "nfg_mines": {},
+        "nfg_vault_run": {
+          "session": {
+            "active": true,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneDistance": 0,
+            "lastMilestoneAt": 0,
+            "peakDistance": 0
+          },
+          "ownedShips": [
+            "classic"
+          ],
+          "equippedShip": "classic",
+          "bestDistance": 2056
+        }
+      },
+      "claimedMissions": []
+    },
+    "f0rty3": {
+      "dayKey": "2026-06-02",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_tower": {
+          "hero": {
+            "level": 8,
+            "xp": 291,
+            "gold": 277,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 0,
+            "bestFloor": 9,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "male",
+              "skinTone": 2,
+              "hairStyle": 1,
+              "hairColor": 3,
+              "beard": true,
+              "heroName": "43"
+            }
+          },
+          "session": null,
+          "skillLevel": 10
+        },
+        "nfg_snake_jump": {
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic"
+        }
+      },
+      "claimedMissions": []
+    },
+    "madebymanah": {
+      "dayKey": "2026-06-11",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_blocks": {
+          "bestLevel": 4,
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          }
+        },
+        "nfg_snake_jump": {
+          "bestHeight": 4330,
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0
+          }
+        }
+      },
+      "claimedMissions": []
+    },
+    "cj_hern": {
+      "dayKey": "2026-06-08",
+      "stats": {
+        "rounds": 1,
+        "wins": 1,
+        "lost": 0
+      },
+      "games": {
+        "nfg_hilo": {
+          "session": null
+        },
+        "nfg_tower": {
+          "hero": {
+            "level": 1,
+            "xp": 0,
+            "gold": 25,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 2,
+            "bestFloor": 0,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": false,
+              "bodyStyle": "male",
+              "skinTone": 2,
+              "hairStyle": 1,
+              "hairColor": 3,
+              "beard": false,
+              "heroName": ""
+            }
+          }
+        },
+        "nfg_blocks": {
+          "bestLevel": 3,
+          "session": {
+            "active": true,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          }
+        },
+        "nfg_wheel": {
+          "skillLevel": 2
+        },
+        "nfg_dice": {
+          "skillLevel": 2
+        },
+        "nfg_plinko": {
+          "skillLevel": 10
+        },
+        "nfg_mines": {
+          "session": null,
+          "skillLevel": 2
+        },
+        "nfg_snake_jump": {
+          "bestHeight": 8696,
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0
+          }
+        }
+      },
+      "claimedMissions": []
+    },
+    "akerzk": {
+      "dayKey": "2026-06-06",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_tower": {
+          "hero": {
+            "level": 336,
+            "xp": 9366,
+            "gold": 253691,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "body_gen_18",
+              "legs": "worn_trousers",
+              "shield": "shield_gen_12",
+              "weapon": "weapon_gen_30",
+              "cape": "cape_gen_15"
+            },
+            "weaponId": "weapon_gen_30",
+            "armorId": "body_gen_18",
+            "potions": 85,
+            "bestFloor": 263,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak",
+              "bronze_guard",
+              "felt_vest",
+              "ace_cutlass",
+              "chip_mail",
+              "weapon_gen_12",
+              "shield_gen_12",
+              "body_gen_12",
+              "cape_gen_11",
+              "weapon_gen_16",
+              "weapon_gen_21",
+              "body_gen_22",
+              "body_gen_18",
+              "cape_gen_15",
+              "weapon_gen_30"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger",
+              "ace_cutlass",
+              "weapon_gen_12",
+              "weapon_gen_16",
+              "weapon_gen_21",
+              "weapon_gen_30"
+            ],
+            "ownedArmors": [
+              "gambler_tunic",
+              "felt_vest",
+              "chip_mail",
+              "body_gen_12",
+              "body_gen_22",
+              "body_gen_18"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "male",
+              "skinTone": 5,
+              "hairStyle": 1,
+              "hairColor": 1,
+              "beard": true,
+              "heroName": "Zk"
+            }
+          },
+          "session": null,
+          "skillLevel": 10
+        },
+        "nfg_wheel": {},
+        "nfg_snake_jump": {
+          "bestHeight": 9198,
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic"
+        }
+      },
+      "claimedMissions": []
+    },
+    "apple_app_review": {
+      "dayKey": "2026-06-05",
+      "stats": {
+        "rounds": 14,
+        "wins": 4,
+        "lost": 16100
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "bestHeight": 0,
+          "session": {
+            "active": true,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic"
+        },
+        "nfg_hilo": {
+          "session": null
+        },
+        "nfg_plinko": {
+          "skillLevel": 3
+        },
+        "nfg_wheel": {},
+        "nfg_tower": {
+          "session": {
+            "floor": 35,
+            "monster": {
+              "id": "ace_shade",
+              "name": "Ace of Spades Shade",
+              "emoji": "♠️",
+              "theme": "cards",
+              "hp": 553,
+              "maxHp": 553,
+              "atk": 63,
+              "def": 20,
+              "floor": 35,
+              "isBoss": false,
+              "tier": 1
+            },
+            "playerHp": 692,
+            "turn": "player",
+            "defending": false,
+            "log": [
+              "— Floor 34: 🪙 Copper Chip Slime —",
+              "You hit 🪙 Copper Chip Slime for 127.44999999999999! (+73 XP)",
+              "🪙 Copper Chip Slime hits you for 20.699999999999996!",
+              "You hit 🪙 Copper Chip Slime for 132.45! (+73 XP)",
+              "🪙 Copper Chip Slime hits you for 17.699999999999996!",
+              "You hit 🪙 Copper Chip Slime for 128.45! (+73 XP)",
+              "🪙 Copper Chip Slime hits you for 18.699999999999996!",
+              "You hit 🪙 Copper Chip Slime for 129.45! (+73 XP)",
+              "🪙 Copper Chip Slime hits you for 17.699999999999996!",
+              "You hit 🪙 Copper Chip Slime for 130.45! (+73 XP)",
+              "Victory! +144 gold, +185 bonus XP.",
+              "— Floor 35: ♠️ Ace of Spades Shade —"
+            ],
+            "lastEvent": {
+              "kind": "kill",
+              "playerDamage": 130.45,
+              "xpGained": 258,
+              "killed": true,
+              "levelUp": false
+            }
+          },
+          "hero": {
+            "level": 44,
+            "xp": 1690,
+            "gold": 10557,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 0,
+            "bestFloor": 40,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "male",
+              "skinTone": 2,
+              "hairStyle": 1,
+              "hairColor": 3,
+              "beard": false,
+              "heroName": "Adventurer"
+            }
+          },
+          "skillLevel": 10
+        },
+        "nfg_blocks": {
+          "bestLevel": 1,
+          "session": {
+            "active": true,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          }
+        },
+        "nfg_dice": {
+          "skillLevel": 3
+        }
+      },
+      "claimedMissions": []
+    },
+    "ghi4462": {
+      "dayKey": "2026-06-22",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_blocks": {
+          "bestLevel": 7,
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          }
+        },
+        "nfg_snake_jump": {
+          "bestHeight": 31623,
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          }
+        },
+        "nfg_mines": {
+          "session": null,
+          "skillLevel": 10
+        },
+        "nfg_tower": {
+          "hero": {
+            "level": 8,
+            "xp": 63,
+            "gold": 277,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 0,
+            "bestFloor": 9,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "male",
+              "skinTone": 2,
+              "hairStyle": 1,
+              "hairColor": 3,
+              "beard": false,
+              "heroName": ""
+            }
+          },
+          "session": {
+            "floor": 1,
+            "monster": {
+              "id": "dice_goblin",
+              "name": "Pip the Dice Goblin",
+              "emoji": "🎲",
+              "theme": "dice",
+              "hp": 47,
+              "maxHp": 47,
+              "atk": 5,
+              "def": 1,
+              "floor": 1,
+              "isBoss": false,
+              "tier": 0
+            },
+            "playerHp": 188,
+            "turn": "player",
+            "defending": false,
+            "log": [
+              "You enter the Dragon Tower…",
+              "Floor 1 — 🎲 Pip the Dice Goblin awaits!"
+            ]
+          },
+          "skillLevel": 10
+        },
+        "nfg_hilo": {
+          "session": null
+        },
+        "nfg_wheel": {},
+        "nfg_vault_run": {
+          "ownedShips": [
+            "classic"
+          ],
+          "equippedShip": "classic",
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneDistance": 0,
+            "lastMilestoneAt": 0,
+            "peakDistance": 0
+          }
+        },
+        "nfg_plinko": {
+          "skillLevel": 3
+        },
+        "nfg_dice": {
+          "skillLevel": 2
+        }
+      },
+      "claimedMissions": [],
+      "lastArcadeStakeAt": 1781741658420
+    },
+    "testuser": {
+      "dayKey": "2026-06-08",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0
+          }
+        }
+      },
+      "claimedMissions": []
+    },
+    "_35114_": {
+      "dayKey": "2026-06-19",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "bestHeight": 19416,
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          }
+        },
+        "nfg_tower": {
+          "session": {
+            "floor": 1,
+            "monster": {
+              "id": "dice_goblin",
+              "name": "Pip the Dice Goblin",
+              "emoji": "🎲",
+              "theme": "dice",
+              "hp": 47,
+              "maxHp": 47,
+              "atk": 5,
+              "def": 1,
+              "floor": 1,
+              "isBoss": false,
+              "tier": 0
+            },
+            "playerHp": 90,
+            "turn": "player",
+            "defending": false,
+            "log": [
+              "You enter the Dragon Tower…",
+              "Floor 1 — 🎲 Pip the Dice Goblin awaits!"
+            ]
+          },
+          "hero": {
+            "level": 1,
+            "xp": 0,
+            "gold": 25,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 2,
+            "bestFloor": 0,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "female",
+              "skinTone": 2,
+              "hairStyle": 4,
+              "hairColor": 2,
+              "beard": false,
+              "heroName": "dobby"
+            }
+          }
+        },
+        "nfg_blocks": {
+          "bestLevel": 5,
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          }
+        },
+        "nfg_dice": {},
+        "nfg_hilo": {
+          "session": null,
+          "skillLevel": 2
+        }
+      },
+      "claimedMissions": []
+    },
+    "nina.k825": {
+      "dayKey": "2026-06-22",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_blocks": {
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          },
+          "bestLevel": 8
+        },
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "bestHeight": 4983
+        },
+        "nfg_plinko": {
+          "skillLevel": 6
+        },
+        "nfg_tower": {
+          "hero": {
+            "level": 1,
+            "xp": 0,
+            "gold": 25,
+            "equipment": {
+              "head": "cloth_hood",
+              "body": "gambler_tunic",
+              "legs": "worn_trousers",
+              "shield": "chip_buckler",
+              "weapon": "rusty_dagger",
+              "cape": "novice_cloak"
+            },
+            "weaponId": "rusty_dagger",
+            "armorId": "gambler_tunic",
+            "potions": 2,
+            "bestFloor": 0,
+            "ownedGear": [
+              "cloth_hood",
+              "gambler_tunic",
+              "worn_trousers",
+              "chip_buckler",
+              "rusty_dagger",
+              "novice_cloak"
+            ],
+            "ownedWeapons": [
+              "rusty_dagger"
+            ],
+            "ownedArmors": [
+              "gambler_tunic"
+            ],
+            "appearance": {
+              "created": true,
+              "bodyStyle": "female",
+              "skinTone": 2,
+              "hairStyle": 1,
+              "hairColor": 1,
+              "beard": false,
+              "heroName": "Nina"
+            }
+          }
+        },
+        "nfg_wheel": {},
+        "nfg_mines": {
+          "session": null,
+          "skillLevel": 2
+        },
+        "nfg_dice": {
+          "skillLevel": 3
+        },
+        "nfg_hilo": {
+          "session": null
+        }
+      },
+      "claimedMissions": [],
+      "lastArcadeStakeAt": 1782076314961
+    },
+    "f9otp": {
+      "dayKey": "2026-06-18",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "bestHeight": 1940
+        },
+        "nfg_blocks": {
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          },
+          "bestLevel": 2
+        }
+      },
+      "claimedMissions": []
+    },
+    "offline_x14": {
+      "dayKey": "2026-06-19",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "bestHeight": 1154
+        }
+      },
+      "claimedMissions": []
+    }
+  },
+  "leaderboards": {
+    "nfg_blocks": [
+      {
+        "userId": "fatimahxm",
+        "displayName": "fatimah",
+        "points": 12,
+        "updatedAt": 1780685772856
+      },
+      {
+        "userId": "y666.suf",
+        "displayName": "Y666SUF 👨🏾‍🦯",
+        "points": 8,
+        "updatedAt": 1781041555061
+      },
+      {
+        "userId": "nina.k825",
+        "displayName": "Nina🩵K",
+        "points": 8,
+        "updatedAt": 1782059598660
+      },
+      {
+        "userId": "ghi4462",
+        "displayName": "G",
+        "points": 7,
+        "updatedAt": 1780994990647
+      },
+      {
+        "userId": "huma2882",
+        "displayName": "Huma",
+        "points": 6,
+        "updatedAt": 1780577170264
+      },
+      {
+        "userId": "sameya.bx",
+        "displayName": "Sameya🐨",
+        "points": 6,
+        "updatedAt": 1780720754287
+      },
+      {
+        "userId": "sk_x120",
+        "displayName": "𝓢.𝓴𝓱𝔁𝓷🫶🏽",
+        "points": 5,
+        "updatedAt": 1780654836722
+      },
+      {
+        "userId": "sk.07020",
+        "displayName": "SK",
+        "points": 5,
+        "updatedAt": 1780702317874
+      },
+      {
+        "userId": "_35114_",
+        "displayName": "E",
+        "points": 5,
+        "updatedAt": 1781356064750
+      },
+      {
+        "userId": "madebymanah",
+        "displayName": "madebymanah",
+        "points": 4,
+        "updatedAt": 1780510025519
+      },
+      {
+        "userId": "cj_hern",
+        "displayName": "cj_hern",
+        "points": 3,
+        "updatedAt": 1780492030008
+      },
+      {
+        "userId": "moinazarin",
+        "displayName": "moinazarin",
+        "points": 2,
+        "updatedAt": 1780492030008
+      },
+      {
+        "userId": "meowcloud__",
+        "displayName": "__CloudMeow",
+        "points": 2,
+        "updatedAt": 1780511254370
+      },
+      {
+        "userId": "f9otp",
+        "displayName": "F9",
+        "points": 2,
+        "updatedAt": 1781749967805
+      },
+      {
+        "userId": "apple_app_review",
+        "displayName": "Apple Review",
+        "points": 1,
+        "updatedAt": 1780654806907
+      }
+    ],
+    "nfg_snake_jump": [
+      {
+        "userId": "sameya.bx",
+        "displayName": "Sameya🐨",
+        "points": 43522,
+        "updatedAt": 1782085484610,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      },
+      {
+        "userId": "sk.07020",
+        "displayName": "SK",
+        "points": 35010,
+        "updatedAt": 1782085021188,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      },
+      {
+        "userId": "sk_x120",
+        "displayName": "𝓢.𝓴𝓱𝔁𝓷🫶🏽",
+        "points": 31747,
+        "updatedAt": 1782084394537,
+        "jumpSkinId": "nfg_fire",
+        "jumpSkinName": "NFG Inferno",
+        "jumpSkinFill": "#ff6b35",
+        "jumpSkinRing": "#ffd700"
+      },
+      {
+        "userId": "ghi4462",
+        "displayName": "G",
+        "points": 31623,
+        "updatedAt": 1782085972047,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      },
+      {
+        "userId": "y666.suf",
+        "displayName": "Y666SUF 👨🏾‍🦯",
+        "points": 26971,
+        "updatedAt": 1782083883550,
+        "jumpSkinId": "emerald",
+        "jumpSkinName": "Emerald Elite",
+        "jumpSkinFill": "#34d399",
+        "jumpSkinRing": "#a7f3d0"
+      },
+      {
+        "userId": "huma2882",
+        "displayName": "Huma",
+        "points": 19737,
+        "updatedAt": 1781288919782,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      },
+      {
+        "userId": "_35114_",
+        "displayName": "E",
+        "points": 19416,
+        "updatedAt": 1781831182192,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      },
+      {
+        "userId": "fatimahxm",
+        "displayName": "fatimah",
+        "points": 14016,
+        "updatedAt": 1781200724537,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      },
+      {
+        "userId": "akerzk",
+        "displayName": "ZK",
+        "points": 9198,
+        "updatedAt": 1780698100713
+      },
+      {
+        "userId": "cj_hern",
+        "displayName": "cj_hern",
+        "points": 8696,
+        "updatedAt": 1780872650100
+      },
+      {
+        "userId": "meowcloud__",
+        "displayName": "__CloudMeow",
+        "points": 6421,
+        "updatedAt": 1780511101968
+      },
+      {
+        "userId": "nina.k825",
+        "displayName": "Nina🩵K",
+        "points": 4983,
+        "updatedAt": 1782084593611,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      },
+      {
+        "userId": "madebymanah",
+        "displayName": "madebymanah",
+        "points": 4330,
+        "updatedAt": 1780947180559,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      },
+      {
+        "userId": "f9otp",
+        "displayName": "F9",
+        "points": 1940,
+        "updatedAt": 1781749845046,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      },
+      {
+        "userId": "offline_x14",
+        "displayName": "User1304858394093 🙈",
+        "points": 1154,
+        "updatedAt": 1781830490389,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      }
+    ],
+    "nfg_vault_run": [
+      {
+        "userId": "sameya.bx",
+        "displayName": "Sameya🐨",
+        "points": 7218,
+        "updatedAt": 1782085425206
+      },
+      {
+        "userId": "y666.suf",
+        "displayName": "Y666SUF 👨🏾‍🦯",
+        "points": 2667,
+        "updatedAt": 1780881783148
+      },
+      {
+        "userId": "sk_x120",
+        "displayName": "𝓢.𝓴𝓱𝔁𝓷🫶🏽",
+        "points": 2056,
+        "updatedAt": 1782083452535
+      }
+    ]
+  }
+}

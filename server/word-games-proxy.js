@@ -19,8 +19,22 @@ function proxyHttpRequest(req, res) {
   }
 
   const lib = targetUrl.protocol === "https:" ? https : http;
+  const method = String(req.method || "GET").toUpperCase();
   const headers = { ...req.headers, host: targetUrl.host };
   delete headers.connection;
+
+  let bodyBuffer = null;
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+    if (Buffer.isBuffer(req.body)) {
+      bodyBuffer = req.body;
+    } else if (req.body != null && typeof req.body === "object") {
+      bodyBuffer = Buffer.from(JSON.stringify(req.body), "utf8");
+      headers["content-type"] = headers["content-type"] || "application/json";
+    }
+  }
+  if (bodyBuffer) {
+    headers["content-length"] = String(bodyBuffer.length);
+  }
 
   const proxyReq = lib.request(
     targetUrl,
@@ -46,6 +60,11 @@ function proxyHttpRequest(req, res) {
       res.end();
     }
   });
+
+  if (bodyBuffer) {
+    proxyReq.end(bodyBuffer);
+    return;
+  }
 
   req.pipe(proxyReq);
 }

@@ -22,14 +22,41 @@ set "HANGMAN_BACKEND_URL=http://127.0.0.1:19876"
 set "WORD_GAMES_PORT=19877"
 set "WORD_GAMES_HOST=127.0.0.1"
 set "WORD_GAMES_BACKEND_URL=http://127.0.0.1:19877"
+set "NFG_WORD_GAMES_DIR=%USERPROFILE%\Documents\nfg-word-games"
+set "WORD_GAMES_DATA_DIR=%USERPROFILE%\Documents\nfg-word-games\data"
 set "NFG_START_WORD_GAMES=1"
 if "%WORD_GAMES_PYTHON%"=="" set "WORD_GAMES_PYTHON=%HANGMAN_PYTHON%"
+set "PIXEL_JUMP_PORT=8001"
+set "PIXEL_JUMP_HOST=127.0.0.1"
+set "PIXEL_JUMP_BACKEND_URL=http://127.0.0.1:8001"
+set "PIXEL_JUMP_DIR=%USERPROFILE%\Documents\NFG-JUMP-MULTIPLAYER"
+set "PUBLIC_PATH_PREFIX=/api/pixel-jump"
+set "NFG_START_PIXEL_JUMP=1"
 set "NFG_PLATFORM_URL=http://127.0.0.1:3847"
 set "NFG_INTERNAL_SECRET=nfg-dev-internal"
 set "NFG_CHAT_ADMIN_USERS=y666.suf"
 set "NFG_START_HANGMAN=1"
 set "NFG_HANGMAN_GUESS_TIMEOUT_MS=12000"
+set "LIVE_SONG_COMMAND=1"
 if "%HANGMAN_PYTHON%"=="" set "HANGMAN_PYTHON=py"
+rem Auto-restart OFF by default (prevents infinite loops). Set NFG_AUTO_RESTART=1 to enable.
+if not defined NFG_AUTO_RESTART set "NFG_AUTO_RESTART=0"
+if not defined NFG_AUTO_RESTART_DELAY_SECONDS set "NFG_AUTO_RESTART_DELAY_SECONDS=8"
+if not defined NFG_AUTO_RESTART_MAX_RETRIES set "NFG_AUTO_RESTART_MAX_RETRIES=10"
+if not defined NFG_EXIT_ON_FATAL set "NFG_EXIT_ON_FATAL=0"
+if not defined NFG_KILL_OLD_SESSIONS set "NFG_KILL_OLD_SESSIONS=1"
+if not defined BALANCE_SHOUT_COOLDOWN_MS set "BALANCE_SHOUT_COOLDOWN_MS=0"
+if not defined TIKTOK_SEND_BALANCE_REPLY set "TIKTOK_SEND_BALANCE_REPLY=0"
+
+rem --- Stop leftover Electron / Node / Hangman / cloudflared from prior runs ---
+if "%NFG_KILL_OLD_SESSIONS%"=="1" (
+  echo.
+  echo Stopping old NFG sessions ^(ports %PORT% / %HANGMAN_PORT%, Electron, cloudflared^)...
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports %PORT%,%HANGMAN_PORT%,8001 -KillElectron -KillCloudflared -KillNodeNfg -RepoRoot "%~dp0" -Quiet
+  timeout /t 2 /nobreak >nul
+  echo Ready for fresh launch.
+  echo.
+)
 
 set "NFG_CF_TUNNEL=1"
 if "%NFG_CF_TUNNEL_NAME%"=="" set "NFG_CF_TUNNEL_NAME=NFG Crash"
@@ -106,6 +133,8 @@ echo.
 echo ============================================================
 echo  NFG Platform - Crash + Hangman + Cloudflare
 echo ============================================================
+echo   Kill old sessions on start: %NFG_KILL_OLD_SESSIONS%
+echo   Auto-restart: %NFG_AUTO_RESTART% ^(delay %NFG_AUTO_RESTART_DELAY_SECONDS%s, max retries %NFG_AUTO_RESTART_MAX_RETRIES%^)
 echo   Electron: NFG Crash, Player Lookup, App Chat, NFG Hangman
 echo   Tunnel: "%NFG_CF_TUNNEL_NAME%"
 if not "%NFG_CF_TUNNEL_TOKEN%"=="" (
@@ -137,8 +166,15 @@ echo   iOS word UI: needs NFG-Hangman.ipa with mask display fix - rebuild on Mac
 echo   Link/chat:   /api/mobile/link/*  /api/mobile/chat
 echo   Python API:  GET  /api/hangman/app/state  ^(proxied on %PORT%^)
 echo.
+echo --- Retro Pixel Jump mobile ^(FastAPI^) ---
+echo   Health:      GET  https://y666suf.com/api/pixel-jump/
+echo   Leaderboard: POST https://y666suf.com/api/pixel-jump/leaderboard
+echo   Multiplayer: POST https://y666suf.com/api/pixel-jump/mp/rooms
+echo   WebSocket:   wss://y666suf.com/api/pixel-jump/ws/mp/{roomId}?playerId=...
+echo   Backend:     %PIXEL_JUMP_BACKEND_URL%  ^(auto-start^)
+echo   iOS env:     EXPO_PUBLIC_BACKEND_URL=https://y666suf.com/api/pixel-jump
+echo.
 echo --- NFG Words mobile ^(NFG Words iOS^) ---
-echo   Health:      GET  https://y666suf.com/api/word-games/health
 echo   Login:       POST https://y666suf.com/api/word-games/players/login
 echo   Leaderboard: GET  https://y666suf.com/api/word-games/leaderboard
 echo   Source repo: %USERPROFILE%\Documents\nfg-word-games

@@ -22,6 +22,72 @@ function getTikTokBridgeStatus() {
   return { ...bridgeStatus };
 }
 
+const BRIDGE_TARGET_OPTIONS = ["y666.suf", "y666sxf"];
+const bridgeRuntime = {
+  desiredUniqueId: null,
+  activeConnection: null,
+  targetVersion: 0,
+};
+
+function normalizeBridgeTarget(raw) {
+  const next = String(raw || "")
+    .replace(/^@/, "")
+    .trim()
+    .toLowerCase();
+  if (!next) return null;
+  return BRIDGE_TARGET_OPTIONS.includes(next) ? next : null;
+}
+
+function saveTikTokConfig(patch = {}) {
+  const file = path.join(getAppRoot(), "tiktok.config.json");
+  const current = loadTikTokConfig();
+  const next = { ...current, ...patch };
+  try {
+    fs.writeFileSync(file, JSON.stringify(next, null, 2), "utf8");
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function getTikTokBridgeTarget() {
+  return (
+    normalizeBridgeTarget(bridgeRuntime.desiredUniqueId) ||
+    normalizeBridgeTarget(loadTikTokConfig().uniqueId) ||
+    BRIDGE_TARGET_OPTIONS[0]
+  );
+}
+
+function setTikTokBridgeTarget(rawUniqueId, options = {}) {
+  const persist = options.persist !== false;
+  const next = normalizeBridgeTarget(rawUniqueId);
+  if (!next) {
+    return {
+      ok: false,
+      error: "invalid_unique_id",
+      options: [...BRIDGE_TARGET_OPTIONS],
+      uniqueId: getTikTokBridgeTarget(),
+    };
+  }
+
+  bridgeRuntime.desiredUniqueId = next;
+  bridgeRuntime.targetVersion += 1;
+  setBridgeStatus({ uniqueId: next, state: "waiting", roomId: null });
+  if (persist) {
+    saveTikTokConfig({ uniqueId: next });
+  }
+
+  if (bridgeRuntime.activeConnection) {
+    try {
+      bridgeRuntime.activeConnection.disconnect();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return { ok: true, uniqueId: next, options: [...BRIDGE_TARGET_OPTIONS] };
+}
+
 function loadTikTokConfig() {
   const defaults = { uniqueId: "y666.suf", enabled: true, sendBalanceChatReply: true };
   const file = path.join(getAppRoot(), "tiktok.config.json");
@@ -30,7 +96,17 @@ function loadTikTokConfig() {
   }
   try {
     const parsed = JSON.parse(fs.readFileSync(file, "utf8"));
-    return { ...defaults, ...parsed };
+    const merged = { ...defaults, ...parsed };
+    // Keep y666.suf as the startup default even if older config saved y666sxf.
+    if (normalizeBridgeTarget(merged.uniqueId) === "y666sxf") {
+      merged.uniqueId = "y666.suf";
+      try {
+        fs.writeFileSync(file, JSON.stringify(merged, null, 2), "utf8");
+      } catch {
+        /* ignore */
+      }
+    }
+    return merged;
   } catch {
     return { ...defaults };
   }
@@ -199,6 +275,25 @@ function looksLikeRepost(data) {
   return false;
 }
 
+/** Best-effort: detect live follow events (payloads vary by TikTok version). */
+function looksLikeFollow(data) {
+  if (looksLikeRepost(data)) return false;
+  const dt = String(data.common?.displayType ?? data.displayType ?? data.actionType ?? "").toLowerCase();
+  if (dt.includes("follow") && !dt.includes("unfollow")) return true;
+  const label = data.label ?? data.event?.eventDetails?.label ?? data.common?.label;
+  if (label != null && String(label).toLowerCase().includes("follow")) return true;
+  const action = String(data.action ?? "").toLowerCase();
+  if (action.includes("follow") && !action.includes("unfollow")) return true;
+  try {
+    const j = JSON.stringify(data).toLowerCase();
+    if (j.includes("unfollow")) return false;
+    if (j.includes("pm_main_follow") || j.includes("follow_message")) return true;
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
 /** One LIKE event = one or a small batch of likes (capped). */
 function likeDeltaCount(data) {
   const raw = Number(data.count ?? data.comboCount ?? data.likeCount);
@@ -226,9 +321,11 @@ function startTikTokBridge(options) {
     return;
   }
 
-  const uniqueId = String(process.env.TIKTOK_USERNAME || cfg.uniqueId || "y666.suf")
-    .replace(/^@/, "")
-    .trim();
+  const initialUniqueId =
+    normalizeBridgeTarget(process.env.TIKTOK_USERNAME || cfg.uniqueId || "y666.suf") ||
+    BRIDGE_TARGET_OPTIONS[0];
+  bridgeRuntime.desiredUniqueId = initialUniqueId;
+  const uniqueId = initialUniqueId;
   setBridgeStatus({ enabled: true, uniqueId, state: "waiting", roomId: null });
 
   let TikTokLiveConnection;
@@ -246,6 +343,7 @@ function startTikTokBridge(options) {
   const evGift = WebcastEvent.GIFT || "gift";
   const evLike = WebcastEvent.LIKE || "like";
   const evSocial = WebcastEvent.SOCIAL || "social";
+  const evFollow = WebcastEvent.FOLLOW || "follow";
   const evBarrage = WebcastEvent.BARRAGE || "barrage";
   const evSuperFan = WebcastEvent.SUPER_FAN || "superFan";
   const evRoomUser = WebcastEvent.ROOM_USER || "roomUser";
@@ -268,10 +366,14 @@ function startTikTokBridge(options) {
   let sendBalanceHintLogged = false;
 
   (async function loop() {
-    console.log(`[TikTok] Bridge on — @${uniqueId} → http://127.0.0.1:${port}/`);
+    console.log(`[TikTok] Bridge on — @${getTikTokBridgeTarget()} → http://127.0.0.1:${port}/`);
 
     while (true) {
+      let retryDelayMs = 5000;
+      const activeUniqueId = getTikTokBridgeTarget();
+      const targetVersionAtStart = bridgeRuntime.targetVersion;
       const repostPaidThisLive = new Set();
+      const followPaidThisLive = new Set();
       const giftComboState = new Map();
       const streakFlushTimer = setInterval(() => {
         const flushed = flushStaleStreakCombos(giftComboState);
@@ -306,7 +408,24 @@ function startTikTokBridge(options) {
         connectionOpts.ttTargetIdc = ttTargetIdc;
       }
 
-      const connection = new TikTokLiveConnection(uniqueId, connectionOpts);
+      const connection = new TikTokLiveConnection(activeUniqueId, connectionOpts);
+      bridgeRuntime.activeConnection = connection;
+      const rewardCtx = { sourceUniqueId: activeUniqueId };
+
+      function payFollowBonus(userId, displayName, superFan, superFanLevel) {
+        if (!userId || followPaidThisLive.has(userId)) return;
+        followPaidThisLive.add(userId);
+        postReward(port, {
+          type: "follow",
+          userId,
+          displayName,
+          superFan,
+          superFanLevel,
+          ...rewardCtx,
+        }).catch((err) => {
+          console.error("[TikTok] Follow reward:", err.message);
+        });
+      }
 
       const markSuperFan = (data) => {
         const userId = data?.user && (data.user.uniqueId || data.user.nickname);
@@ -358,12 +477,12 @@ function startTikTokBridge(options) {
         if (looksLikeRepost(data)) {
           if (repostPaidThisLive.has(userId)) return;
           repostPaidThisLive.add(userId);
-          postReward(port, { type: "repost", userId, displayName, superFan, superFanLevel }).catch((err) => {
+          postReward(port, { type: "repost", userId, displayName, superFan, superFanLevel, ...rewardCtx }).catch((err) => {
             console.error("[TikTok] Repost reward:", err.message);
           });
           return;
         }
-        postReward(port, { type: "share", userId, displayName, superFan, superFanLevel }).catch((err) => {
+        postReward(port, { type: "share", userId, displayName, superFan, superFanLevel, ...rewardCtx }).catch((err) => {
           console.error("[TikTok] Share reward:", err.message);
         });
       });
@@ -389,6 +508,7 @@ function startTikTokBridge(options) {
           giftId: gift.giftId,
           groupId: data.groupId ?? data.group_id ?? "0",
           streakFinal: gift.streakFinal === true,
+          ...rewardCtx,
         }).catch((err) => {
           console.error("[TikTok] Gift reward:", err.message);
         });
@@ -401,9 +521,26 @@ function startTikTokBridge(options) {
         const superFanLevel = superFan ? extractSuperFanLevel(data) : 0;
         if (!userId) return;
         const count = likeDeltaCount(data);
-        postReward(port, { type: "like", userId, displayName, superFan, superFanLevel, count }).catch((err) => {
+        postReward(port, {
+          type: "like",
+          userId,
+          displayName,
+          superFan,
+          superFanLevel,
+          count,
+          ...rewardCtx,
+        }).catch((err) => {
           console.error("[TikTok] Like reward:", err.message);
         });
+      });
+
+      connection.on(evFollow, (data) => {
+        const userId = data.user && (data.user.uniqueId || data.user.nickname);
+        const displayName = data.user && (data.user.nickname || data.user.uniqueId || userId);
+        const superFan = detectSuperFan(data);
+        const superFanLevel = superFan ? extractSuperFanLevel(data) : 0;
+        if (!userId) return;
+        payFollowBonus(userId, displayName, superFan, superFanLevel);
       });
 
       connection.on(evSocial, (data) => {
@@ -411,12 +548,18 @@ function startTikTokBridge(options) {
         const displayName = data.user && (data.user.nickname || data.user.uniqueId || userId);
         const superFan = detectSuperFan(data);
         const superFanLevel = superFan ? extractSuperFanLevel(data) : 0;
-        if (!userId || !looksLikeRepost(data)) return;
-        if (repostPaidThisLive.has(userId)) return;
-        repostPaidThisLive.add(userId);
-        postReward(port, { type: "repost", userId, displayName, superFan, superFanLevel }).catch((err) => {
-          console.error("[TikTok] Repost (social) reward:", err.message);
-        });
+        if (!userId) return;
+        if (looksLikeRepost(data)) {
+          if (repostPaidThisLive.has(userId)) return;
+          repostPaidThisLive.add(userId);
+          postReward(port, { type: "repost", userId, displayName, superFan, superFanLevel, ...rewardCtx }).catch((err) => {
+            console.error("[TikTok] Repost (social) reward:", err.message);
+          });
+          return;
+        }
+        if (looksLikeFollow(data)) {
+          payFollowBonus(userId, displayName, superFan, superFanLevel);
+        }
       });
 
       connection.on(evSuperFan, (data) => {
@@ -436,14 +579,37 @@ function startTikTokBridge(options) {
       });
 
       try {
-        console.log(`[TikTok] Waiting until @${uniqueId} is LIVE...`);
-        setBridgeStatus({ state: "waiting", roomId: null });
-        await connection.waitUntilLive();
-        setBridgeStatus({ state: "live" });
+        console.log(`[TikTok] Waiting until @${activeUniqueId} is LIVE...`);
+        setBridgeStatus({ uniqueId: activeUniqueId, state: "waiting", roomId: null });
+        const waitOutcome = await Promise.race([
+          connection.waitUntilLive().then(() => "live"),
+          (async () => {
+            while (true) {
+              await sleep(250);
+              if (
+                bridgeRuntime.targetVersion !== targetVersionAtStart ||
+                getTikTokBridgeTarget() !== activeUniqueId
+              ) {
+                return "switched";
+              }
+            }
+          })(),
+        ]);
+        if (waitOutcome === "switched") {
+          retryDelayMs = 100;
+          setBridgeStatus({ uniqueId: getTikTokBridgeTarget(), state: "waiting", roomId: null });
+          try {
+            connection.disconnect();
+          } catch {
+            /* ignore */
+          }
+          continue;
+        }
+        setBridgeStatus({ uniqueId: activeUniqueId, state: "live" });
         console.log("[TikTok] Live — connecting...");
         const state = await connection.connect();
         const roomId = state?.roomId ? String(state.roomId) : null;
-        setBridgeStatus({ state: "live", roomId });
+        setBridgeStatus({ uniqueId: activeUniqueId, state: "live", roomId });
         console.log("[TikTok] Connected.", state && state.roomId ? `roomId=${state.roomId}` : "");
 
         await new Promise((resolve) => {
@@ -453,10 +619,13 @@ function startTikTokBridge(options) {
           connection.once("error", done);
         });
       } catch (err) {
-        setBridgeStatus({ state: "offline", roomId: null });
+        setBridgeStatus({ uniqueId: activeUniqueId, state: "offline", roomId: null });
         console.error("[TikTok]", err.message || err);
       } finally {
-        setBridgeStatus({ state: "waiting", roomId: null });
+        if (bridgeRuntime.activeConnection === connection) {
+          bridgeRuntime.activeConnection = null;
+        }
+        setBridgeStatus({ uniqueId: getTikTokBridgeTarget(), state: "waiting", roomId: null });
         clearInterval(streakFlushTimer);
         const flushed = flushStaleStreakCombos(giftComboState);
         for (const row of flushed) {
@@ -478,10 +647,18 @@ function startTikTokBridge(options) {
         }
       }
 
-      console.log("[TikTok] Stream ended or lost connection; retrying in 5s...");
-      await sleep(5000);
+      const retrySeconds = Math.max(0, Math.round(retryDelayMs / 1000));
+      console.log(`[TikTok] Stream ended or lost connection; retrying in ${retrySeconds}s...`);
+      await sleep(retryDelayMs);
     }
   })().catch((e) => console.error("[TikTok] Fatal:", e));
 }
 
-module.exports = { startTikTokBridge, loadTikTokConfig, getTikTokBridgeStatus };
+module.exports = {
+  startTikTokBridge,
+  loadTikTokConfig,
+  getTikTokBridgeStatus,
+  getTikTokBridgeTarget,
+  setTikTokBridgeTarget,
+  BRIDGE_TARGET_OPTIONS,
+};

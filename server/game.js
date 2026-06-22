@@ -191,19 +191,31 @@ class CrashGame {
     return { active: true, msLeft: lock.msLeft, secondsLeft: lock.secondsLeft, blockedUntil: lock.blockedUntil };
   }
 
-  adminSetJetLock(user, durationMs) {
-    const result = this._setJetLock(user, durationMs);
+  applyJetLock(user, durationMs) {
+    const ms = Math.max(0, Math.floor(Number(durationMs) || 0));
+    if (ms <= 0) return { ok: false, reason: "bad_duration" };
+    const lock = this._setJetLock(user, ms);
     this.onUpdate();
-    return result;
+    return { ok: true, ...lock };
   }
 
-  adminClearJetLock(user) {
+  clearJetLock(user) {
     const u = this._normUser(user);
+    if (!u) return { ok: false, reason: "invalid_user" };
     this._jetLocks.delete(u);
     this.onUpdate();
     return { ok: true, user: u, cleared: true };
   }
 
+  adminSetJetLock(user, durationMs) {
+    return this.applyJetLock(user, durationMs);
+  }
+
+  adminClearJetLock(user) {
+    return this.clearJetLock(user);
+  }
+
+  /** Merged profile + in-memory armed gift charges (Galaxy / Car Drifting / Flying Jet). */
   getEffectivePowerupInventory(user) {
     const u = this._normUser(user);
     if (!u) return { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 };
@@ -226,10 +238,20 @@ class CrashGame {
       Number(fromStore.jetLockCharges) || 0,
       Number(this._armedJetLocks.get(u) || 0)
     );
-    if (this._isHostUnlimitedStealUser(user)) {
+    if (this._isHostUnlimitedStealUser && this._isHostUnlimitedStealUser(u)) {
       return { stealCharges: HOST_UNLIMITED_STEAL_VISIBLE, shieldBreakCharges, jetLockCharges };
     }
     return { stealCharges, shieldBreakCharges, jetLockCharges };
+  }
+
+  /** After host admin sets inventory on disk, drop armed maps so counts match saved values. */
+  clearArmedPowerups(user) {
+    const u = this._normUser(user);
+    if (!u) return { ok: false, reason: "invalid_user" };
+    this._armedSteals.delete(u);
+    this._armedShieldBreaks.delete(u);
+    this._armedJetLocks.delete(u);
+    return { ok: true, user: u };
   }
 
   listOpenBets() {
@@ -895,10 +917,7 @@ class CrashGame {
       }
       this._balanceShoutAt.set(user, now);
       const v = this._userView(user);
-      const inventory = typeof this.store.getPowerupInventory === "function"
-        ? this.store.getPowerupInventory(user)
-        : { stealCharges: Number(this._armedSteals.get(user) || 0), shieldBreakCharges: Number(this._armedShieldBreaks.get(user) || 0), jetLockCharges: Number(this._armedJetLocks.get(user) || 0) };
-      if (this._isHostUnlimitedStealUser(user)) inventory.stealCharges = HOST_UNLIMITED_STEAL_VISIBLE;
+      const inventory = this.getEffectivePowerupInventory(user);
       return { type: "balance_shout", ok: true, user, displayName: v.displayName, nameStyle: v.nameStyle, level: v.level, rank: v.rank, balance, jetLock: this.getJetLockStatus(user), inventory };
     }
 

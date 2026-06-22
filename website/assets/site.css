@@ -652,7 +652,11 @@ a:focus-visible {
   resize: vertical;
 }
 
-.btn-primary {
+.btn-primary,
+a.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid rgba(97, 213, 255, 0.55);
   background:
     linear-gradient(135deg, rgba(97, 213, 255, 0.42), rgba(155, 125, 255, 0.46)),
@@ -662,13 +666,34 @@ a:focus-visible {
   padding: 10px 14px;
   font-weight: 700;
   cursor: pointer;
+  text-decoration: none;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
     0 8px 18px rgba(23, 53, 112, 0.34);
 }
 
-.btn-primary:hover {
+.btn-primary:hover,
+a.btn-primary:hover {
   filter: brightness(1.08) saturate(1.08);
+  text-decoration: none;
+}
+
+a.nav-play-cta {
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.92rem;
+  letter-spacing: 0.02em;
+}
+
+a.hero-play-cta {
+  border-radius: 999px;
+  padding: 12px 22px;
+  font-size: 1rem;
+  letter-spacing: 0.03em;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 10px 24px rgba(23, 53, 112, 0.45),
+    0 0 28px rgba(97, 213, 255, 0.22);
 }
 
 .form-status {

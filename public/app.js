@@ -9,11 +9,12 @@ const pointsGuideList = document.getElementById("pointsGuideList");
 const lastCrash = document.getElementById("lastCrash");
 const winList = document.getElementById("winList");
 const loseList = document.getElementById("loseList");
-const linePath = document.getElementById("linePath");
-const areaPath = document.getElementById("areaPath");
 const chartWrap = document.getElementById("chartWrap");
-const headDot = document.getElementById("headDot");
-const gridLines = document.getElementById("gridLines");
+const crashCanvas = document.getElementById("crashCanvas");
+const chartEntries = document.getElementById("chartEntries");
+const chartStatus = document.getElementById("chartStatus");
+const chartMult = document.getElementById("chartMult");
+const chartMultEyebrow = document.getElementById("chartMultEyebrow");
 const btnStart = document.getElementById("btnStart");
 const nextRoundEta = document.getElementById("nextRoundEta");
 const simUser = document.getElementById("simUser");
@@ -29,6 +30,10 @@ const starterPts = document.getElementById("starterPts");
 const btnSaveStarter = document.getElementById("btnSaveStarter");
 const board = document.getElementById("board");
 const balancesList = document.getElementById("balancesList");
+const bridgeSwitch = document.getElementById("bridgeSwitch");
+const bridgeSwitchState = document.getElementById("bridgeSwitchState");
+const btnBridgeY666Suf = document.getElementById("btnBridgeY666Suf");
+const btnBridgeY666Sxf = document.getElementById("btnBridgeY666Sxf");
 const spotifyMissionBlock = document.getElementById("spotifyMissionBlock");
 const spotifyMissionNowPlaying = document.getElementById("spotifyMissionNowPlaying");
 const spotifyMissionQueueOne = document.getElementById("spotifyMissionQueueOne");
@@ -79,8 +84,15 @@ const ROUND_SUMMARY_SHOW_MS = 5000;
 const IS_STREAM_UI =
   !!(document && document.body && document.body.classList.contains("stream-ui"));
 
+if (new URLSearchParams(location.search).get("layout") === "wide") {
+  document.body.classList.remove("portrait-ui");
+}
+
 let state = null;
 let historyMult = [1];
+let crashChart = null;
+let serverMult = 1;
+let smoothMult = 1;
 let lastRoundId = 0;
 let prevPhase = null;
 let lastSummaryRoundId = 0;
@@ -90,11 +102,7 @@ let boardRefreshInFlight = false;
 let boardRefreshQueued = false;
 let boardRefreshQueuedTimer = null;
 let lastBoardRefreshAt = 0;
-
-const CHART_W = 400;
-const CHART_H = 200;
-const PAD_X = 26;
-const PAD_Y = 16;
+let bridgeSwitchRefreshTimer = null;
 
 function fmtMult(n) {
   return `${(Math.round(Number(n) * 100) / 100).toFixed(2)}×`;
@@ -671,6 +679,124 @@ function showSpinOverlay(p) {
   }, Math.max(2200, spinMs + 900));
 }
 
+function displayMultForUi() {
+  if (!state) return 1;
+  if (state.phase === "ended") return Math.max(Number(state.crashPoint ?? state.multiplier) || 1, 1);
+  if (state.phase === "running") return Math.max(smoothMult, 1);
+  return 1;
+}
+
+function tickSmoothMult() {
+  if (!state) return;
+  serverMult = Number(state.multiplier) || 1;
+  if (state.phase !== "running") {
+    smoothMult = state.phase === "ended" ? displayMultForUi() : 1;
+    return;
+  }
+  const diff = serverMult - smoothMult;
+  if (Math.abs(diff) < 0.006) {
+    smoothMult = serverMult;
+    return;
+  }
+  const step = Math.sign(diff) * Math.min(Math.abs(diff), Math.max(0.012, Math.abs(diff) * 0.38));
+  smoothMult = Math.round((smoothMult + step) * 100) / 100;
+}
+
+function pushSmoothHistory() {
+  if (!state || state.phase !== "running") return;
+  const m = displayMultForUi();
+  const last = historyMult[historyMult.length - 1];
+  if (last == null || Math.abs(last - m) > 0.003) {
+    historyMult.push(m);
+    if (historyMult.length > 200) historyMult.shift();
+  }
+}
+
+function updateChartChrome(s) {
+  const phase = s.phase || "idle";
+  const crashed = phase === "ended";
+  const showMult = phase === "running" || phase === "ended";
+
+  if (chartMult) {
+    chartMult.hidden = !showMult;
+    chartMult.classList.toggle("crashed", crashed);
+  }
+  if (chartMultEyebrow) chartMultEyebrow.hidden = !crashed;
+  if (multDisplay) multDisplay.textContent = fmtMult(displayMultForUi());
+
+  if (chartStatus) {
+    if (phase === "betting" || phase === "idle") {
+      chartStatus.hidden = false;
+      const sec =
+        phase === "betting" && s.bettingEndsAt
+          ? Math.max(0, Math.ceil((s.bettingEndsAt - Date.now()) / 1000))
+          : null;
+      chartStatus.innerHTML =
+        phase === "betting"
+          ? `<div>Waiting for round…</div><div class="chart-status-eyebrow">ENTRY WINDOW</div>${sec != null ? `<div class="chart-status-countdown">${sec}s</div>` : ""}`
+          : `<div>Standing by</div>`;
+    } else {
+      chartStatus.hidden = true;
+    }
+  }
+}
+
+function renderChartEntries(open, queued) {
+  if (!chartEntries) return;
+  const o = open || [];
+  const q = queued || [];
+  let html = "";
+  if (!o.length && !q.length) {
+    html = `<div class="chart-entry-row">No entries this round</div>`;
+  } else {
+    for (const b of o.slice(0, 4)) {
+      html += `<div class="chart-entry-row">${renderStyledName(b)} · ${b.amount} @ ${Number(b.cashout).toFixed(2)}×</div>`;
+    }
+    if (q.length) {
+      html += `<div class="chart-entries-head">NEXT ROUND</div>`;
+      for (const b of q.slice(0, 3)) {
+        html += `<div class="chart-entry-row queued">${renderStyledName(b)} · ${b.amount} @ ${Number(b.cashout).toFixed(2)}×</div>`;
+      }
+    }
+  }
+  chartEntries.innerHTML = html;
+}
+
+function refreshCrashVisuals() {
+  if (!state) return;
+  updateChartChrome(state);
+  renderChartEntries(state.openBets, state.queuedBets);
+  if (crashChart) {
+    crashChart.update({
+      ...state,
+      multiplier: displayMultForUi(),
+      history: historyMult,
+    });
+  }
+}
+
+function startCrashVisualLoop() {
+  const frame = () => {
+    tickSmoothMult();
+    if (state?.phase === "running") pushSmoothHistory();
+    refreshCrashVisuals();
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+}
+
+async function initCrashChart() {
+  if (!crashCanvas || !chartWrap) return;
+  try {
+    const { CrashChartRenderer } = await import("/crash-chart.js");
+    crashChart = new CrashChartRenderer(crashCanvas, chartWrap);
+    startCrashVisualLoop();
+    if (state) refreshCrashVisuals();
+  } catch (err) {
+    console.warn("[CrashChart] init failed", err);
+  }
+}
+
 function setPhaseLabel(phase) {
   const map = { idle: "Idle", betting: "Entry Open", running: "Running", ended: "Round over" };
   phasePill.textContent = map[phase] || phase;
@@ -696,89 +822,6 @@ function updateLivePhaseCountdown() {
       nextRoundEta.hidden = false;
       nextRoundEta.textContent = `Next round ~${sec}s`;
     }
-  }
-}
-
-function drawGrid(maxY, innerW, innerH, padX, padY) {
-  gridLines.innerHTML = "";
-  const NS = "http://www.w3.org/2000/svg";
-  const steps = 6;
-  for (let i = 0; i <= steps; i += 1) {
-    const t = i / steps;
-    const mult = 1 + t * (maxY - 1);
-    const y = padY + innerH * (1 - t);
-    const line = document.createElementNS(NS, "line");
-    line.setAttribute("x1", String(padX));
-    line.setAttribute("x2", String(padX + innerW));
-    line.setAttribute("y1", String(y));
-    line.setAttribute("y2", String(y));
-    gridLines.appendChild(line);
-    const label = document.createElementNS(NS, "text");
-    label.setAttribute("x", String(padX + innerW + 6));
-    label.setAttribute("y", String(y + 3));
-    const dec = mult < 10 ? 2 : mult < 100 ? 1 : 0;
-    label.textContent = `${mult.toFixed(dec)}×`;
-    gridLines.appendChild(label);
-  }
-}
-
-function drawChart(mult, crash, phase) {
-  const w = CHART_W;
-  const h = CHART_H;
-  const padX = PAD_X;
-  const padY = PAD_Y;
-  const innerW = w - padX * 2;
-  const innerH = h - padY * 2;
-
-  let maxY = Math.max(2.05, mult * 1.2, 2.2);
-  if (phase === "ended" && crash != null) {
-    maxY = Math.max(maxY, Number(crash) * 1.08);
-  } else if (phase === "running") {
-    maxY = Math.max(maxY, mult * 1.25);
-  }
-  const span = Math.max(maxY - 1, 0.05);
-
-  const yFor = (m) => {
-    const clamped = Math.min(Math.max(m, 1), maxY);
-    return padY + innerH * (1 - (clamped - 1) / span);
-  };
-
-  let pts = historyMult.length ? historyMult.slice() : [1];
-  if ((phase === "idle" || phase === "betting") && pts.length === 1) {
-    pts = [1, 1];
-  }
-  const n = pts.length;
-  const xs = pts.map((_, i) => padX + (n <= 1 ? 0 : (i / (n - 1)) * innerW));
-
-  let d = "";
-  for (let i = 0; i < n; i += 1) {
-    const x = xs[i];
-    const y = yFor(pts[i]);
-    d += i === 0 ? `M ${x} ${y}` : ` L ${x} ${y}`;
-  }
-  if (!d) d = `M ${padX} ${yFor(1)} L ${padX + innerW} ${yFor(1)}`;
-
-  linePath.setAttribute("d", d);
-
-  const lastX = xs[n - 1];
-  const lastY = yFor(pts[n - 1]);
-  const baseY = padY + innerH;
-  const areaD = `${d} L ${lastX} ${baseY} L ${padX} ${baseY} Z`;
-  areaPath.setAttribute("d", areaD);
-
-  headDot.setAttribute("cx", String(lastX));
-  headDot.setAttribute("cy", String(lastY));
-
-  drawGrid(maxY, innerW, innerH, padX, padY);
-
-  if (phase === "ended" && (crash != null || mult > 1)) {
-    multDisplay.classList.add("crash");
-    linePath.setAttribute("stroke", "#fb7185");
-    linePath.removeAttribute("filter");
-  } else {
-    multDisplay.classList.remove("crash");
-    linePath.setAttribute("stroke", "url(#lineStrokeGrad)");
-    linePath.setAttribute("filter", "url(#lineGlow)");
   }
 }
 
@@ -860,7 +903,16 @@ function applyState(s) {
   document.body.classList.add(`phase-${s.phase}`);
   updateSkyboxByState(s);
   setPhaseLabel(s.phase);
-  multDisplay.textContent = fmtMult(s.multiplier);
+
+  if (s.phase === "betting" || s.phase === "idle") {
+    smoothMult = 1;
+    serverMult = 1;
+  } else if (s.phase === "running") {
+    serverMult = Number(s.multiplier) || 1;
+    if (smoothMult < 1 || smoothMult > serverMult + 0.5) smoothMult = serverMult;
+  } else if (s.phase === "ended") {
+    smoothMult = Math.max(Number(s.crashPoint ?? s.multiplier) || 1, 1);
+  }
 
   if (chartWrap) {
     chartWrap.classList.remove("phase-idle", "phase-betting", "phase-running", "phase-ended");
@@ -896,11 +948,6 @@ function applyState(s) {
     }
   } else if (s.phase === "running") {
     subline.textContent = "Multiplier climbing — auto cashout when targets hit.";
-    const m = s.multiplier;
-    if (!historyMult.length || Math.abs(historyMult[historyMult.length - 1] - m) > 0.001) {
-      historyMult.push(m);
-      if (historyMult.length > 200) historyMult.shift();
-    }
   } else if (s.phase === "ended") {
     if (s.pendingSpinCount > 0 || s.spinPauseEndsAt) {
       const sec = Math.max(0, Math.ceil((Number(s.spinPauseEndsAt) - Date.now()) / 1000));
@@ -928,7 +975,7 @@ function applyState(s) {
     historyMult = [1];
   }
 
-  drawChart(s.multiplier, s.crashPoint ?? s.multiplier, s.phase);
+  refreshCrashVisuals();
   renderBets(s.openBets, s.queuedBets);
   renderLast(s.lastResult);
   renderPinned(s.pinnedMessage);
@@ -959,12 +1006,74 @@ function pushFeed(text) {
   while (feed.children.length > 40) feed.removeChild(feed.lastChild);
 }
 
+function setBridgeButtonState(activeId) {
+  const buttons = [btnBridgeY666Suf, btnBridgeY666Sxf].filter(Boolean);
+  buttons.forEach((btn) => {
+    const target = String(btn.getAttribute("data-target") || "").toLowerCase();
+    btn.classList.toggle("is-active", target === String(activeId || "").toLowerCase());
+  });
+}
+
+async function refreshBridgeSwitch() {
+  if (!bridgeSwitch) return;
+  try {
+    const r = await fetch("/api/internal/tiktok-bridge/options", { cache: "no-store" });
+    if (!r.ok) throw new Error(String(r.status));
+    const body = await r.json();
+    if (!body || body.ok !== true) throw new Error("bridge_options_unavailable");
+    bridgeSwitch.hidden = false;
+    const activeId = String(body.uniqueId || body.status?.uniqueId || "").toLowerCase();
+    const stateText = String(body.status?.state || "waiting");
+    setBridgeButtonState(activeId);
+    if (bridgeSwitchState) {
+      bridgeSwitchState.textContent = `@${activeId || "unknown"} · ${stateText}`;
+    }
+  } catch {
+    bridgeSwitch.hidden = true;
+  }
+}
+
+async function updateBridgeTarget(uniqueId) {
+  if (!uniqueId) return;
+  try {
+    const r = await fetch("/api/internal/tiktok-bridge/target", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ uniqueId }),
+    });
+    if (!r.ok) {
+      const err = await r.json().catch(() => ({}));
+      pushFeed(
+        `<strong>Bridge</strong> switch failed: ${escHtml(
+          String(err.error || err.reason || `HTTP ${r.status}`)
+        )}`
+      );
+      return;
+    }
+    const body = await r.json();
+    const next = String(body.uniqueId || uniqueId);
+    setBridgeButtonState(next);
+    if (bridgeSwitchState) {
+      const stateText = String(body.status?.state || "waiting");
+      bridgeSwitchState.textContent = `@${next} · ${stateText}`;
+    }
+    pushFeed(`<strong>Bridge</strong> switched chat source to <strong>@${escHtml(next)}</strong>`);
+  } catch {
+    pushFeed("<strong>Bridge</strong> switch failed: network error");
+  } finally {
+    refreshBridgeSwitch().catch(() => {});
+  }
+}
+
+let wsPingTimer = null;
+
 function connectWs() {
   const proto = location.protocol === "https:" ? "wss" : "ws";
   const ws = new WebSocket(`${proto}://${location.host}`);
   ws.onmessage = (ev) => {
     try {
       const msg = JSON.parse(ev.data);
+      if (msg.type === "ping" || msg.type === "pong") return;
       if (msg.type === "state") applyState(msg.payload);
       if (msg.type === "chat_result") handleChatResult(msg.payload);
       if (msg.type === "reward") handleReward(msg.payload);
@@ -976,7 +1085,23 @@ function connectWs() {
       /* ignore */
     }
   };
-  ws.onclose = () => setTimeout(connectWs, 2000);
+  ws.onopen = () => {
+    clearInterval(wsPingTimer);
+    wsPingTimer = setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(JSON.stringify({ type: "ping" }));
+        } catch {
+          /* ignore */
+        }
+      }
+    }, 25000);
+  };
+  ws.onclose = () => {
+    clearInterval(wsPingTimer);
+    wsPingTimer = null;
+    setTimeout(connectWs, 2000);
+  };
 }
 
 function fmtCountdownFromMs(ms) {
@@ -1298,7 +1423,7 @@ function showBalanceToast(p) {
       clearTimeout(balanceToastTimer);
       balanceToastTimer = setTimeout(() => {
         balanceToast.hidden = true;
-      }, 3200);
+      }, document.body.classList.contains("portrait-ui") ? 2100 : 1600);
     }
     return;
   }
@@ -1350,7 +1475,7 @@ function showBalanceToast(p) {
   clearTimeout(balanceToastTimer);
   balanceToastTimer = setTimeout(() => {
     balanceToast.hidden = true;
-  }, 5200);
+  }, document.body.classList.contains("portrait-ui") ? 3400 : 2600);
 }
 
 function handleChatResult(p) {
@@ -1767,23 +1892,25 @@ function showRewardToastVisual(p) {
     gift: "Gift",
     like: "Like",
     repost: "Repost",
+    follow: "Follow",
   };
   const k = labels[p.kind] || p.kind || "Reward";
   const kind = String(p.kind || "").toLowerCase();
   const icon =
     kind === "like" ? '<span class="reward-toast-ico reward-toast-ico--like">❤️</span>' :
     kind === "gift" ? '<span class="reward-toast-ico reward-toast-ico--gift">🎁</span>' :
+    kind === "follow" ? '<span class="reward-toast-ico reward-toast-ico--follow">👤</span>' :
     "";
   const el = document.createElement("div");
   el.className = "reward-toast-item";
   el.innerHTML = `
     <div class="reward-toast-row">
       <span class="reward-toast-name">${icon}${renderStyledName(p)}</span>
-      <span class="reward-toast-pts">+${p.gained}</span>
+      <span class="reward-toast-pts">+${fmtNum(Number(p.gained) || 0)}</span>
     </div>
     <div class="reward-toast-kind">${k}</div>
   `;
-  rewardToastStack.appendChild(el);
+  rewardToastStack.prepend(el);
   setTimeout(() => {
     el.classList.add("is-out");
     setTimeout(() => {
@@ -1792,7 +1919,7 @@ function showRewardToastVisual(p) {
   }, 4500);
   const maxItems = 6;
   while (rewardToastStack.children.length > maxItems) {
-    rewardToastStack.removeChild(rewardToastStack.firstChild);
+    rewardToastStack.removeChild(rewardToastStack.lastChild);
   }
 }
 
@@ -1804,6 +1931,7 @@ function handleReward(p) {
     gift: "Gift",
     like: "Like",
     repost: "Repost",
+    follow: "Follow",
   };
   const k = labels[p.kind] || p.kind;
   const giftLabel = p.giftName ? ` (${p.giftName})` : "";
@@ -1820,7 +1948,9 @@ function handleReward(p) {
         ? ` · Flying Jet armed (${p.rewardMeta.jetLocksReady} lock${p.rewardMeta.jetLocksReady === 1 ? "" : "s"})`
       : p.rewardMeta && p.rewardMeta.special === "shield_applied"
         ? ` · Shield active for ${p.rewardMeta.shieldHours}h`
-        : "";
+      : p.rewardMeta && p.rewardMeta.special === "live_follow_bonus"
+        ? " · Live follow bonus (once per stream)"
+      : "";
   showRewardToastVisual(p);
   showGiftPowerPopup(p);
   pushFeed(
@@ -2127,6 +2257,17 @@ btnSaveStarter.addEventListener("click", async () => {
   });
 });
 
+if (btnBridgeY666Suf) {
+  btnBridgeY666Suf.addEventListener("click", () => {
+    updateBridgeTarget("y666.suf");
+  });
+}
+if (btnBridgeY666Sxf) {
+  btnBridgeY666Sxf.addEventListener("click", () => {
+    updateBridgeTarget("y666sxf");
+  });
+}
+
 // Disable forced periodic full re-renders to keep stream layout visually stable.
 
 setInterval(() => {
@@ -2140,7 +2281,11 @@ connectWs();
 refreshBoard();
 refreshSpotifyMission();
 loadStarter();
-loadPointsGuide();
+if (!document.body.classList.contains("portrait-ui")) {
+  loadPointsGuide();
+}
+refreshBridgeSwitch();
+bridgeSwitchRefreshTimer = setInterval(refreshBridgeSwitch, 12000);
 if (!IS_STREAM_UI) {
   setInterval(refreshBoard, 8000);
 }
@@ -2151,6 +2296,8 @@ fetch("/api/state")
   .then((r) => r.json())
   .then(applyState)
   .catch(() => {});
+
+initCrashChart();
 
 // Best-effort lookup window for browser mode only.
 try {
@@ -2164,3 +2311,4 @@ try {
 } catch {
   /* ignore popup/session storage restrictions */
 }
+

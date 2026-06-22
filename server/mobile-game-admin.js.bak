@@ -1,0 +1,228 @@
+/**
+ * Mobile host admin panel (iOS build 91+) — @y666.suf only.
+ * Edit balances, powerups, shields, jet lock, leaderboard wipe.
+ */
+const { normalizeUser } = require("./store");
+const { buildWalletPayload } = require("./mobile-wallet");
+const { isGameHost, HOST_GAME_USER } = require("./host-config");
+
+const HOST_ADMIN_USER = HOST_GAME_USER;
+
+function isHostAdmin(userId) {
+  return isGameHost(userId);
+}
+
+function adminGate(session) {
+  if (!session) {
+    return { status: 401, body: { ok: false, error: "auth_required" } };
+  }
+  if (!isHostAdmin(session.userId)) {
+    return { status: 403, body: { ok: false, error: "not_host_admin" } };
+  }
+  return null;
+}
+
+function playerSnapshot(user, pointStore, game) {
+  return buildWalletPayload(user, pointStore, game);
+}
+
+function applyAdminUpdate(pointStore, game, target, body) {
+  const u = normalizeUser(target);
+  if (!u) return { ok: false, error: "user_required" };
+  if (isHostAdmin(u)) {
+    return { ok: false, error: "cannot_edit_host" };
+  }
+
+  const changes = [];
+
+  if (body.balance != null || body.setBalance != null) {
+    const bal = Math.max(0, Math.floor(Number(body.balance ?? body.setBalance) || 0));
+    pointStore.setBalance(u, bal);
+    changes.push("balance");
+  }
+
+  if (body.allTime != null || body.setAllTime != null) {
+    const at = Math.max(0, Math.floor(Number(body.allTime ?? body.setAllTime) || 0));
+    if (typeof pointStore.setAllTime === "function") pointStore.setAllTime(u, at);
+    changes.push("allTime");
+  }
+
+  const invPatch = {};
+  if (body.stealCharges != null) invPatch.stealCharges = body.stealCharges;
+  if (body.shieldBreakCharges != null) invPatch.shieldBreakCharges = body.shieldBreakCharges;
+  if (body.jetLockCharges != null) invPatch.jetLockCharges = body.jetLockCharges;
+  if (Object.keys(invPatch).length > 0) {
+    pointStore.setPowerupInventory(u, invPatch);
+    if (typeof game.clearArmedPowerups === "function") {
+      game.clearArmedPowerups(u);
+    }
+    changes.push("inventory");
+  }
+
+  if (body.addSteal != null && Number(body.addSteal) > 0) {
+    pointStore.addPowerupCharges(u, "steal", Number(body.addSteal));
+    changes.push("addSteal");
+  }
+  if (body.addShieldBreak != null && Number(body.addShieldBreak) > 0) {
+    pointStore.addPowerupCharges(u, "shield_break", Number(body.addShieldBreak));
+    changes.push("addShieldBreak");
+  }
+  if (body.addJetLock != null && Number(body.addJetLock) > 0) {
+    pointStore.addPowerupCharges(u, "jet_lock", Number(body.addJetLock));
+    changes.push("addJetLock");
+  }
+
+  if (body.removeSteal != null && Number(body.removeSteal) > 0) {
+    pointStore.consumePowerupCharge(u, "steal", Number(body.removeSteal));
+    changes.push("removeSteal");
+  }
+  if (body.removeShieldBreak != null && Number(body.removeShieldBreak) > 0) {
+    pointStore.consumePowerupCharge(u, "shield_break", Number(body.removeShieldBreak));
+    changes.push("removeShieldBreak");
+  }
+  if (body.removeJetLock != null && Number(body.removeJetLock) > 0) {
+    pointStore.consumePowerupCharge(u, "jet_lock", Number(body.removeJetLock));
+    changes.push("removeJetLock");
+  }
+
+  let shieldOut = null;
+  if (body.clearShield === true || body.removeShield === true) {
+    shieldOut = pointStore.clearShield(u);
+    changes.push("clearShield");
+  } else {
+    const shieldHours = Number(body.shieldHours ?? body.addShieldHours);
+    const shieldMs = Number(body.shieldMs ?? body.addShieldMs);
+    if (Number.isFinite(shieldHours) && shieldHours > 0) {
+      shieldOut =
+        typeof game.applyShield === "function"
+          ? game.applyShield(u, shieldHours * 60 * 60 * 1000)
+          : pointStore.shieldUser(u, shieldHours * 60 * 60 * 1000, "host_admin");
+      changes.push("shieldHours");
+    } else if (Number.isFinite(shieldMs) && shieldMs > 0) {
+      shieldOut =
+        typeof game.applyShield === "function"
+          ? game.applyShield(u, shieldMs)
+          : pointStore.shieldUser(u, shieldMs, "host_admin");
+      changes.push("shieldMs");
+    }
+  }
+
+  let jetLockOut = null;
+  if (body.clearJetLock === true || body.removeJetLockActive === true) {
+    if (typeof game.adminClearJetLock === "function") {
+      jetLockOut = game.adminClearJetLock(u);
+    } else if (typeof game.clearJetLock === "function") {
+      jetLockOut = game.clearJetLock(u);
+    }
+    changes.push("clearJetLock");
+  } else {
+    const jetSec = Number(body.jetLockSeconds ?? body.jetLockSec);
+    const jetHours = Number(body.jetLockHours);
+    let jetMs = Number(body.jetLockMs);
+    if (Number.isFinite(jetHours) && jetHours > 0) jetMs = jetHours * 60 * 60 * 1000;
+    if (Number.isFinite(jetSec) && jetSec > 0) jetMs = jetSec * 1000;
+    if (Number.isFinite(jetMs) && jetMs > 0) {
+      if (typeof game.adminSetJetLock === "function") {
+        jetLockOut = game.adminSetJetLock(u, jetMs);
+      } else if (typeof game.applyJetLock === "function") {
+        jetLockOut = game.applyJetLock(u, jetMs);
+      }
+      changes.push("jetLock");
+    }
+  }
+
+  let wipeOut = null;
+  if (body.wipe === true || body.wipeLeaderboard === true) {
+    if (typeof pointStore.wipeLeaderboardUser !== "function") {
+      return { ok: false, error: "server_update_needed" };
+    }
+    wipeOut = pointStore.wipeLeaderboardUser(u);
+    changes.push("wipe");
+  }
+
+  return {
+    ok: true,
+    user: u,
+    changes,
+    shieldOut,
+    jetLockOut,
+    wipeOut,
+    player: playerSnapshot(u, pointStore, game),
+  };
+}
+
+function registerMobileGameAdminRoutes(app, ctx) {
+  const { validateBearer, pointStore, game, pushState } = ctx;
+
+  app.get("/api/mobile/admin/me", (req, res) => {
+    const session = validateBearer(req);
+    const gate = adminGate(session);
+    if (gate) return res.status(gate.status).json(gate.body);
+    return res.json({
+      ok: true,
+      isHostAdmin: true,
+      userId: normalizeUser(session.userId),
+      host: HOST_ADMIN_USER,
+    });
+  });
+
+  app.get("/api/mobile/admin/player", (req, res) => {
+    const session = validateBearer(req);
+    const gate = adminGate(session);
+    if (gate) return res.status(gate.status).json(gate.body);
+    const target = normalizeUser(req.query?.user || req.query?.userId);
+    if (!target) {
+      return res.status(400).json({ ok: false, error: "user_required" });
+    }
+    return res.json({
+      ok: true,
+      player: playerSnapshot(target, pointStore, game),
+    });
+  });
+
+  app.post("/api/mobile/admin/update-player", (req, res) => {
+    const session = validateBearer(req);
+    const gate = adminGate(session);
+    if (gate) return res.status(gate.status).json(gate.body);
+
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const target = normalizeUser(body.user || body.userId || body.username);
+    if (!target) {
+      return res.status(400).json({ ok: false, error: "user_required" });
+    }
+
+    const result = applyAdminUpdate(pointStore, game, target, body);
+    if (result.ok === false) {
+      return res.status(result.error === "server_update_needed" ? 500 : 400).json(result);
+    }
+    if (typeof pushState === "function") pushState();
+    return res.json(result);
+  });
+
+  app.post("/api/mobile/admin/wipe-player", (req, res) => {
+    const session = validateBearer(req);
+    const gate = adminGate(session);
+    if (gate) return res.status(gate.status).json(gate.body);
+
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const target = normalizeUser(body.user || body.userId || body.username);
+    if (!target) {
+      return res.status(400).json({ ok: false, error: "user_required" });
+    }
+    if (isHostAdmin(target)) {
+      return res.status(403).json({ ok: false, error: "cannot_wipe_host" });
+    }
+    if (typeof pointStore.wipeLeaderboardUser !== "function") {
+      return res.status(500).json({ ok: false, error: "server_update_needed" });
+    }
+
+    const result = pointStore.wipeLeaderboardUser(target);
+    if (typeof pushState === "function") pushState();
+    return res.json({
+      ...result,
+      player: playerSnapshot(target, pointStore, game),
+    });
+  });
+}
+
+module.exports = { registerMobileGameAdminRoutes, isHostAdmin, HOST_ADMIN_USER };

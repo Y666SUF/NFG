@@ -11,10 +11,20 @@ const CRASH_QUEUE_RE =
   /^!(?:c(?:song|queue|addsong)|crash(?:song|queue|addsong))\b(.*)$/i;
 
 const LEGACY_GENERIC_RE = /^!(?:song|queue|addsong)\b/i;
+const LIVE_SONG_RE = /^!(?:song|sr|request)\b(.*)$/i;
 
 function parseCrashSpotifyQueueCommand(text) {
   const raw = String(text || "").trim();
   if (!raw) return null;
+
+  // NFG Live: enable bare !song / !sr / !request when explicitly toggled on.
+  if (process.env.LIVE_SONG_COMMAND === "1") {
+    const live = raw.match(LIVE_SONG_RE);
+    if (live) {
+      return { command: "song", query: String(live[1] || "").trim() };
+    }
+  }
+
   if (LEGACY_GENERIC_RE.test(raw)) {
     return {
       rejected: true,

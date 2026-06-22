@@ -11,6 +11,13 @@ const LEGACY_POINTS_FILES = [
   path.join(getAppRoot(), "dist", "data", "points.json"),
 ];
 const SHIELDS_FILE = path.join(DATA_DIR, "shields.json");
+const SHIELDS_BAK_FILE = `${SHIELDS_FILE}.bak`;
+const SHIELDS_META_FILE = path.join(DATA_DIR, "shields.meta.json");
+const MIN_SHIELDS_GUARD = Math.max(0, Math.floor(Number(process.env.SHIELDS_MIN_USERS_GUARD) || 1));
+const SHIELDS_SHRINK_RATIO_GUARD = Math.min(
+  1,
+  Math.max(0.05, Number(process.env.SHIELDS_SHRINK_RATIO_GUARD) || 0.5)
+);
 const POINTS_BAK_FILE = `${PRIMARY_POINTS_FILE}.bak`;
 const POINTS_META_FILE = path.join(DATA_DIR, "points.live.meta.json");
 const MIN_USERS_GUARD = Math.max(0, Math.floor(Number(process.env.POINTS_MIN_USERS_GUARD) || 5));
@@ -261,12 +268,56 @@ function writePointsMeta(state, filePath = PRIMARY_POINTS_FILE) {
   return meta;
 }
 
+function sleepSync(ms) {
+  const end = Date.now() + Math.max(0, ms);
+  while (Date.now() < end) {
+    /* short busy-wait for Windows file-lock retries */
+  }
+}
+
 function atomicWriteJsonFile(filePath, obj) {
   ensureDataDir();
   const tmpPath = `${filePath}.tmp`;
   const payload = `${JSON.stringify(obj, null, 2)}\n`;
-  fs.writeFileSync(tmpPath, payload, "utf8");
-  fs.renameSync(tmpPath, filePath);
+  const maxAttempts = 12;
+  let lastErr = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      fs.writeFileSync(tmpPath, payload, "utf8");
+      try {
+        fs.renameSync(tmpPath, filePath);
+        return;
+      } catch (renameErr) {
+        const code = renameErr && renameErr.code;
+        if (code === "EPERM" || code === "EBUSY" || code === "EACCES") {
+          // Windows often locks the target briefly (AV, sync, second Node process).
+          fs.copyFileSync(tmpPath, filePath);
+          try {
+            fs.unlinkSync(tmpPath);
+          } catch {
+            /* ignore */
+          }
+          return;
+        }
+        throw renameErr;
+      }
+    } catch (err) {
+      lastErr = err;
+      try {
+        if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
+      } catch {
+        /* ignore */
+      }
+      const code = err && err.code;
+      if (!["EPERM", "EBUSY", "EACCES", "ENOENT"].includes(code) && attempt === 1) {
+        throw err;
+      }
+    }
+    if (attempt < maxAttempts) sleepSync(Math.min(300, 25 * attempt));
+  }
+
+  throw lastErr || new Error(`Failed to write ${filePath}`);
 }
 
 function isSuspiciousShrink(prevUsers, nextUsers) {
@@ -461,21 +512,170 @@ function savePoints(state, options = {}) {
   return { ok: true, users: nextUsers };
 }
 
-function loadShields() {
-  ensureDataDir();
-  if (!fs.existsSync(SHIELDS_FILE)) return {};
+function countShieldUsers(shields) {
+  if (!shields || typeof shields !== "object") return 0;
+  return Object.keys(shields).length;
+}
+
+function normalizeShieldRow(row) {
+  if (!row || typeof row !== "object") return null;
+  const until = Number(row.until) || 0;
+  if (!until) return null;
+  return { until, reason: String(row.reason || "gift").slice(0, 64) };
+}
+
+/** Keep the longest active shield per user when merging files/backups. */
+function mergeShieldMaps(...maps) {
+  const out = {};
+  for (const map of maps) {
+    if (!map || typeof map !== "object") continue;
+    for (const [user, row] of Object.entries(map)) {
+      const norm = normalizeShieldRow(row);
+      if (!norm) continue;
+      const key = normalizeUser(user);
+      if (!key) continue;
+      const prev = out[key];
+      if (!prev || norm.until > prev.until) out[key] = norm;
+    }
+  }
+  return out;
+}
+
+function readShieldsMeta() {
+  if (!fs.existsSync(SHIELDS_META_FILE)) return null;
   try {
-    const raw = fs.readFileSync(SHIELDS_FILE, "utf8");
-    const obj = JSON.parse(raw);
-    return typeof obj === "object" && obj ? obj : {};
+    const obj = JSON.parse(fs.readFileSync(SHIELDS_META_FILE, "utf8"));
+    if (!obj || typeof obj !== "object") return null;
+    return {
+      users: Math.max(0, Math.floor(Number(obj.users) || 0)),
+      savedAt: String(obj.savedAt || ""),
+    };
   } catch {
-    return {};
+    return null;
   }
 }
 
-function saveShields(shields) {
+function writeShieldsMeta(shields) {
+  const meta = {
+    users: countShieldUsers(shields),
+    savedAt: new Date().toISOString(),
+  };
+  atomicWriteJsonFile(SHIELDS_META_FILE, meta);
+  return meta;
+}
+
+function isSuspiciousShieldShrink(prevUsers, nextUsers) {
+  const prev = Math.max(0, Math.floor(Number(prevUsers) || 0));
+  const next = Math.max(0, Math.floor(Number(nextUsers) || 0));
+  if (prev < MIN_SHIELDS_GUARD) return false;
+  if (next >= prev) return false;
+  if (next < MIN_SHIELDS_GUARD) return true;
+  if (next < Math.floor(prev * SHIELDS_SHRINK_RATIO_GUARD)) return true;
+  return false;
+}
+
+function loadShieldsFromFile(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  try {
+    const raw = fs.readFileSync(filePath, "utf8");
+    if (!String(raw || "").trim()) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj !== "object") return null;
+    const merged = mergeShieldMaps(obj);
+    return countShieldUsers(merged) > 0 ? merged : null;
+  } catch {
+    return null;
+  }
+}
+
+function findBestBackupShields(minUsersHint = MIN_SHIELDS_GUARD) {
+  const snapshots = listBackupSnapshotDirs();
+  let best = null;
+  let bestUsers = 0;
+  let bestDir = "";
+  for (let i = snapshots.length - 1; i >= 0; i -= 1) {
+    const backupDir = snapshots[i];
+    const shieldsPath = path.join(backupDir, "shields.json");
+    const manifest = readBackupManifest(backupDir);
+    const loaded = loadShieldsFromFile(shieldsPath);
+    if (!loaded) continue;
+    const users = countShieldUsers(loaded);
+    if (users <= bestUsers) continue;
+    const manifestShields = manifest ? Math.max(0, Math.floor(Number(manifest.shieldedUsers) || 0)) : 0;
+    if (
+      manifestShields > 0 &&
+      users < Math.max(1, Math.floor(manifestShields * SHIELDS_SHRINK_RATIO_GUARD))
+    ) {
+      continue;
+    }
+    best = loaded;
+    bestUsers = users;
+    bestDir = backupDir;
+  }
+  return best ? { state: best, users: bestUsers, backupDir: bestDir } : null;
+}
+
+function loadShields() {
   ensureDataDir();
-  atomicWriteJsonFile(SHIELDS_FILE, shields || {});
+  const meta = readShieldsMeta();
+  const minExpected = meta && meta.users >= MIN_SHIELDS_GUARD ? meta.users : 0;
+  const onDiskPrimary = loadShieldsFromFile(SHIELDS_FILE);
+  let merged = mergeShieldMaps(
+    onDiskPrimary,
+    loadShieldsFromFile(SHIELDS_BAK_FILE)
+  );
+  let users = countShieldUsers(merged);
+  const minAllowed =
+    minExpected >= MIN_SHIELDS_GUARD
+      ? Math.max(MIN_SHIELDS_GUARD, Math.floor(minExpected * SHIELDS_SHRINK_RATIO_GUARD))
+      : 0;
+  if (users < minAllowed) {
+    const recovered = findBestBackupShields(minExpected || MIN_SHIELDS_GUARD);
+    if (recovered) {
+      merged = mergeShieldMaps(merged, recovered.state);
+      users = countShieldUsers(merged);
+      console.error(
+        `[Shields] Recovered ${users} users from backup ${recovered.backupDir} (disk had ~${countShieldUsers(onDiskPrimary)}).`
+      );
+    }
+  }
+  for (const backupDir of listBackupSnapshotDirs()) {
+    const fromBackup = loadShieldsFromFile(path.join(backupDir, "shields.json"));
+    if (fromBackup) merged = mergeShieldMaps(merged, fromBackup);
+  }
+  users = countShieldUsers(merged);
+  if (users > countShieldUsers(onDiskPrimary)) {
+    saveShields(merged, { force: true, source: "loadShields_merge" });
+  }
+  return merged;
+}
+
+function saveShields(shields, options = {}) {
+  ensureDataDir();
+  const payload = shields && typeof shields === "object" ? shields : {};
+  const nextUsers = countShieldUsers(payload);
+  const meta = readShieldsMeta();
+  const prevUsers = meta?.users ?? nextUsers;
+  const force = options.force === true;
+
+  if (!force && isSuspiciousShieldShrink(prevUsers, nextUsers)) {
+    console.error(
+      `[Shields] Refusing to save: shielded user count would drop ${prevUsers} -> ${nextUsers}. Disk left unchanged.`
+    );
+    return { ok: false, reason: "shrink_guard", prevUsers, nextUsers };
+  }
+
+  atomicWriteJsonFile(SHIELDS_FILE, payload);
+  try {
+    fs.copyFileSync(SHIELDS_FILE, SHIELDS_BAK_FILE);
+  } catch (err) {
+    console.warn("[Shields] Could not refresh .bak copy:", err.message);
+  }
+  writeShieldsMeta(payload);
+  if (options.source) {
+    console.log(`[Shields] Saved ${nextUsers} shielded users (${options.source}).`);
+  }
+  return { ok: true, users: nextUsers };
 }
 
 function normalizeUser(name) {
@@ -494,20 +694,35 @@ class PointStore {
       writePointsMeta(this.points);
     }
     this.shields = loadShields();
+    this._recoverShieldsFromBackupIfWiped();
     this._pruneExpiredShields();
+    this._saveChain = Promise.resolve();
   }
 
   _savePoints() {
-    const result = savePoints(this.points);
-    if (result && result.ok === false && result.reason === "shrink_guard") {
-      console.error("[Points] Reloading in-memory hi-scores from last good on-disk copy.");
-      this.points = loadPoints();
-    }
+    this._saveChain = this._saveChain.then(() => {
+      try {
+        const result = savePoints(this.points);
+        if (result && result.ok === false && result.reason === "shrink_guard") {
+          console.error("[Points] Reloading in-memory hi-scores from last good on-disk copy.");
+          this.points = loadPoints();
+        }
+      } catch (err) {
+        console.error(
+          "[Points] Save failed (server keeps running):",
+          err && err.message ? err.message : err
+        );
+      }
+    });
+    return this._saveChain;
   }
 
-  /** Reload balances/profiles from disk (use after manual data fixes while server runs). */
+  /** Reload balances/profiles and shields from disk (use after manual data fixes while server runs). */
   reloadFromDisk() {
     this.points = loadPoints();
+    this.shields = loadShields();
+    this._recoverShieldsFromBackupIfWiped();
+    this._pruneExpiredShields();
   }
 
   _recoverPointsFromBackupIfWiped() {
@@ -532,8 +747,35 @@ class PointStore {
     return { recovered: true, users: recovered.users, backupDir: recovered.backupDir };
   }
 
-  _saveShields() {
-    saveShields(this.shields);
+  _recoverShieldsFromBackupIfWiped() {
+    const meta = readShieldsMeta();
+    const users = countShieldUsers(this.shields);
+    const expected = meta?.users || 0;
+    if (expected < MIN_SHIELDS_GUARD) return { recovered: false, users };
+    const minAllowed = Math.max(MIN_SHIELDS_GUARD, Math.floor(expected * SHIELDS_SHRINK_RATIO_GUARD));
+    if (users >= minAllowed) return { recovered: false, users };
+    const recovered = findBestBackupShields(expected);
+    if (!recovered || recovered.users <= users) {
+      console.error(
+        `[Shields] In-memory shields look wiped (${users} users; expected ~${expected}) but no better backup was found.`
+      );
+      return { recovered: false, users, expected };
+    }
+    console.error(
+      `[Shields] Auto-recovering ${recovered.users} users from ${recovered.backupDir} (was ${users}).`
+    );
+    this.shields = mergeShieldMaps(this.shields, recovered.state);
+    this._saveShields({ force: true, source: recovered.backupDir });
+    return { recovered: true, users: countShieldUsers(this.shields), backupDir: recovered.backupDir };
+  }
+
+  _saveShields(options = {}) {
+    const result = saveShields(this.shields, options);
+    if (result && result.ok === false && result.reason === "shrink_guard") {
+      console.error("[Shields] Reloading in-memory shields from last good on-disk copy.");
+      this.shields = loadShields();
+      this._recoverShieldsFromBackupIfWiped();
+    }
   }
 
   _snapshotStamp(now = new Date()) {
@@ -559,12 +801,9 @@ class PointStore {
     const profiles = (this.points && this.points.profiles) || {};
     for (const [user, profile] of Object.entries(profiles)) {
       const p = profile && typeof profile === "object" ? profile : {};
-      const powerups = p.powerups && typeof p.powerups === "object" ? p.powerups : {};
-      const stealCharges = Math.max(0, Math.floor(Number(powerups.stealCharges) || 0));
-      const shieldBreakCharges = Math.max(0, Math.floor(Number(powerups.shieldBreakCharges) || 0));
-      const jetLockCharges = Math.max(0, Math.floor(Number(powerups.jetLockCharges) || 0));
-      if (stealCharges > 0 || shieldBreakCharges > 0 || jetLockCharges > 0) {
-        out[user] = { stealCharges, shieldBreakCharges, jetLockCharges };
+      const inv = this._normalizePowerupInventory(p.powerups);
+      if (inv.stealCharges > 0 || inv.shieldBreakCharges > 0 || inv.jetLockCharges > 0) {
+        out[user] = inv;
       }
     }
     return out;
@@ -591,6 +830,7 @@ class PointStore {
     const keepLatest = Math.max(1, Math.floor(Number(options.keepLatest) || 12));
     ensureDataDir();
     this._recoverPointsFromBackupIfWiped();
+    this._recoverShieldsFromBackupIfWiped();
     const liveUsers = countPointsUsers(this.points);
     const meta = readPointsMeta();
     if (
@@ -625,12 +865,17 @@ class PointStore {
     const superFanSnapshotName = "superfans.snapshot.json";
     const inventoriesOut = path.join(backupDir, inventorySnapshotName);
     const superfansOut = path.join(backupDir, superFanSnapshotName);
+    const arcadeStateOut = path.join(backupDir, "arcade-state.json");
     const inventorySnapshot = this._buildInventorySnapshot();
     const superFanSnapshot = this._buildSuperFanSnapshot();
     fs.writeFileSync(pointsOut, JSON.stringify(this.points || {}, null, 2), "utf8");
     fs.writeFileSync(shieldsOut, JSON.stringify(this.shields || {}, null, 2), "utf8");
     fs.writeFileSync(inventoriesOut, JSON.stringify(inventorySnapshot, null, 2), "utf8");
     fs.writeFileSync(superfansOut, JSON.stringify(superFanSnapshot, null, 2), "utf8");
+    const arcadeStatePath = path.join(DATA_DIR, "arcade-state.json");
+    if (fs.existsSync(arcadeStatePath)) {
+      fs.copyFileSync(arcadeStatePath, arcadeStateOut);
+    }
 
     const manifest = {
       createdAt: new Date().toISOString(),
@@ -638,6 +883,7 @@ class PointStore {
       shieldsFile: "shields.json",
       inventoriesFile: inventorySnapshotName,
       superfansFile: superFanSnapshotName,
+      arcadeStateFile: fs.existsSync(arcadeStatePath) ? "arcade-state.json" : null,
       users: Object.keys((this.points && this.points.balances) || {}).length,
       profiles: Object.keys((this.points && this.points.profiles) || {}).length,
       shieldedUsers: Object.keys(this.shields || {}).length,
@@ -1982,6 +2228,9 @@ class PointStore {
     const meta = readPointsMeta();
     const users = countPointsUsers(this.points);
     const latestBackup = findBestBackupPoints(MIN_USERS_GUARD);
+    const shieldsMeta = readShieldsMeta();
+    const shieldUsers = countShieldUsers(this.shields);
+    const latestShieldBackup = findBestBackupShields(MIN_SHIELDS_GUARD);
     return {
       users,
       meta,
@@ -1994,6 +2243,21 @@ class PointStore {
       looksHealthy:
         users >= MIN_USERS_GUARD &&
         (!meta || meta.users < MIN_USERS_GUARD || users >= Math.max(MIN_USERS_GUARD, Math.floor(meta.users * SHRINK_RATIO_GUARD))),
+      shields: {
+        users: shieldUsers,
+        meta: shieldsMeta,
+        minUsersGuard: MIN_SHIELDS_GUARD,
+        shrinkRatioGuard: SHIELDS_SHRINK_RATIO_GUARD,
+        primaryFile: SHIELDS_FILE,
+        backupFile: SHIELDS_BAK_FILE,
+        latestBackupUsers: latestShieldBackup ? latestShieldBackup.users : 0,
+        latestBackupDir: latestShieldBackup ? latestShieldBackup.backupDir : "",
+        looksHealthy:
+          shieldUsers >= MIN_SHIELDS_GUARD &&
+          (!shieldsMeta ||
+            shieldsMeta.users < MIN_SHIELDS_GUARD ||
+            shieldUsers >= Math.max(MIN_SHIELDS_GUARD, Math.floor(shieldsMeta.users * SHIELDS_SHRINK_RATIO_GUARD))),
+      },
     };
   }
 }

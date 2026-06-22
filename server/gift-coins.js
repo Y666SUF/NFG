@@ -8,9 +8,8 @@ const COIN_PER_DIAMOND = Math.max(1, Number(process.env.COIN_PER_DIAMOND) || 2);
 /** Per-gift viewer coin cost when API diamondCount is wrong or ambiguous. */
 const GIFT_NAME_COIN_OVERRIDES = [
   { match: /hand\s*heart/i, unitCoins: 100 },
-  /** TikTok Heart / Hearts (not Hand Hearts) — 200 viewer coins each */
-  { match: /^(?!.*\bhand\b).*hearts?$/i, unitCoins: 200 },
-  { match: /\bheart\b/i, unitCoins: 200 },
+  /** Fan-club Heart Me only — not Heart Puff, Hand Hearts, or other heart gifts */
+  { match: /^heart\s*me$/i, unitCoins: 200 },
   { match: /\brose\b/i, unitCoins: 1 },
 ];
 

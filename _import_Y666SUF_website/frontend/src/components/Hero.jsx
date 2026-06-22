@@ -75,8 +75,11 @@ export default function Hero() {
           transition={{ duration: 0.9, delay: 0.6 }}
           className="mt-10 flex flex-wrap items-center gap-4"
         >
-          <Link to="/games/nfg-crash" data-testid="hero-cta-play" className="btn-neon">
-            ► Explore NFG Crash
+          <a href="/play" data-testid="hero-cta-play-web" className="btn-neon">
+            ► Play NFG Crash
+          </a>
+          <Link to="/games/nfg-crash" data-testid="hero-cta-play" className="btn-ghost">
+            Explore NFG Crash
           </Link>
           <a href="/#games" data-testid="hero-cta-arsenal" className="btn-ghost">
             ◇ View Game Suite

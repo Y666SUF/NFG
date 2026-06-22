@@ -1,4 +1,4 @@
----
+﻿---
 cross_device_status: pending
 from_device: mac
 target_device: pc
@@ -28,8 +28,8 @@ The latest iOS app expects these **mobile endpoints** on the Windows game server
   - `POST /api/mobile/arcade/play`
 
 Right now the iOS app shows errors like:
-- “Display name settings are not on the game server yet. Copy mobile-profile.js to your PC and restart Node.”
-- “Vault Arcade is not on the game server yet. Copy arcade files to your PC and restart Node.”
+- ÔÇ£Display name settings are not on the game server yet. Copy mobile-profile.js to your PC and restart Node.ÔÇØ
+- ÔÇ£Vault Arcade is not on the game server yet. Copy arcade files to your PC and restart Node.ÔÇØ
 
 This is a **Windows server mismatch**, not an iOS issue.
 
@@ -61,7 +61,7 @@ Check if these files exist on the PC in `server/`:
 - `server/mobile-profile.js`
 - `server/mobile-arcade.js`
 
-If they’re missing, create them exactly as below.
+If theyÔÇÖre missing, create them exactly as below.
 
 #### Create `server/mobile-profile.js`
 
@@ -178,12 +178,12 @@ curl https://y666suf.com/api/mobile/arcade/catalog
 ```
 
 From iOS:
-- Change display name → should save and reflect in wallet/profile and show in chat/entries.
-- Open Vault Arcade → should load without the “copy arcade files” error.
+- Change display name ÔåÆ should save and reflect in wallet/profile and show in chat/entries.
+- Open Vault Arcade ÔåÆ should load without the ÔÇ£copy arcade filesÔÇØ error.
 
 ## When done
 
 1) Set frontmatter `cross_device_status: done`  
 2) Push via your usual Windows sync script (`scripts/sync-push.ps1`) with a short message like:
-   - “Server: add mobile profile + arcade endpoints”
+   - ÔÇ£Server: add mobile profile + arcade endpointsÔÇØ
 

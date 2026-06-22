@@ -3,13 +3,17 @@
  */
 const { spawn } = require("child_process");
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 const http = require("http");
 
 const WORD_GAMES_PORT = Number(process.env.WORD_GAMES_PORT) || 19877;
 const WORD_GAMES_HOST = String(process.env.WORD_GAMES_HOST || "127.0.0.1").trim() || "127.0.0.1";
 const WORD_GAMES_DIR =
-  process.env.NFG_WORD_GAMES_DIR || path.join(__dirname, "..", "..", "nfg-word-games");
+  process.env.NFG_WORD_GAMES_DIR ||
+  path.join(process.env.USERPROFILE || os.homedir(), "Documents", "nfg-word-games");
+const WORD_GAMES_DATA_DIR =
+  process.env.WORD_GAMES_DATA_DIR || path.join(WORD_GAMES_DIR, "data");
 
 let wordGamesProcess = null;
 let owned = false;
@@ -60,6 +64,10 @@ function startWordGamesProcess() {
     console.log("[WordGames] Auto-start disabled (NFG_START_WORD_GAMES=0).");
     return null;
   }
+  if (!fs.existsSync(path.join(WORD_GAMES_DIR, "server.py"))) {
+    console.warn(`[WordGames] server.py not found in ${WORD_GAMES_DIR} — Word Games disabled.`);
+    return null;
+  }
   if (wordGamesProcess && !wordGamesProcess.killed) return wordGamesProcess;
 
   const py = resolveWordGamesPython();
@@ -67,6 +75,7 @@ function startWordGamesProcess() {
   const childEnv = {
     ...process.env,
     WORD_GAMES_PORT: String(WORD_GAMES_PORT),
+    WORD_GAMES_DATA_DIR: WORD_GAMES_DATA_DIR,
     PYTHONUTF8: "1",
     PYTHONIOENCODING: "utf-8",
   };

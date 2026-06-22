@@ -25,9 +25,15 @@ const {
   getSpotifyStatus,
 } = require("./spotify");
 const { registerHangmanHttpProxy, attachHangmanWebSocketProxy } = require("./hangman-proxy");
-const { startHangmanProcess, waitForHangman, HANGMAN_PORT } = require("./hangman-process");
+const { startHangmanProcess, waitForHangman, stopHangmanProcess, HANGMAN_PORT } = require("./hangman-process");
 const { registerWordGamesHttpProxy } = require("./word-games-proxy");
 const { startWordGamesProcess, waitForWordGames, WORD_GAMES_PORT } = require("./word-games-process");
+const { registerPixelJumpHttpProxy } = require("./pixel-jump-proxy");
+const {
+  startPixelJumpProcess,
+  waitForPixelJump,
+  PIXEL_JUMP_PORT,
+} = require("./pixel-jump-process");
 const { registerIpaDownloads, getIpaDownloadMeta, IPA_CATALOG } = require("./ipa-downloads");
 const { registerHangmanCompanionWeb } = require("./hangman-companion-web");
 
@@ -37,6 +43,7 @@ const SHARE_BONUS = Number(process.env.SHARE_BONUS_POINTS) || 100;
 const GIFT_COIN_MULTIPLIER = Number(process.env.GIFT_COIN_MULTIPLIER) || 100;
 const LIKE_POINTS_PER = Number(process.env.LIKE_POINTS) || 25;
 const REPOST_BONUS = Number(process.env.REPOST_BONUS_POINTS) || 500;
+const FOLLOW_BONUS = Number(process.env.FOLLOW_BONUS_POINTS) || 200_000;
 const SHIELD_DURATION_MS = 48 * 60 * 60 * 1000;
 const BALANCE_SHOUT_COOLDOWN_MS = Number(process.env.BALANCE_SHOUT_COOLDOWN_MS) || 60_000;
 const ICONS_POPUP_COOLDOWN_MS = Number(process.env.ICONS_POPUP_COOLDOWN_MS) || 120_000;
@@ -97,11 +104,29 @@ app.use((req, res, next) => {
   next();
 });
 
+function shutdownNfg(exitCode = 0) {
+  try {
+    stopHangmanProcess();
+  } catch (_e) {
+    /* ignore */
+  }
+  process.exit(exitCode);
+}
+
+process.on("SIGINT", () => shutdownNfg(0));
+process.on("SIGTERM", () => shutdownNfg(0));
+
 process.on("uncaughtException", (err) => {
   console.error("[NFG] uncaughtException (server stays up):", err && err.stack ? err.stack : err);
+  if (String(process.env.NFG_EXIT_ON_FATAL || "").trim() === "1") {
+    shutdownNfg(1);
+  }
 });
 process.on("unhandledRejection", (reason) => {
   console.error("[NFG] unhandledRejection (server stays up):", reason);
+  if (String(process.env.NFG_EXIT_ON_FATAL || "").trim() === "1") {
+    shutdownNfg(1);
+  }
 });
 
 const publicDir = path.join(__dirname, "..", "public");
@@ -132,6 +157,8 @@ const websiteGames = {
   "nfg-wordwheel": path.join(websiteDir, "game-nfg-wordwheel.html"),
   "nfg-hangman": path.join(websiteDir, "game-nfg-hangman.html"),
 };
+const webPlayDir = path.join(publicDir, "play");
+const webPlayIndex = path.join(webPlayDir, "index.html");
 
 function isPublicWebsiteHost(req) {
   const host = String(req.headers.host || "").trim().toLowerCase();
@@ -314,6 +341,25 @@ app.get("/badge-preview.html", blockPublicDomainGamePage, (_req, res) =>
   res.sendFile(path.join(publicDir, "badge-preview.html"))
 );
 
+/** Browser player companion — same APIs as the iOS app (public on y666suf.com). */
+app.get(["/play", "/play/"], (_req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
+  res.setHeader("Expires", "0");
+  return res.sendFile(webPlayIndex);
+});
+app.use(
+  "/play",
+  express.static(webPlayDir, {
+    index: false,
+    setHeaders(res, filePath) {
+      if (String(filePath || "").endsWith(".html")) {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      }
+    },
+  })
+);
+
 app.use("/website-assets", (req, res, next) => {
   if (shouldServeReactWebsite(req)) return next();
   return express.static(websiteAssetsDir, { index: false })(req, res, next);
@@ -336,7 +382,9 @@ if (hasReactWebsiteBuild) {
     if (!isPublicWebsiteHost(req) || !hasReactWebsiteBuild) return next();
     if (req.method !== "GET" && req.method !== "HEAD") return next();
     const p = String(req.path || "");
-    if (p.startsWith("/api") || p.startsWith("/download/")) return next();
+    if (p.startsWith("/api") || p.startsWith("/download/") || p === "/play" || p.startsWith("/play/")) {
+      return next();
+    }
     return sendReactWebsite(req, res);
   });
 }
@@ -403,6 +451,7 @@ registerMobileApi(app, { game, pointStore, isLocalhost, broadcast, pushState });
 registerHangmanCompanionWeb(app);
 registerHangmanHttpProxy(app);
 registerWordGamesHttpProxy(app);
+registerPixelJumpHttpProxy(app);
 
 app.get("/api/internal/tiktok-bridge", (req, res) => {
   if (!isLocalhost(req)) {
@@ -564,10 +613,7 @@ app.post("/api/chat", async (req, res) => {
     const shield = pointStore.getShieldStatus(parsed.user);
     const jetLock = typeof game.getJetLockStatus === "function" ? game.getJetLockStatus(parsed.user) : null;
     const economy = pointStore.getEconomyProfile(parsed.user);
-    const inventory =
-      typeof pointStore.getPowerupInventory === "function"
-        ? pointStore.getPowerupInventory(parsed.user)
-        : parsed.inventory || { stealCharges: 0, shieldBreakCharges: 0, jetLockCharges: 0 };
+    const inventory = resolvePowerupInventory(parsed.user, pointStore, game);
     const reset = pointStore.getMissionResetInfo();
     broadcast({
       type: "balance_toast",
@@ -876,6 +922,11 @@ app.post("/api/tiktok/reward", (req, res) => {
     gained = REPOST_BONUS;
     pointStore.add(u, gained, { countAsEarned: true });
     pointStore.awardXP(u, "CHAT_MESSAGE", 0.8);
+  } else if (type === "follow") {
+    gained = FOLLOW_BONUS;
+    pointStore.add(u, gained, { countAsEarned: true });
+    pointStore.awardXP(u, "CHAT_MESSAGE", 1.2);
+    rewardMeta = { special: "live_follow_bonus", oncePerLive: true };
   } else {
     return res.status(400).json({ ok: false, error: "bad type" });
   }
@@ -1036,6 +1087,40 @@ app.post("/api/admin/reload-points", (req, res) => {
   res.json({ ok: true, reloaded: true });
 });
 
+/** Localhost-only: remove powerup charges / add shield hours while server is live. */
+app.post("/api/admin/player-adjust", (req, res) => {
+  if (!isLocalhost(req)) {
+    return res.status(403).json({ ok: false, error: "local only" });
+  }
+  const user = String(req.body?.user || "")
+    .trim()
+    .replace(/^@+/, "")
+    .slice(0, 40);
+  if (!user) return res.status(400).json({ ok: false, error: "user required" });
+  const removeSteal = Math.max(0, Math.floor(Number(req.body?.removeSteal) || 0));
+  const addShieldHours = Math.max(0, Number(req.body?.addShieldHours) || 0);
+  let stealOut = null;
+  if (removeSteal > 0) {
+    stealOut = pointStore.consumePowerupCharge(user, "steal", removeSteal);
+    if (!stealOut.ok) return res.status(400).json({ ok: false, ...stealOut });
+  }
+  let shieldOut = null;
+  if (addShieldHours > 0) {
+    shieldOut = game.applyShield(user, addShieldHours * 60 * 60 * 1000);
+  }
+  pushState();
+  const shield = pointStore.getShieldStatus(user);
+  const inventory = resolvePowerupInventory(user, pointStore, game);
+  res.json({
+    ok: true,
+    user,
+    stealOut,
+    shieldOut,
+    shield,
+    inventory,
+  });
+});
+
 app.get("/api/admin/data-health", (req, res) => {
   if (!isLocalhost(req)) {
     return res.status(403).json({ ok: false, error: "local only" });
@@ -1103,6 +1188,8 @@ app.get("/api/config/rewards", (_req, res) => {
     giftCoinMultiplier: GIFT_COIN_MULTIPLIER,
     likePointsPer: LIKE_POINTS_PER,
     repostBonus: REPOST_BONUS,
+    followBonus: FOLLOW_BONUS,
+    followBonusOncePerLive: true,
     galaxyGift: "Galaxy",
     interstellarGift: "Interstellar",
     carDriftingGift: "Car Drifting",
@@ -1144,6 +1231,14 @@ const wss = new WebSocketServer({ noServer: true });
 wss.on("connection", (ws) => {
   clients.add(ws);
   ws.send(JSON.stringify({ type: "state", payload: game.getState() }));
+  ws.on("message", (raw) => {
+    try {
+      const msg = JSON.parse(String(raw));
+      if (msg && msg.type === "ping") ws.send(JSON.stringify({ type: "pong" }));
+    } catch {
+      /* ignore */
+    }
+  });
   ws.on("close", () => clients.delete(ws));
 });
 
@@ -1193,6 +1288,17 @@ function getLanUrls(port) {
   return [...new Set(out)];
 }
 
+server.on("error", (err) => {
+  if (err && err.code === "EADDRINUSE") {
+    console.error(
+      `[NFG] Port ${PORT} is already in use. Close other NFG windows and run stop-nfg.bat.`
+    );
+  } else {
+    console.error("[NFG] Server listen error:", err && err.message ? err.message : err);
+  }
+  shutdownNfg(1);
+});
+
 server.listen(PORT, SERVER_HOST, () => {
   const url = `http://127.0.0.1:${PORT}/`;
   const lanUrls = getLanUrls(PORT);
@@ -1233,15 +1339,20 @@ server.listen(PORT, SERVER_HOST, () => {
   }
   console.log(`Hangman backend port: ${HANGMAN_PORT} (WebSocket proxy: /hangman/ws)`);
   console.log(`Word Games backend port: ${WORD_GAMES_PORT} (HTTP proxy: /api/word-games/*)`);
+  console.log(`Pixel Jump backend port: ${PIXEL_JUMP_PORT} (HTTP/WS proxy: /api/pixel-jump/*)`);
   console.log("Tower World: /api/mobile/tower/world/profile + WebSocket /api/mobile/tower/world/ws");
   startHangmanProcess();
   startWordGamesProcess();
+  startPixelJumpProcess();
   waitForHangman()
     .then(() => console.log("[Hangman] Ready (proxied through this server)."))
     .catch((e) => console.warn("[Hangman] Not ready yet:", e.message));
   waitForWordGames()
     .then(() => console.log("[WordGames] Ready (proxied through this server)."))
     .catch((e) => console.warn("[WordGames] Not ready yet:", e.message));
+  waitForPixelJump()
+    .then(() => console.log("[PixelJump] Ready at https://y666suf.com/api/pixel-jump/"))
+    .catch((e) => console.warn("[PixelJump] Not ready yet:", e.message));
 
   openBrowser(url);
   startTikTokBridge({ port: PORT });

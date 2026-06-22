@@ -1,4 +1,7 @@
 {
   "uniqueId": "y666.suf",
-  "enabled": true
+  "enabled": true,
+  "sendBalanceChatReply": false,
+  "sessionId": "optional — browser cookie sessionid (only if sendBalanceChatReply is true)",
+  "ttTargetIdc": "optional — browser cookie tt-target-idc"
 }

@@ -1,0 +1,147 @@
+{
+  "users": {
+    "sk.07020": {
+      "dayKey": "2026-06-10",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_blocks": {
+          "session": {
+            "active": true,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          },
+          "bestLevel": 3
+        }
+      },
+      "claimedMissions": []
+    },
+    "y666.suf": {
+      "dayKey": "2026-06-10",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "bestHeight": 12864
+        },
+        "nfg_blocks": {
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          }
+        }
+      },
+      "claimedMissions": []
+    },
+    "fatimahxm": {
+      "dayKey": "2026-06-10",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_blocks": {
+          "session": {
+            "active": true,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          },
+          "bestLevel": 6
+        }
+      },
+      "claimedMissions": []
+    },
+    "sameya.bx": {
+      "dayKey": "2026-06-10",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": true,
+            "milestones": 3,
+            "sessionPoints": 9000,
+            "lastMilestoneHeight": 7500,
+            "lastMilestoneAt": 1781088313156,
+            "peakHeight": 7500,
+            "vsMatchId": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "bestHeight": 7500
+        }
+      },
+      "claimedMissions": []
+    }
+  },
+  "leaderboards": {
+    "nfg_blocks": [
+      {
+        "userId": "fatimahxm",
+        "displayName": "fatimah",
+        "points": 6,
+        "updatedAt": 1781088154055
+      },
+      {
+        "userId": "sk.07020",
+        "displayName": "SK",
+        "points": 3,
+        "updatedAt": 1781085634846
+      }
+    ],
+    "nfg_snake_jump": [
+      {
+        "userId": "y666.suf",
+        "displayName": "Y666SUF 👨🏾‍🦯",
+        "points": 12864,
+        "updatedAt": 1781088344709,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      },
+      {
+        "userId": "sameya.bx",
+        "displayName": "Sameya🐨",
+        "points": 7500,
+        "updatedAt": 1781088313156,
+        "jumpSkinId": "classic",
+        "jumpSkinName": null,
+        "jumpSkinFill": "#596ff2",
+        "jumpSkinRing": "#f2c733"
+      }
+    ],
+    "nfg_vault_run": []
+  }
+}

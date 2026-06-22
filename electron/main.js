@@ -11,6 +11,7 @@ const {
   HANGMAN_PORT,
   HANGMAN_HOST,
 } = require("../server/hangman-process");
+const { killNfgProcesses } = require("../server/process-cleanup");
 
 const PORT = Number(process.env.PORT) || 3847;
 const ROOT_URL = `http://127.0.0.1:${PORT}/`;
@@ -22,18 +23,30 @@ const HANGMAN_URL =
 const START_HANGMAN = String(process.env.NFG_START_HANGMAN || "1").trim() !== "0";
 const OPEN_HANGMAN_WINDOW = String(process.env.NFG_OPEN_HANGMAN_WINDOW || "1").trim() !== "0";
 const IS_PORTRAIT_MODE = process.env.NFG_PORTRAIT === "1";
+const USE_WIDE_WINDOW = String(process.env.NFG_WIDE_WINDOW || "0").trim() === "1";
+const GAME_WINDOW_W = Math.max(360, Math.floor(Number(process.env.NFG_GAME_W) || 460));
+const GAME_WINDOW_H = Math.max(640, Math.floor(Number(process.env.NFG_GAME_H) || 920));
 const SERVER_URL = IS_PORTRAIT_MODE ? `${ROOT_URL}portrait.html` : ROOT_URL;
 const ENABLE_CF_TUNNEL = process.env.NFG_CF_TUNNEL === "1";
 const CF_TUNNEL_NAME = String(process.env.NFG_CF_TUNNEL_NAME || "nfg-crash").trim();
 const CF_TUNNEL_TOKEN = String(process.env.NFG_CF_TUNNEL_TOKEN || "").trim();
 let serverProcess = null;
 let serverOwnedByElectron = false;
+let serverRestartTimer = null;
+let serverRestartAttempts = 0;
+const MAX_SERVER_RESTART_ATTEMPTS = Math.max(
+  3,
+  Math.floor(Number(process.env.NFG_SERVER_RESTART_MAX) || 30)
+);
 let cloudflaredProcess = null;
 let cloudflaredOwnedByElectron = false;
 let mainWindow = null;
 let lookupWindow = null;
 let chatWindow = null;
 let hangmanWindow = null;
+let startupAttempts = 0;
+const MAX_STARTUP_ATTEMPTS = Math.max(1, Math.floor(Number(process.env.NFG_STARTUP_MAX_ATTEMPTS) || 3));
+const ENABLE_AUTO_RESTART = String(process.env.NFG_AUTO_RESTART || "0").trim() === "1";
 
 function waitForServer(url, timeoutMs = 20000) {
   const start = Date.now();
@@ -142,9 +155,22 @@ function startServer() {
       HANGMAN_BACKEND_URL:
         process.env.HANGMAN_BACKEND_URL ||
         `http://${process.env.HANGMAN_HOST || "127.0.0.1"}:${process.env.HANGMAN_PORT || 19876}`,
+      WORD_GAMES_PORT: process.env.WORD_GAMES_PORT || "19877",
+      WORD_GAMES_HOST: process.env.WORD_GAMES_HOST || "127.0.0.1",
+      WORD_GAMES_BACKEND_URL:
+        process.env.WORD_GAMES_BACKEND_URL || "http://127.0.0.1:19877",
+      NFG_WORD_GAMES_DIR:
+        process.env.NFG_WORD_GAMES_DIR ||
+        `${process.env.USERPROFILE || ""}\\Documents\\nfg-word-games`,
+      WORD_GAMES_DATA_DIR:
+        process.env.WORD_GAMES_DATA_DIR ||
+        `${process.env.USERPROFILE || ""}\\Documents\\nfg-word-games\\data`,
+      NFG_START_WORD_GAMES: process.env.NFG_START_WORD_GAMES || "1",
+      WORD_GAMES_PYTHON: process.env.WORD_GAMES_PYTHON || process.env.HANGMAN_PYTHON || "py",
       NFG_PLATFORM_URL: process.env.NFG_PLATFORM_URL || `http://127.0.0.1:${PORT}`,
       NFG_INTERNAL_SECRET: process.env.NFG_INTERNAL_SECRET || "nfg-dev-internal",
       NFG_START_HANGMAN: process.env.NFG_START_HANGMAN || "1",
+      NFG_EXIT_ON_FATAL: process.env.NFG_EXIT_ON_FATAL || "1",
       // Safe fallback if node exe is unavailable and process.execPath is Electron.
       ELECTRON_RUN_AS_NODE: "1",
     },
@@ -154,13 +180,8 @@ function startServer() {
   serverOwnedByElectron = true;
 
   serverProcess.on("exit", (code) => {
-    if (!app.isQuiting && code !== 0) {
-      dialog.showErrorBox(
-        "NFG Crash server stopped",
-        `The game server exited unexpectedly (code ${code}).`
-      );
-      app.quit();
-    }
+    serverProcess = null;
+    if (!app.isQuiting && code !== 0) scheduleServerRestart(code);
   });
 }
 
@@ -172,6 +193,91 @@ function stopServer() {
   } catch (_err) {
     // Ignore process-kill errors during app shutdown.
   }
+}
+
+function clearServerRestartTimer() {
+  if (!serverRestartTimer) return;
+  clearTimeout(serverRestartTimer);
+  serverRestartTimer = null;
+}
+
+async function prepareCleanRestart() {
+  stopHangmanProcess();
+  if (serverProcess && !serverProcess.killed) {
+    try {
+      serverProcess.kill();
+    } catch (_err) {
+      /* ignore */
+    }
+    serverProcess = null;
+  }
+  await killNfgProcesses({
+    ports: [PORT, HANGMAN_PORT_NUM],
+    excludePid: process.pid,
+    waitMs: 600,
+  });
+}
+
+async function reloadGameWindows() {
+  const tasks = [];
+  const loadIfAlive = (win, url) => {
+    if (!win || win.isDestroyed()) return;
+    tasks.push(
+      win.loadURL(url).catch((err) => {
+        console.warn("[Electron] Window reload failed:", err.message);
+      })
+    );
+  };
+  loadIfAlive(mainWindow, SERVER_URL);
+  loadIfAlive(lookupWindow, `${ROOT_URL}player-lookup.html`);
+  loadIfAlive(chatWindow, `${ROOT_URL}app-chat.html`);
+  if (OPEN_HANGMAN_WINDOW && START_HANGMAN) {
+    loadIfAlive(hangmanWindow, HANGMAN_URL);
+  }
+  if (tasks.length) {
+    await Promise.all(tasks);
+  }
+}
+
+function scheduleServerRestart(exitCode) {
+  if (app.isQuiting || !serverOwnedByElectron) return;
+  if (!ENABLE_AUTO_RESTART) {
+    console.error(
+      `[Electron] NFG server exited (code ${exitCode}). Auto-restart is off — run stop-nfg.bat then start again.`
+    );
+    return;
+  }
+  clearServerRestartTimer();
+  serverRestartAttempts += 1;
+  if (serverRestartAttempts > MAX_SERVER_RESTART_ATTEMPTS) {
+    console.error(
+      `[Electron] NFG server restart gave up after ${MAX_SERVER_RESTART_ATTEMPTS} attempts. Run stop-nfg.bat then start again.`
+    );
+    return;
+  }
+  const delayMs = Math.min(15000, 1500 + (serverRestartAttempts - 1) * 1500);
+  const delaySec = (delayMs / 1000).toFixed(1);
+  console.error(
+    `[Electron] NFG server exited (code ${exitCode}). Auto-restarting attempt ${serverRestartAttempts} in ${delaySec}s...`
+  );
+  serverRestartTimer = setTimeout(async () => {
+    serverRestartTimer = null;
+    if (app.isQuiting) return;
+    try {
+      await prepareCleanRestart();
+      startServer();
+      await waitForServer(ROOT_URL, 20000);
+      if (START_HANGMAN) {
+        await ensureHangmanReady();
+      }
+      await reloadGameWindows();
+      serverRestartAttempts = 0;
+      console.log("[Electron] NFG server recovered.");
+    } catch (err) {
+      console.error("[Electron] NFG server restart failed:", err && err.message ? err.message : err);
+      scheduleServerRestart("restart_failed");
+    }
+  }, delayMs);
 }
 
 function startCloudflareTunnel() {
@@ -307,12 +413,14 @@ async function createWindows() {
   });
 
   mainWindow = new BrowserWindow({
-    width: IS_PORTRAIT_MODE ? 540 : 1600,
-    height: IS_PORTRAIT_MODE ? 980 : 900,
-    minWidth: IS_PORTRAIT_MODE ? 420 : 1280,
-    minHeight: IS_PORTRAIT_MODE ? 760 : 720,
-    title: IS_PORTRAIT_MODE ? "NFG Crash - Portrait" : "NFG Crash",
-    backgroundColor: "#0b0f19",
+    width: USE_WIDE_WINDOW ? 1600 : GAME_WINDOW_W,
+    height: USE_WIDE_WINDOW ? 900 : GAME_WINDOW_H,
+    minWidth: USE_WIDE_WINDOW ? 1280 : GAME_WINDOW_W,
+    minHeight: USE_WIDE_WINDOW ? 720 : 640,
+    maxWidth: USE_WIDE_WINDOW ? undefined : GAME_WINDOW_W,
+    title: USE_WIDE_WINDOW ? "NFG Crash" : "NFG Crash — Live",
+    transparent: false,
+    backgroundColor: "#070b12",
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: true,
@@ -425,18 +533,44 @@ async function createWindows() {
   });
 }
 
-app.whenReady().then(async () => {
+async function bootWithRetry() {
+  if (app.isQuiting) return;
+  startupAttempts += 1;
   try {
     await createWindows();
+    startupAttempts = 0;
   } catch (err) {
-    dialog.showErrorBox("Failed to start NFG Crash", err.message);
-    stopServer();
-    app.quit();
+    const msg = err && err.message ? err.message : String(err);
+    console.error(`[Electron] Startup failed (attempt ${startupAttempts}):`, msg);
+    await prepareCleanRestart();
+    if (startupAttempts >= MAX_STARTUP_ATTEMPTS || !ENABLE_AUTO_RESTART) {
+      dialog.showErrorBox(
+        "Failed to start NFG Crash",
+        `${msg}\n\nRun stop-nfg.bat, wait 10 seconds, then run run-electron-cloudflare.bat again.`
+      );
+      app.quit();
+      return;
+    }
+    const delayMs = Math.min(15000, 2000 * startupAttempts);
+    console.log(`[Electron] Retrying startup in ${(delayMs / 1000).toFixed(1)}s...`);
+    setTimeout(bootWithRetry, delayMs);
+  }
+}
+
+app.whenReady().then(() => bootWithRetry());
+
+app.on("render-process-gone", (_event, webContents, details) => {
+  if (details.reason === "crashed" || details.reason === "oom") {
+    console.error("[Electron] Renderer crashed:", details.reason);
+    if (webContents && !webContents.isDestroyed()) {
+      webContents.reload();
+    }
   }
 });
 
 app.on("before-quit", () => {
   app.isQuiting = true;
+  clearServerRestartTimer();
   stopCloudflareTunnel();
   stopHangmanProcess();
   stopServer();

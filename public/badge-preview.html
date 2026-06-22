@@ -86,6 +86,83 @@
         justify-content: center;
         background: radial-gradient(circle, rgba(46, 16, 101, 0.5), transparent 70%);
         border-radius: 12px;
+        border: none;
+        padding: 0;
+        color: inherit;
+        font: inherit;
+        cursor: pointer;
+        transition: transform 0.12s, box-shadow 0.15s;
+      }
+
+      .bp-icon-wrap:hover {
+        transform: scale(1.04);
+        box-shadow: 0 0 24px rgba(168, 85, 247, 0.35);
+      }
+
+      .bp-lightbox {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .bp-lightbox[hidden] {
+        display: none !important;
+      }
+
+      .bp-lightbox-backdrop {
+        position: absolute;
+        inset: 0;
+        background: rgba(4, 6, 14, 0.85);
+        backdrop-filter: blur(6px);
+      }
+
+      .bp-lightbox-card {
+        position: relative;
+        z-index: 1;
+        padding: 32px 28px 24px;
+        border-radius: 18px;
+        border: 1px solid rgba(168, 85, 247, 0.45);
+        background: linear-gradient(165deg, rgba(30, 18, 55, 0.98), rgba(12, 14, 28, 0.98));
+        text-align: center;
+        max-width: 360px;
+        width: 92vw;
+      }
+
+      .bp-lightbox-art .nfg-badge {
+        width: 140px;
+        height: 140px;
+        filter: drop-shadow(0 0 28px rgba(168, 85, 247, 0.5));
+      }
+
+      .bp-lightbox-title {
+        margin: 16px 0 6px;
+        font-size: 1.25rem;
+        color: #e9d5ff;
+      }
+
+      .bp-lightbox-sub {
+        margin: 0;
+        color: #c4b5fd;
+        font-family: "JetBrains Mono", ui-monospace, monospace;
+        font-size: 0.85rem;
+      }
+
+      .bp-lightbox-close {
+        position: absolute;
+        top: 10px;
+        right: 12px;
+        border: none;
+        background: rgba(255, 255, 255, 0.1);
+        color: #fff;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        font-size: 1.4rem;
+        cursor: pointer;
       }
 
       .bp-icon-wrap .nfg-badge {
@@ -169,12 +246,22 @@
       <h1>NFG vault badge icons</h1>
       <p>
         Gambling &amp; crypto tiers lead up to <strong>NFG Imperial</strong> — a gold-rimmed crest with NFG + money. Tier 6 is a purple-rimmed
-        <strong>Litecoin (Ł)</strong> coin. <code>!buy &lt;id&gt;</code> once; repeat to switch free.
+        <strong>Litecoin (Ł)</strong> coin. <code>!buy &lt;id&gt;</code> once; repeat to switch free. <strong>Click any icon to enlarge.</strong>
       </p>
       <p id="bpNotice" class="bp-notice" hidden></p>
     </header>
 
     <div class="bp-grid" id="badgeGrid"></div>
+
+    <div id="bpLightbox" class="bp-lightbox" hidden>
+      <div class="bp-lightbox-backdrop" data-bp-close></div>
+      <div class="bp-lightbox-card" role="dialog" aria-modal="true">
+        <button type="button" class="bp-lightbox-close" data-bp-close aria-label="Close">×</button>
+        <div class="bp-lightbox-art" id="bpLightboxArt"></div>
+        <h3 class="bp-lightbox-title" id="bpLightboxTitle"></h3>
+        <p class="bp-lightbox-sub" id="bpLightboxSub"></p>
+      </div>
+    </div>
 
     <section class="bp-legacy">
       <h2>Legacy (old buyers only)</h2>
@@ -227,7 +314,7 @@
         const icon = badgeIcon(id);
         return `
           <article class="bp-card">
-            <div class="bp-icon-wrap">${icon}</div>
+            <button type="button" class="bp-icon-wrap" data-bp-icon="${id}" data-bp-label="${b.label || id}" data-bp-tier="${b.tier || ""}" data-bp-cost="${cost}" aria-label="Enlarge ${b.label || id}">${icon}</button>
             <p class="bp-tier">Tier ${b.tier || "—"}</p>
             <h3 class="bp-name">${b.label || id}</h3>
             <p class="bp-cmd">!buy ${id}</p>
@@ -267,6 +354,33 @@
 
         const list = mergeCatalog(apiList);
         grid.innerHTML = list.map(cardHtml).join("");
+
+        const lb = document.getElementById("bpLightbox");
+        const openLb = (id, label, tier, cost) => {
+          const svg = NFG_BADGE_ICONS?.SVG?.[NFG_BADGE_ICONS.resolveBadgeId(id)];
+          if (!svg || !lb) return;
+          document.getElementById("bpLightboxArt").innerHTML =
+            `<span class="nfg-badge nfg-badge--${id}">${svg}</span>`;
+          document.getElementById("bpLightboxTitle").textContent = label || id;
+          document.getElementById("bpLightboxSub").textContent =
+            [tier ? `Tier ${tier}` : "", cost ? `${cost} pts` : "", `!buy ${id}`].filter(Boolean).join(" · ");
+          lb.hidden = false;
+          document.body.style.overflow = "hidden";
+        };
+        const closeLb = () => {
+          if (!lb) return;
+          lb.hidden = true;
+          document.body.style.overflow = "";
+        };
+        grid.querySelectorAll("[data-bp-icon]").forEach((btn) => {
+          btn.addEventListener("click", () =>
+            openLb(btn.dataset.bpIcon, btn.dataset.bpLabel, btn.dataset.bpTier, btn.dataset.bpCost)
+          );
+        });
+        lb?.querySelectorAll("[data-bp-close]").forEach((el) => el.addEventListener("click", closeLb));
+        document.addEventListener("keydown", (e) => {
+          if (e.key === "Escape" && lb && !lb.hidden) closeLb();
+        });
         const crownHtml = badgeIcon("crown");
         const legacyIcon = document.getElementById("legacyCrownIcon");
         const legacySample = document.getElementById("legacyCrownSample");

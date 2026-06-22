@@ -50,7 +50,7 @@ function registerMobileChatRoutes(app, ctx) {
       return res.status(400).json({
         ok: false,
         error: "commands_not_allowed",
-        message: "Use the bet box for !commands. App chat is for messages only.",
+        message: "Use the play panel for !commands. App chat is for messages only.",
       });
     }
 

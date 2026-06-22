@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="NFG Crash" />
+    <meta name="format-detection" content="telephone=no" />
+    <meta name="theme-color" content="#070b12" />
+    <title>NFG Crash — Play in Browser</title>
+    <link rel="stylesheet" href="/play/styles.css?v=15" />
+  </head>
+  <body>
+    <div class="portrait-lock" id="portraitLock" hidden aria-live="polite">
+      <div class="portrait-lock-card">
+        <p class="portrait-lock-icon" aria-hidden="true">📱</p>
+        <p class="portrait-lock-title">Rotate to portrait</p>
+        <p class="portrait-lock-sub">NFG Crash plays upright — same as the iPhone app.</p>
+      </div>
+    </div>
+    <div id="app" class="app">
+      <header class="topbar" id="topbar" hidden>
+        <div class="topbar-left">
+          <a class="brand" href="/">NFG</a>
+          <span class="user-pill" id="userPill">—</span>
+        </div>
+        <div class="topbar-right">
+          <span class="balance-pill" id="balancePill">— pts</span>
+          <span class="live-pill" id="livePill">Offline</span>
+          <button type="button" class="icon-btn" id="btnLogout" title="Sign out">⎋</button>
+        </div>
+      </header>
+
+      <section class="panel link-panel" id="linkPanel">
+        <div class="link-card">
+          <h1>NFG Crash</h1>
+          <p class="lede">Play in Safari with the same account and points as the iPhone app.</p>
+          <ol class="steps">
+            <li>Join <a href="https://www.tiktok.com/@y666.suf" target="_blank" rel="noopener">@y666.suf</a> on TikTok LIVE.</li>
+            <li>Tap <strong>Link TikTok</strong> below.</li>
+            <li>Comment the code shown on your LIVE from your TikTok account.</li>
+          </ol>
+          <p class="fine">Virtual points only — entertainment, not real-money gambling.</p>
+          <div class="link-actions">
+            <button type="button" class="btn primary block" id="btnLinkStart">Link TikTok</button>
+            <button type="button" class="btn ghost block" id="btnAppReviewToggle">App Review login</button>
+          </div>
+          <div class="review-box" id="reviewBox" hidden>
+            <label class="review-label">
+              <span>Review password</span>
+              <input type="password" id="reviewCode" autocomplete="off" inputmode="text" placeholder="Password" />
+            </label>
+            <button type="button" class="btn secondary block" id="btnAppReview">Sign in to test account</button>
+            <p class="fine">200k pts test wallet for reviewers — not a real TikTok link.</p>
+          </div>
+          <div class="link-status" id="linkStatus" hidden>
+            <p class="link-code-label">Comment on LIVE:</p>
+            <p class="link-code" id="linkCode">!link —</p>
+            <p class="link-wait" id="linkWait">Waiting for TikTok…</p>
+            <button type="button" class="btn ghost" id="btnLinkCancel">Cancel</button>
+          </div>
+          <p class="err" id="linkError" hidden></p>
+        </div>
+        <p class="home-link"><a href="/games/nfg-crash">← Game info &amp; iPhone install</a></p>
+      </section>
+
+      <main class="main" id="main" hidden>
+        <section class="screen screen-active play-screen" id="screenPlay" data-screen="play">
+          <div class="play-scene" id="playScene">
+            <div id="topProfiles" class="top-profiles-mount"></div>
+            <div class="tax-pot" id="taxPotBanner" hidden>
+              <span class="tax-pot-icon">✦</span>
+              <span class="tax-pot-label">Tax Pot</span>
+              <span class="tax-pot-amt" id="taxPotAmt">—</span>
+            </div>
+            <div class="recent-crashes" id="recentCrashes" hidden></div>
+            <p class="subline" id="subline">Connecting…</p>
+
+            <div class="entries-strip" id="chartEntries"></div>
+
+            <div class="chart-shell" id="chartWrap">
+              <canvas id="crashCanvas" aria-label="Crash round chart"></canvas>
+              <div class="chart-status" id="chartStatus" hidden></div>
+              <div class="chart-mult" id="chartMult" hidden>
+                <span class="chart-mult-eyebrow" id="chartMultEyebrow" hidden>CRASHED AT</span>
+                <span class="chart-mult-val" id="multDisplay">1.00×</span>
+              </div>
+            </div>
+            <p class="round-eta" id="roundEta" hidden></p>
+          </div>
+
+          <div class="bet-dock">
+            <form class="bet-form" id="betForm">
+              <div class="bet-dock-head">
+                <span class="bet-dock-title">⚡ PLACE A BET</span>
+                <span class="bet-dock-bal" id="betDockBalance">—</span>
+              </div>
+              <div class="field-row">
+                <label>
+                  <span>Amount</span>
+                  <input type="text" id="betAmount" inputmode="text" placeholder="!100 or 30k" autocomplete="off" />
+                </label>
+                <label class="cashout-field">
+                  <span>Cash out</span>
+                  <span class="cashout-wrap">
+                    <input type="number" id="betCashout" min="1.05" max="500" step="0.01" value="2.00" />
+                    <span class="cashout-x">×</span>
+                  </span>
+                </label>
+              </div>
+              <div class="btn-row">
+                <button type="submit" class="btn primary" id="btnPlaceBet">▸ PLACE BET</button>
+                <button type="button" class="btn secondary" id="btnBalanceShoutDock">!bal</button>
+              </div>
+              <button type="button" class="btn allin" id="btnBetAll">🔥 All-in @ 2× (!all 2)</button>
+            </form>
+            <p class="action-msg" id="actionMsg" hidden></p>
+          </div>
+        </section>
+
+        <section class="screen" id="screenWallet" data-screen="wallet">
+          <div class="wallet-card">
+            <p class="wallet-balance" id="walletBalance">—</p>
+            <p class="wallet-sub" id="walletSub">—</p>
+            <div class="btn-row">
+              <button type="button" class="btn primary" id="btnRefreshWallet">Refresh</button>
+              <button type="button" class="btn ghost" id="btnBalanceShout">!balance</button>
+            </div>
+          </div>
+          <div class="list-card" id="inventoryCard" hidden>
+            <h3>Power-ups</h3>
+            <ul class="inv-list" id="inventoryList"></ul>
+          </div>
+          <div class="list-card shop-card" id="shopCard">
+            <div id="shopMount"></div>
+          </div>
+          <p class="fine wallet-note">Virtual points only. Web shares the same live balance, crash bets, and Vault Arcade as the iPhone app.</p>
+        </section>
+
+        <section class="screen" id="screenChat" data-screen="chat">
+          <div class="chat-feed" id="chatFeed"></div>
+          <form class="chat-form" id="chatForm">
+            <input type="text" id="chatInput" maxlength="280" placeholder="Message app chat…" autocomplete="off" />
+            <button type="submit" class="btn primary">Send</button>
+          </form>
+        </section>
+
+        <section class="screen" id="screenArcade" data-screen="arcade">
+          <div class="list-card arcade-intro">
+            <h1 class="arcade-title">Vault Arcade</h1>
+            <p class="fine">All 8 mini-games — same points &amp; logic as the iPhone app.</p>
+          </div>
+          <div id="arcadeHub"></div>
+        </section>
+
+        <section class="screen" id="screenBoard" data-screen="board">
+          <div class="list-card board-card">
+            <div class="board-card-head">
+              <h3>Leaderboard</h3>
+              <p class="board-meta muted" id="boardMeta">Loading…</p>
+            </div>
+            <div class="board-scroll" id="boardScroll">
+              <ul class="board-list" id="boardList"></ul>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <nav class="tabbar" id="tabbar" hidden>
+        <button type="button" class="tab tab-active" data-tab="play">Crash</button>
+        <button type="button" class="tab" data-tab="arcade">Vault</button>
+        <button type="button" class="tab" data-tab="wallet">Wallet</button>
+        <button type="button" class="tab" data-tab="chat">Chat</button>
+        <button type="button" class="tab" data-tab="board">Board</button>
+      </nav>
+
+      <div class="arcade-overlay" id="arcadeOverlay" hidden>
+        <header class="arcade-overlay-head">
+          <button type="button" class="btn ghost sm" id="arcadeBack">← Vault</button>
+          <span id="arcadeTitle">Game</span>
+          <button type="button" class="icon-btn" id="arcadeRefresh" title="Refresh">↻</button>
+        </header>
+        <div class="arcade-overlay-body" id="arcadeBody"></div>
+      </div>
+
+      <div class="toast" id="toast" hidden></div>
+    </div>
+    <script src="/badge-icons.js"></script>
+    <script src="/play/link-boot.js?v=15"></script>
+    <script type="module" src="/play/app.js?v=15"></script>
+  </body>
+</html>

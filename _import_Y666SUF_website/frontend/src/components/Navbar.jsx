@@ -68,15 +68,24 @@ export default function Navbar() {
           ))}
         </nav>
 
-        <a
-          href="https://www.tiktok.com/@y666.suf"
-          target="_blank"
-          rel="noopener noreferrer"
-          data-testid="navbar-tiktok-cta"
-          className="btn-ghost text-xs"
-        >
-          @y666.suf
-        </a>
+        <div className="flex items-center gap-2">
+          <a
+            href="/play"
+            data-testid="navbar-play-cta"
+            className="btn-neon text-xs hidden sm:inline-flex"
+          >
+            Play NFG Crash
+          </a>
+          <a
+            href="https://www.tiktok.com/@y666.suf"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="navbar-tiktok-cta"
+            className="btn-ghost text-xs"
+          >
+            @y666.suf
+          </a>
+        </div>
       </div>
     </header>
   );

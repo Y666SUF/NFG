@@ -3,8 +3,6 @@ setlocal EnableExtensions
 cd /d "%~dp0"
 title NFG Crash - Electron Launcher
 
-chcp 65001 >nul 2>&1
-
 echo NFG Crash - starting desktop app...
 echo.
 
@@ -47,6 +45,9 @@ set "NFG_NODE_EXE=%NODE_EXE%"
 if not defined PORT set "PORT=3847"
 if not defined HOST set "HOST=0.0.0.0"
 set "MAX_BET=unlimited"
+rem Optional env: BALANCE_SHOUT_COOLDOWN_MS, TIKTOK_SEND_BALANCE_REPLY
+if not defined BALANCE_SHOUT_COOLDOWN_MS set "BALANCE_SHOUT_COOLDOWN_MS=0"
+if not defined TIKTOK_SEND_BALANCE_REPLY set "TIKTOK_SEND_BALANCE_REPLY=0"
 if not defined HANGMAN_PORT set "HANGMAN_PORT=19876"
 if not defined HANGMAN_HOST set "HANGMAN_HOST=127.0.0.1"
 if not defined HANGMAN_BACKEND_URL set "HANGMAN_BACKEND_URL=http://127.0.0.1:%HANGMAN_PORT%"
@@ -61,6 +62,13 @@ if not defined NFG_CHAT_ADMIN_USERS set "NFG_CHAT_ADMIN_USERS=y666.suf"
 if not defined NFG_START_HANGMAN set "NFG_START_HANGMAN=1"
 if not defined HANGMAN_PYTHON set "HANGMAN_PYTHON=py"
 if not defined NFG_HANGMAN_GUESS_TIMEOUT_MS set "NFG_HANGMAN_GUESS_TIMEOUT_MS=12000"
+rem Auto-restart OFF by default. Set NFG_AUTO_RESTART=1 to re-enable after crashes.
+if not defined NFG_AUTO_RESTART set "NFG_AUTO_RESTART=0"
+if not defined NFG_AUTO_RESTART_DELAY_SECONDS set "NFG_AUTO_RESTART_DELAY_SECONDS=8"
+if not defined NFG_AUTO_RESTART_MAX_RETRIES set "NFG_AUTO_RESTART_MAX_RETRIES=10"
+if not defined NFG_EXIT_ON_FATAL set "NFG_EXIT_ON_FATAL=0"
+if not defined LIVE_SONG_COMMAND set "LIVE_SONG_COMMAND=1"
+set /a NFG_RESTART_COUNT=0
 
 echo Using Node: %NODE_EXE%
 echo.
@@ -81,20 +89,63 @@ echo Platform port %PORT% ^| Hangman %HANGMAN_PORT% proxied on %PORT% ^| Word Ga
 echo Mobile Hangman: GET /api/mobile/hangman/state  POST /api/mobile/hangman/guess  WS /hangman/ws
 echo Mobile Words:  GET https://y666suf.com/api/word-games/health  POST /api/word-games/players/login
 set "PATH=%~dp0node_modules\.bin;%PATH%"
+echo Clearing stale listeners on %PORT% / %HANGMAN_PORT% before launch...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports %PORT%,%HANGMAN_PORT% -KillElectron -KillNodeNfg -RepoRoot "%~dp0" -Quiet
 echo Launching Electron ^(Crash + Hangman windows, shared Node server^)...
 echo.
-call "%NPM_CMD%" run start:electron
-if errorlevel 1 (
+if "%NFG_AUTO_RESTART%"=="0" (
+  call "%NPM_CMD%" run start:electron
+  if errorlevel 1 (
+    echo.
+    echo Electron failed to start.
+    echo Run this in PowerShell for details:
+    echo   cd /d "%~dp0"
+    echo   npm run start:electron
+    echo.
+    pause
+    exit /b 1
+  )
+) else (
+:restart_electron
+  call "%NPM_CMD%" run start:electron
+  set "NFG_LAST_EXIT=%errorlevel%"
+  if "%NFG_LAST_EXIT%"=="0" goto :electron_ok
+  set /a NFG_RESTART_COUNT+=1
   echo.
-  echo Electron failed to start.
-  echo Run this in PowerShell for details:
-  echo   cd /d "%~dp0"
-  echo   npm run start:electron
-  echo.
-  pause
-  exit /b 1
+  echo Electron exited unexpectedly ^(code %NFG_LAST_EXIT%^).
+  if "%NFG_LAST_EXIT%"=="3221226505" (
+    echo Detected Windows app-crash code 3221226505 ^(0xC0000409^). Restarting automatically...
+  )
+  if "%NFG_AUTO_RESTART_MAX_RETRIES%"=="0" (
+    echo WARNING: NFG_AUTO_RESTART_MAX_RETRIES=0 means UNLIMITED restarts.
+    echo Set NFG_AUTO_RESTART=0 or NFG_AUTO_RESTART_MAX_RETRIES=10 to stop the loop.
+  ) else if %NFG_RESTART_COUNT% GEQ %NFG_AUTO_RESTART_MAX_RETRIES% (
+    echo Reached max auto-restart retries ^(%NFG_AUTO_RESTART_MAX_RETRIES%^).
+    goto :electron_failed
+  )
+  echo Clearing stale NFG processes before auto-restart...
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports %PORT%,%HANGMAN_PORT% -KillElectron -KillNodeNfg -RepoRoot "%~dp0" -Quiet
+  timeout /t 3 /nobreak >nul
+  cls
+  echo Auto-restart attempt %NFG_RESTART_COUNT% / %NFG_AUTO_RESTART_MAX_RETRIES% in %NFG_AUTO_RESTART_DELAY_SECONDS%s...
+  timeout /t %NFG_AUTO_RESTART_DELAY_SECONDS% /nobreak >nul
+  goto :restart_electron
 )
 
+:electron_ok
+goto :done
+
+:electron_failed
+echo.
+echo Electron failed to start.
+echo Run this in PowerShell for details:
+echo   cd /d "%~dp0"
+echo   npm run start:electron
+echo.
+pause
+exit /b 1
+
+:done
 endlocal
 exit /b 0
 

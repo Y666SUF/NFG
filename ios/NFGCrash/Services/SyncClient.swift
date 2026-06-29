@@ -137,11 +137,12 @@ final class SyncClient: ObservableObject {
         connectionStatus = "Connecting…"
 
         Task {
+            isBootstrappingSession = true
+            _ = await AuthStore.refreshSessionFromServer()
             if !PlayerSession.isLoggedIn {
-                isBootstrappingSession = true
                 await ensureAppGuestSession()
-                isBootstrappingSession = false
             }
+            isBootstrappingSession = false
 
             guard PlayerSession.isLoggedIn else {
                 connectionStatus = "Server unreachable"
@@ -168,13 +169,19 @@ final class SyncClient: ObservableObject {
     }
 
     func ensureAppGuestSession() async {
+        if AuthStore.isTikTokLinked, AuthStore.sessionToken != nil {
+            _ = await AuthStore.refreshSessionFromServer()
+            return
+        }
         do {
             let bootstrapApi = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
             let resp = try await bootstrapApi.bootstrapAppGuest(deviceId: AuthStore.deviceId)
-            AuthStore.saveGuestSession(
-                token: resp.token ?? "",
-                userId: resp.userId ?? "",
-                displayName: resp.displayName ?? AuthStore.appGuestDisplayName
+            guard let token = resp.token, let userId = resp.userId else { return }
+            AuthStore.applyServerSession(
+                token: token,
+                userId: userId,
+                displayName: resp.displayName ?? AuthStore.appGuestDisplayName,
+                linkedVia: resp.linkedVia
             )
         } catch {
             // Server may be down — user can retry connect.
@@ -211,7 +218,7 @@ final class SyncClient: ObservableObject {
     /// Clears session and starts a fresh app guest account.
     func signOut() async {
         if let api {
-            await api.logoutSession()
+            await api.logoutSession(unlink: true)
         }
         disconnect()
         reconnectTask?.cancel()
@@ -294,6 +301,17 @@ final class SyncClient: ObservableObject {
             let next = try await api.fetchMobileWallet()
             guard force || revisionAtStart == walletDataRevision else { return }
             applyWalletFromServer(next)
+        } catch GameAPIError.notLoggedIn {
+            if await AuthStore.refreshSessionFromServer(),
+               let refreshed = try? GameAPI(baseURLString: PlayerSession.serverBaseURL) {
+                self.api = refreshed
+                if let next = try? await refreshed.fetchMobileWallet() {
+                    guard force || revisionAtStart == walletDataRevision else { return }
+                    applyWalletFromServer(next)
+                }
+            } else {
+                walletError = GameAPIError.notLoggedIn.errorDescription
+            }
         } catch {
             walletError = error.localizedDescription
         }
@@ -762,6 +780,48 @@ final class SyncClient: ObservableObject {
         await sendCommand("!\(trimmed) \(cashout)")
     }
 
+    /// Cash out an active crash bet at the current live multiplier (before crash / before auto target).
+    func manualCashout() async {
+        guard PlayerSession.isLoggedIn else {
+            lastActionMessage = "Sign in required."
+            return
+        }
+        guard gameState.phase == .running else {
+            lastActionMessage = "You can only cash out while the round is running."
+            return
+        }
+        guard activeCrashBet != nil else {
+            lastActionMessage = "No active bet this round."
+            return
+        }
+        guard gameState.multiplier >= 1.05 else {
+            lastActionMessage = "Too early — wait until at least 1.05×"
+            return
+        }
+        await sendCommand("!cashout")
+    }
+
+    var activeCrashBet: OpenBet? {
+        guard gameState.phase == .running else { return nil }
+        let user = normalizeBetUser(resolvedBetUserId())
+        guard !user.isEmpty else { return nil }
+        let bets = gameState.openBets.isEmpty ? cachedOpenBets : gameState.openBets
+        return bets.first { normalizeBetUser($0.user) == user }
+    }
+
+    var canManualCashout: Bool {
+        activeCrashBet != nil && gameState.multiplier >= 1.05
+    }
+
+    func estimatedManualCashoutPayout(for bet: OpenBet) -> Int {
+        let mult = gameState.multiplier
+        guard mult >= 1.05 else { return 0 }
+        let gross = Int((Double(bet.amount) * mult).rounded(.down))
+        let profit = max(0, gross - bet.amount)
+        let tax = profit * 5 / 100
+        return gross - tax
+    }
+
     func checkBalance() async {
         await sendCommand("!balance")
     }
@@ -891,6 +951,25 @@ final class SyncClient: ObservableObject {
             } else {
                 lastActionMessage = "Balance on cooldown"
             }
+        case "manual_cashout":
+            if parsed.ok == true {
+                let mult = parsed.cashout ?? gameState.multiplier
+                let paid = parsed.payout ?? 0
+                let target = parsed.targetCashout ?? mult
+                if target > mult + 0.001 {
+                    lastActionMessage = "Cashed out @ \(String(format: "%.2f", mult))× (target was \(String(format: "%.2f", target))×) — +\(paid.formatted()) pts"
+                } else {
+                    lastActionMessage = "Cashed out @ \(String(format: "%.2f", mult))× — +\(paid.formatted()) pts"
+                }
+                removeCachedBetForCurrentUser()
+                if let bal = parsed.balance {
+                    applyBalanceFromServer(balance: bal)
+                } else if paid > 0 {
+                    patchWallet { $0.balance = $0.balance + paid }
+                }
+            } else {
+                lastActionMessage = manualCashoutErrorMessage(parsed.reason)
+            }
         default:
             if parsed.ok == false, let reason = parsed.reason {
                 lastActionMessage = reason.replacingOccurrences(of: "_", with: " ")
@@ -908,6 +987,17 @@ final class SyncClient: ObservableObject {
         case "bad_amount": return "Invalid bet amount"
         case "already_bet": return "You already have a bet this round"
         default: return reason ?? "Bet failed"
+        }
+    }
+
+    private func manualCashoutErrorMessage(_ reason: String?) -> String {
+        switch reason {
+        case "not_running": return "Round isn't running — can't cash out now"
+        case "no_active_bet": return "No active bet to cash out"
+        case "too_early": return "Too early — wait until at least 1.05×"
+        case "jet_lock_active": return "Commands locked — jet freeze active"
+        case "shield_break_lock": return "Commands locked — shield break active"
+        default: return reason?.replacingOccurrences(of: "_", with: " ") ?? "Cash out failed"
         }
     }
 
@@ -1544,7 +1634,11 @@ final class SyncClient: ObservableObject {
             let sec = max(0, Int((Double(s.bettingEndsAt) - Date().timeIntervalSince1970 * 1000) / 1000))
             sublineText = "Entry window \(sec)s — !amount mult (e.g. !3m 2.5, !30k 2)"
         case .running:
-            sublineText = "Multiplier climbing — auto cashout when targets hit."
+            if activeCrashBet != nil {
+                sublineText = "Tap Cash Out to take profit at the live multiplier — or wait for your target."
+            } else {
+                sublineText = "Multiplier climbing — auto cashout when targets hit."
+            }
         case .ended:
             if let crash = s.crashPoint {
                 sublineText = "Crashed at \(String(format: "%.2f", crash))×"
@@ -1568,6 +1662,12 @@ final class SyncClient: ObservableObject {
         case "bet_line", "bet":
             if let amt = payload["amount"], let co = payload["cashout"] {
                 appendFeed("\(user) bet \(amt) @ \(co)×")
+            }
+        case "manual_cashout":
+            if payload["ok"] as? Bool == true,
+               let mult = payload["cashout"],
+               let paid = payload["payout"] {
+                appendFeed("\(user) cashed out @ \(mult)× (+ \(paid) pts)")
             }
         default:
             break

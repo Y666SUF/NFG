@@ -6,6 +6,7 @@ struct NFGCrashApp: App {
 
     init() {
         PlayerSession.applyDefaultServerIfNeeded()
+        AuthStore.restoreAnchoredTikTokIdentityIfNeeded()
         AdMobAppStartup.configure()
     }
 

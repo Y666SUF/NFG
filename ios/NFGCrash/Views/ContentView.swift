@@ -104,6 +104,7 @@ struct ContentView: View {
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active else { return }
                 Task {
+                    _ = await AuthStore.refreshSessionFromServer()
                     await sync.refreshActiveAppUsers()
                     await sync.refreshMobileStatus()
                 }

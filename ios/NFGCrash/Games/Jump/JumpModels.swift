@@ -71,7 +71,12 @@ struct JumpVsPlayer: Identifiable, Hashable {
 
 struct JumpVsOpponent: Identifiable, Hashable {
     var id: String
+    var displayName: String?
     var height: Int
+    var playerX: Double?
+    var playerY: Double?
+    var velocityY: Double?
+    var elapsed: Double?
     var skinId: String?
     var fill: String?
     var ring: String?
@@ -85,16 +90,20 @@ struct JumpVsSnapshot: Hashable {
     var countdownSeconds: Int
     var matchSeed: Int?
     var matchId: String?
+    var matchStartedAtMs: Int64?
     var eliminated: Bool
     var opponents: [JumpVsOpponent]
     var pot: Int
     var winnerId: String?
 }
 
-struct JumpGhostOpponent: Identifiable, Hashable {
+/// Render-ready other player in the shared VS world (RuneScape-style visibility).
+struct JumpLivePlayerRender: Identifiable, Hashable {
     var id: String
+    var displayName: String?
+    var worldX: Double
+    var worldY: Double
     var fill: String
     var ring: String
-    var x: Double
-    var worldY: Double
+    var eliminated: Bool
 }

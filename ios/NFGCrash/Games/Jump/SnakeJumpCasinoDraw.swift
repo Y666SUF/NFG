@@ -72,9 +72,19 @@ enum SnakeJumpCasinoDraw {
     private static let skyStaticCache = SkyStaticLayerCache()
     private static var glyphImageCache: [String: CGImage] = [:]
 
-    static func drawAnimatedSky(ctx: CGContext, width: CGFloat, height: CGFloat, heightM: Int, elapsed: Double) {
+    static func drawAnimatedSky(
+        ctx: CGContext,
+        width: CGFloat,
+        height: CGFloat,
+        heightM: Int,
+        elapsed: Double,
+        liteEffects: Bool = false
+    ) {
         let tier = skyTier(heightM: heightM)
         skyStaticCache.draw(into: ctx, width: width, height: height, tier: tier)
+        if liteEffects {
+            return
+        }
         drawSoftAmbientGlow(ctx: ctx, width: width, height: height, tier: tier, elapsed: elapsed)
         drawMatrixRain(ctx: ctx, width: width, height: height, heightM: heightM, tier: tier, elapsed: elapsed)
     }

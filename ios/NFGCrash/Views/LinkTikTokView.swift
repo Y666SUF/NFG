@@ -11,6 +11,7 @@ struct LinkTikTokView: View {
     @State private var isPolling = false
     @State private var pollTask: Task<Void, Never>?
     @State private var showLegal = false
+    @State private var linkAvailability: TikTokLinkingAvailability = .checking
 
     var body: some View {
         ZStack {
@@ -19,6 +20,7 @@ struct LinkTikTokView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: NFGSpacing.xl) {
                     header
+                    linkHealthBanner
                     stepsCard
                     if !linkCode.isEmpty {
                         codeCard
@@ -47,9 +49,41 @@ struct LinkTikTokView: View {
         .sheet(isPresented: $showLegal) {
             LegalComplianceView()
         }
+        .task {
+            await refreshLinkAvailability()
+        }
         .onDisappear {
             pollTask?.cancel()
         }
+    }
+
+    private var linkHealthBanner: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: linkAvailability.isError ? "exclamationmark.triangle.fill" : "checkmark.seal.fill")
+                .font(.system(size: 14, weight: .bold))
+                .foregroundStyle(linkAvailability.isError ? Color.orange : NFGTheme.accent2)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(linkAvailability.bannerMessage)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(linkAvailability.isError ? Color.orange : NFGTheme.muted)
+                    .fixedSize(horizontal: false, vertical: true)
+                if linkAvailability.isError {
+                    Button("Check again") {
+                        Task { await refreshLinkAvailability() }
+                    }
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(NFGTheme.accent)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background((linkAvailability.isError ? Color.orange : NFGTheme.accent).opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke((linkAvailability.isError ? Color.orange : NFGTheme.accent).opacity(0.35), lineWidth: 1)
+        )
     }
 
     private var header: some View {
@@ -156,8 +190,8 @@ struct LinkTikTokView: View {
                         .tracking(1.2)
                 }
             }
-            .buttonStyle(NFGPrimaryButtonStyle(isDisabled: isLoading))
-            .disabled(isLoading)
+            .buttonStyle(NFGPrimaryButtonStyle(isDisabled: isLoading || !linkAvailability.canStartLink))
+            .disabled(isLoading || !linkAvailability.canStartLink)
 
             statusBanner
 
@@ -201,6 +235,19 @@ struct LinkTikTokView: View {
     }
 
     @MainActor
+    private func refreshLinkAvailability() async {
+        linkAvailability = .checking
+        if AuthStore.sessionToken?.isEmpty != false {
+            await sync.ensureAppGuestSession()
+        }
+        guard let api = try? GameAPI(baseURLString: PlayerSession.serverBaseURL) else {
+            linkAvailability = .serverUnreachable
+            return
+        }
+        linkAvailability = await api.checkTikTokLinkingAvailability()
+    }
+
+    @MainActor
     private func startLink() async {
         pollTask?.cancel()
         isPolling = false
@@ -209,8 +256,19 @@ struct LinkTikTokView: View {
 
         defer { isLoading = false }
 
+        if AuthStore.sessionToken?.isEmpty != false {
+            await sync.ensureAppGuestSession()
+        }
+
+        await refreshLinkAvailability()
+        guard linkAvailability.canStartLink else {
+            setStatus(linkAvailability.bannerMessage, isError: true)
+            return
+        }
+
         guard let api = try? GameAPI(baseURLString: PlayerSession.serverBaseURL) else {
-            setStatus("Could not connect. Try again in a moment.", isError: true)
+            setStatus(TikTokLinkingAvailability.serverUnreachable.bannerMessage, isError: true)
+            linkAvailability = .serverUnreachable
             return
         }
 
@@ -260,13 +318,21 @@ struct LinkTikTokView: View {
                    let token = status.token,
                    let userId = status.userId {
                     await MainActor.run {
+                        let previousUserId = AuthStore.verifiedUserId
+                        if !previousUserId.isEmpty, previousUserId.lowercased() != userId.lowercased() {
+                            LocalUserDataMigration.mergeGuestAccount(from: previousUserId, into: userId)
+                        }
                         AuthStore.saveTikTokSession(
                             token: token,
                             userId: userId,
                             displayName: status.displayName ?? userId
                         )
                         isPolling = false
-                        setStatus("Linked as @\(userId)", isError: false)
+                        if let merged = status.mergedBalance, merged > 0 {
+                            setStatus("Linked as @\(userId) — \(merged.formatted()) pts combined.", isError: false)
+                        } else {
+                            setStatus("Linked as @\(userId)", isError: false)
+                        }
                         sync.connect()
                     }
                     return

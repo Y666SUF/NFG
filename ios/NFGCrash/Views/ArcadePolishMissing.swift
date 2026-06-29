@@ -592,17 +592,15 @@ struct NFGPlinkoGameView: View {
 
     @State private var selectedRisk = "med"
     @State private var dropping = false
-    @State private var ballProgress: CGFloat = 0
-    @State private var animBucket: Int?
+    @State private var ballState = ArcadePlinkoBallState.idle
+    @State private var highlightBucket: Int?
 
     var body: some View {
         ArcadeStakePlayShell(gameId: "nfg_plinko", title: "Plinko", icon: "⚪", busy: busy, cooldownSecondsLeft: cooldownSecondsLeft, stake: $stake, minStake: minStake, maxStake: maxStake, suggestedStake: suggestedStake, balance: balance, playVisual: playVisual, inPlaySession: inPlaySession, lockedStake: lockedStake ?? (inPlaySession ? stake : nil)) {
             ArcadePlinkoBoardView(
                 risk: selectedRisk,
-                landedBucket: lastBucket,
-                animatingBucket: animBucket,
-                ballProgress: ballProgress,
-                dropping: dropping
+                ballState: ballState,
+                highlightBucket: highlightBucket ?? lastBucket
             )
 
             HStack(spacing: 8) {
@@ -612,20 +610,22 @@ struct NFGPlinkoGameView: View {
                     } label: {
                         Text(risk.uppercased())
                             .font(.system(size: 10, weight: .heavy))
+                            .foregroundStyle(selectedRisk == risk ? .white : NFGTheme.muted)
                             .padding(.horizontal, 12)
                             .padding(.vertical, 8)
-                            .background(selectedRisk == risk ? NFGTheme.accent.opacity(0.35) : NFGTheme.panel2)
+                            .background(selectedRisk == risk ? riskTint(risk).opacity(0.45) : NFGTheme.panel2)
                             .clipShape(Capsule())
+                            .overlay(Capsule().stroke(selectedRisk == risk ? riskTint(risk).opacity(0.7) : NFGTheme.border, lineWidth: 1))
                     }
                     .buttonStyle(.plain)
                     .disabled(dropping)
                 }
             }
 
-            if let lastBucket, let lastMult {
-                Text("Landed bucket \(lastBucket + 1) · ×\(String(format: "%.2f", lastMult))")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(NFGTheme.gold)
+            if let lastBucket, let lastMult, !dropping {
+                Text("×\(String(format: "%.2f", lastMult)) in slot \(lastBucket + 1)")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(lastMult >= 1 ? NFGTheme.gold : NFGTheme.muted)
             }
 
             ArcadePrimaryButton(
@@ -639,25 +639,43 @@ struct NFGPlinkoGameView: View {
         }
     }
 
+    private func riskTint(_ risk: String) -> Color {
+        switch risk {
+        case "low": return .green
+        case "high": return .red
+        default: return NFGTheme.accent
+        }
+    }
+
     @MainActor
     private func runDrop() async {
         guard !dropping else { return }
         dropping = true
-        ballProgress = 0
-        animBucket = nil
+        highlightBucket = nil
+        ballState = .idle
+
         let result = await onDrop(selectedRisk)
         guard let result else {
             dropping = false
             return
         }
-        animBucket = result.bucket
-        withAnimation(.linear(duration: 1.35)) {
-            ballProgress = 1
+
+        let path = ArcadePlinkoLayout.bouncePath(to: result.bucket)
+        ballState = .atTop
+
+        for step in path {
+            ballState = .bouncing(row: step.row, col: step.colAfter, flashRow: step.row, flashCol: step.colBefore)
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+            try? await Task.sleep(nanoseconds: 95_000_000)
         }
-        try? await Task.sleep(nanoseconds: 1_400_000_000)
+
+        ballState = .landed(bucket: result.bucket)
+        highlightBucket = result.bucket
+        UINotificationFeedbackGenerator().notificationOccurred(result.mult >= 1 ? .success : .warning)
+        try? await Task.sleep(nanoseconds: 700_000_000)
+
         dropping = false
-        ballProgress = 0
-        animBucket = nil
+        ballState = .idle
     }
 }
 
@@ -864,77 +882,90 @@ struct ArcadeHiLoCardView: View {
     }
 }
 
+enum ArcadePlinkoBallState: Equatable {
+    case idle
+    case atTop
+    case bouncing(row: Int, col: Int, flashRow: Int, flashCol: Int)
+    case landed(bucket: Int)
+}
+
+struct ArcadePlinkoBounceStep: Equatable {
+    var row: Int
+    var colBefore: Int
+    var colAfter: Int
+}
+
 enum ArcadePlinkoLayout {
+    /// Matches server: 10 peg rows → 11 buckets (binomial spread).
+    static let rowCount = 10
+    static let bucketCount = 11
+
     static let bucketMults: [String: [Double]] = [
         "low": [0.4, 0.6, 0.8, 1, 1.2, 1.5, 1.2, 1, 0.8, 0.6, 0.4],
         "med": [0.2, 0.5, 0.8, 1.1, 1.6, 2.2, 1.6, 1.1, 0.8, 0.5, 0.2],
         "high": [0, 0.2, 0.5, 1, 2, 5, 2, 1, 0.5, 0.2, 0],
     ]
-    static let rows = 8
-    static let bucketCount = 11
 
-    /// Normalized drop path (x/y in 0…1) that zigzags through peg rows and ends in `targetBucket`.
-    static func ballPath(to targetBucket: Int) -> [CGPoint] {
-        let clamped = max(0, min(bucketCount - 1, targetBucket))
-        let endX = (CGFloat(clamped) + 0.5) / CGFloat(bucketCount)
-        var points: [CGPoint] = [CGPoint(x: 0.5, y: 0.04)]
-
-        for row in 0..<rows {
-            let rowY = 0.12 + CGFloat(row) * (0.52 / CGFloat(rows))
-            let progress = CGFloat(row + 1) / CGFloat(rows + 1)
-            let trackX = 0.5 + (endX - 0.5) * progress
-            let side: CGFloat = row.isMultiple(of: 2) ? 1 : -1
-            let wobble = side * 0.028 * (1.0 - progress * 0.25)
-
-            // Approach peg, then bounce to the next row track position.
-            points.append(CGPoint(x: trackX - wobble * 0.45, y: rowY - 0.018))
-            points.append(CGPoint(x: trackX + wobble * 0.55, y: rowY + 0.022))
+    /// Build a shuffled left/right path that lands in `targetBucket` (server bucket index).
+    static func bouncePath(to targetBucket: Int) -> [ArcadePlinkoBounceStep] {
+        let target = max(0, min(bucketCount - 1, targetBucket))
+        var rights = target
+        var lefts = rowCount - rights
+        var dirs: [Bool] = []
+        dirs.reserveCapacity(rowCount)
+        while rights > 0 || lefts > 0 {
+            if rights == 0 { dirs.append(false); lefts -= 1; continue }
+            if lefts == 0 { dirs.append(true); rights -= 1; continue }
+            if Bool.random() {
+                dirs.append(true)
+                rights -= 1
+            } else {
+                dirs.append(false)
+                lefts -= 1
+            }
         }
-
-        points.append(CGPoint(x: endX, y: 0.78))
-        return points
+        var col = 0
+        var steps: [ArcadePlinkoBounceStep] = []
+        for (row, goRight) in dirs.enumerated() {
+            let before = col
+            if goRight { col += 1 }
+            steps.append(ArcadePlinkoBounceStep(row: row, colBefore: before, colAfter: col))
+        }
+        return steps
     }
 
-    static func pointAlongPath(_ points: [CGPoint], progress: CGFloat) -> CGPoint {
-        let t = max(0, min(1, progress))
-        guard points.count >= 2 else { return points.first ?? CGPoint(x: 0.5, y: 0) }
+    static func pegCenter(row: Int, col: Int, in size: CGSize) -> CGPoint {
+        let spacing = min(size.width / CGFloat(bucketCount + 1), size.height * 0.072)
+        let x = size.width * 0.5 + (CGFloat(col) - CGFloat(row) * 0.5) * spacing
+        let y = size.height * 0.1 + CGFloat(row) * spacing
+        return CGPoint(x: x, y: y)
+    }
 
-        var segmentLengths: [CGFloat] = []
-        var total: CGFloat = 0
-        for i in 1..<points.count {
-            let dx = points[i].x - points[i - 1].x
-            let dy = points[i].y - points[i - 1].y
-            let len = sqrt(dx * dx + dy * dy)
-            segmentLengths.append(len)
-            total += len
+    static func ballPosition(for state: ArcadePlinkoBallState, in size: CGSize) -> CGPoint {
+        let spacing = min(size.width / CGFloat(bucketCount + 1), size.height * 0.072)
+        switch state {
+        case .idle, .atTop:
+            return CGPoint(x: size.width * 0.5, y: size.height * 0.04)
+        case .bouncing(let row, let col, _, _):
+            return pegCenter(row: row, col: col, in: size)
+        case .landed(let bucket):
+            let x = size.width * (CGFloat(bucket) + 0.5) / CGFloat(bucketCount)
+            return CGPoint(x: x, y: size.height * 0.88)
         }
+    }
 
-        guard total > 0 else { return points.last ?? CGPoint(x: 0.5, y: 1) }
-
-        var remaining = t * total
-        for i in 1..<points.count {
-            let seg = segmentLengths[i - 1]
-            if remaining <= seg || i == points.count - 1 {
-                let local = seg > 0 ? remaining / seg : 0
-                let from = points[i - 1]
-                let to = points[i]
-                return CGPoint(
-                    x: from.x + (to.x - from.x) * local,
-                    y: from.y + (to.y - from.y) * local
-                )
-            }
-            remaining -= seg
-        }
-        return points.last ?? CGPoint(x: 0.5, y: 1)
+    static func bucketColor(mult: Double, hot: Bool) -> Color {
+        if mult >= 5 { return Color(red: 1, green: 0.78, blue: 0.1) }
+        if mult >= 2 { return Color(red: 0.95, green: 0.35, blue: 0.45) }
+        if mult >= 1 { return Color(red: 0.35, green: 0.75, blue: 0.95) }
+        return Color(red: 0.35, green: 0.42, blue: 0.58)
     }
 }
 
 struct ArcadePlinkoBoardView: View {
     let risk: String
-    var landedBucket: Int?
-    var animatingBucket: Int?
-    var ballProgress: CGFloat = 0
-    var dropping: Bool = false
+    var ballState: ArcadePlinkoBallState = .idle
+    var highlightBucket: Int?
 
     private var mults: [Double] {
         ArcadePlinkoLayout.bucketMults[risk] ?? ArcadePlinkoLayout.bucketMults["med"]!
@@ -942,86 +973,104 @@ struct ArcadePlinkoBoardView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let w = geo.size.width
-            let h = geo.size.height
-            let pegRows = ArcadePlinkoLayout.rows
+            let size = geo.size
             ZStack {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(
                         LinearGradient(
                             colors: [
-                                Color(red: 0.08, green: 0.10, blue: 0.18),
-                                Color(red: 0.04, green: 0.06, blue: 0.12),
+                                Color(red: 0.06, green: 0.09, blue: 0.17),
+                                Color(red: 0.03, green: 0.05, blue: 0.11),
                             ],
                             startPoint: .top,
                             endPoint: .bottom
                         )
                     )
 
-                Canvas { context, size in
-                    let rowCount = pegRows
-                    for row in 0..<rowCount {
-                        let pegsInRow = row + 3
-                        let y = size.height * 0.12 + CGFloat(row) * (size.height * 0.52 / CGFloat(rowCount))
-                        for col in 0..<pegsInRow {
-                            let xSpan = size.width * 0.82
-                            let x = size.width * 0.09 + xSpan * CGFloat(col + 1) / CGFloat(pegsInRow + 1)
-                            let pegRect = CGRect(x: x - 3, y: y - 3, width: 6, height: 6)
-                            context.fill(Path(ellipseIn: pegRect), with: .color(.white.opacity(0.55)))
+                Canvas { context, canvasSize in
+                    for row in 0..<ArcadePlinkoLayout.rowCount {
+                        for col in 0...row {
+                            let center = ArcadePlinkoLayout.pegCenter(row: row, col: col, in: canvasSize)
+                            let flash: Bool = {
+                                if case .bouncing(let r, _, let flashRow, let flashCol) = ballState {
+                                    return r == row && flashRow == row && flashCol == col
+                                }
+                                return false
+                            }()
+                            let r: CGFloat = flash ? 5.5 : 4
+                            let rect = CGRect(x: center.x - r, y: center.y - r, width: r * 2, height: r * 2)
+                            context.fill(
+                                Path(ellipseIn: rect),
+                                with: .color(flash ? Color.white : Color.white.opacity(0.7))
+                            )
+                            if flash {
+                                context.fill(
+                                    Path(ellipseIn: rect.insetBy(dx: -3, dy: -3)),
+                                    with: .color(Color.cyan.opacity(0.25))
+                                )
+                            }
                         }
                     }
                 }
 
-                HStack(spacing: 2) {
+                HStack(spacing: 3) {
                     ForEach(0..<ArcadePlinkoLayout.bucketCount, id: \.self) { idx in
                         let mult = mults[idx]
-                        let hot = mult >= 2
-                        let landed = landedBucket == idx || animatingBucket == idx
-                        VStack(spacing: 2) {
-                            Text(mult == 0 ? "0" : String(format: "%.1f", mult))
-                                .font(.system(size: 8, weight: .heavy, design: .rounded))
-                                .foregroundStyle(.white.opacity(0.9))
+                        let landed = highlightBucket == idx
+                        VStack(spacing: 1) {
+                            Text(mult == 0 ? "0×" : String(format: "%.1f×", mult))
+                                .font(.system(size: 7, weight: .heavy, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.95))
+                                .minimumScaleFactor(0.7)
+                                .lineLimit(1)
                         }
                         .frame(maxWidth: .infinity)
-                        .frame(height: 28)
+                        .frame(height: 32)
                         .background(
-                            hot
-                                ? Color(red: 0.9, green: 0.35, blue: 0.45).opacity(landed ? 0.95 : 0.65)
-                                : Color(red: 0.25, green: 0.45, blue: 0.85).opacity(landed ? 0.9 : 0.55)
+                            ArcadePlinkoLayout.bucketColor(mult: mult, hot: mult >= 2)
+                                .opacity(landed ? 1 : 0.72)
                         )
-                        .clipShape(RoundedRectangle(cornerRadius: 4, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: 5, style: .continuous))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5, style: .continuous)
+                                .stroke(landed ? Color.white.opacity(0.9) : Color.clear, lineWidth: 2)
+                        )
+                        .scaleEffect(landed ? 1.08 : 1)
+                        .animation(.spring(response: 0.3, dampingFraction: 0.6), value: landed)
                     }
                 }
-                .padding(.horizontal, 4)
+                .padding(.horizontal, 6)
                 .frame(maxHeight: .infinity, alignment: .bottom)
-                .padding(.bottom, 4)
+                .padding(.bottom, 6)
 
-                if dropping || ballProgress > 0 {
-                    let target = animatingBucket ?? landedBucket ?? ArcadePlinkoLayout.bucketCount / 2
-                    let path = ArcadePlinkoLayout.ballPath(to: target)
-                    let norm = ArcadePlinkoLayout.pointAlongPath(path, progress: ballProgress)
-                    let ballX = norm.x * w
-                    let ballY = norm.y * h
-                    Circle()
-                        .fill(
-                            RadialGradient(
-                                colors: [Color.white, Color(red: 1, green: 0.55, blue: 0.65)],
-                                center: .topLeading,
-                                startRadius: 1,
-                                endRadius: 14
-                            )
+                let ballPos = ArcadePlinkoLayout.ballPosition(for: ballState, in: size)
+                Circle()
+                    .fill(
+                        RadialGradient(
+                            colors: [Color.white, Color(red: 1, green: 0.45, blue: 0.58)],
+                            center: .topLeading,
+                            startRadius: 1,
+                            endRadius: 12
                         )
-                        .frame(width: 16, height: 16)
-                        .shadow(color: Color.pink.opacity(0.6), radius: 6)
-                        .position(x: ballX, y: ballY)
-                }
+                    )
+                    .frame(width: 14, height: 14)
+                    .shadow(color: Color.pink.opacity(0.7), radius: 8)
+                    .position(ballPos)
+                    .animation(.spring(response: 0.2, dampingFraction: 0.68), value: ballState)
             }
         }
-        .frame(height: 220)
+        .frame(height: 260)
         .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(NFGTheme.border.opacity(0.4), lineWidth: 1)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.pink.opacity(0.5), NFGTheme.border.opacity(0.3)],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
         )
     }
 }

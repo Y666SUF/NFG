@@ -48,6 +48,8 @@ final class SnakeJumpEngine {
     /// Player screen anchor — 45% from top minus offset (matches fixed draw position).
     static let cameraPlayerScreenRatio: Double = 0.55
     static let physicsSubsteps: Int = 3
+    /// Fixed width for VS world generation so all players get identical platforms.
+    static let vsCanonicalViewWidth: Double = 390
 
     var playerX: Double = 0
     var playerY: Double = 120
@@ -71,12 +73,17 @@ final class SnakeJumpEngine {
     private var rng: () -> Double = { Double.random(in: 0..<1) }
     private var fingerTargetX: Double?
     private(set) var fingerScreenX: Double?
+    /// When set, platform spawning uses this width instead of the live screen width.
+    private var fixedSpawnViewWidth: Double?
+    private var vsMatchStartedAtMs: Int64?
+
+    var isVSMode: Bool { fixedSpawnViewWidth != nil }
 
     init() {
         reset(viewWidth: 320)
     }
 
-    func setMatchSeed(_ seed: Int) {
+    func setMatchSeed(_ seed: Int, matchStartedAtMs: Int64? = nil) {
         var state = UInt32(truncatingIfNeeded: seed == 0 ? 1 : seed)
         rng = {
             state = state &+ 0x6d2b79f5
@@ -85,10 +92,41 @@ final class SnakeJumpEngine {
             t ^= t &+ (t &* (((t >> 7) | 1)))
             return Double((t ^ (t >> 14)) >> 0) / 4294967296.0
         }
-        reset(viewWidth: lastViewWidth)
+        fixedSpawnViewWidth = Self.vsCanonicalViewWidth
+        vsMatchStartedAtMs = matchStartedAtMs
+        reset(viewWidth: Self.vsCanonicalViewWidth)
+        warmVSWorldAhead(toY: 3200)
+    }
+
+    /// World units of vertical spawn per elapsed second — identical on every VS client.
+    private static let vsSpawnRatePerSecond = 220.0
+
+    func clearVSMode() {
+        fixedSpawnViewWidth = nil
+        vsMatchStartedAtMs = nil
+        rng = { Double.random(in: 0..<1) }
+    }
+
+    /// Pre-spawn the opening chunk so every VS client materialises identical platforms before anyone moves.
+    private func warmVSWorldAhead(toY targetY: Double) {
+        guard isVSMode else { return }
+        let spawnW = spawnViewWidth()
+        spawnUpTo(targetY: targetY, viewWidth: spawnW, maxSteps: 48)
+    }
+
+    func vsElapsedSeconds(nowMs: Int64 = Int64(Date().timeIntervalSince1970 * 1000)) -> Double? {
+        guard let start = vsMatchStartedAtMs else { return nil }
+        return max(0, Double(nowMs - start) / 1000.0)
+    }
+
+    private func spawnViewWidth() -> Double {
+        fixedSpawnViewWidth ?? lastViewWidth
     }
 
     func reset(viewWidth: Double = 320) {
+        if fixedSpawnViewWidth == nil {
+            lastViewWidth = max(280, viewWidth)
+        }
         playerX = 0
         playerY = 120
         velocityX = 0
@@ -108,8 +146,10 @@ final class SnakeJumpEngine {
         lastSafeY = 40
         nextSpawnY = 120
         plannedTopY = 130
-        lastViewWidth = max(280, viewWidth)
-        seedWorld(viewWidth: lastViewWidth)
+        if fixedSpawnViewWidth == nil {
+            lastViewWidth = max(280, viewWidth)
+        }
+        seedWorld(viewWidth: spawnViewWidth())
     }
 
     var currentHeight: Int {
@@ -128,6 +168,19 @@ final class SnakeJumpEngine {
         (milestonesClaimed + 1) * Self.milestoneStep
     }
 
+    /// Align simulation clock to server match start so moving platforms match for all players.
+    func alignElapsedToMatchStart(startedAtMs: Int64) {
+        vsMatchStartedAtMs = startedAtMs
+        if let elapsed = vsElapsedSeconds() {
+            self.elapsed = elapsed
+        }
+    }
+
+    private func syncVSElapsedFromServerClock() {
+        guard isVSMode, let synced = vsElapsedSeconds() else { return }
+        elapsed = synced
+    }
+
     var reachedNewMilestone: Bool {
         currentHeight >= nextMilestoneHeight
     }
@@ -143,7 +196,11 @@ final class SnakeJumpEngine {
         let tier = difficultyTier
         let pace = paceMultiplier(tier: tier)
         let simStep = step * pace
-        elapsed += simStep
+        if isVSMode {
+            syncVSElapsedFromServerClock()
+        } else {
+            elapsed += simStep
+        }
         lastViewWidth = max(280, viewWidth)
 
         let gravity = Self.baseGravity + Double(tier) * 14
@@ -188,9 +245,17 @@ final class SnakeJumpEngine {
         }
 
         trimPlatforms(belowY: cameraAnchorY - 60)
-        advanceWorldPlan(ceilingY: playerY + Self.worldBufferAbove, maxSteps: 2)
-        let playTop = playerY + min(Self.materializeAhead, max(480, viewHeight * 0.9))
-        spawnUpTo(targetY: playTop, viewWidth: viewWidth, maxSteps: 1)
+        if !isVSMode {
+            advanceWorldPlan(ceilingY: playerY + Self.worldBufferAbove, maxSteps: 2)
+        }
+        let spawnW = spawnViewWidth()
+        if isVSMode {
+            let sharedTop = 120 + elapsed * Self.vsSpawnRatePerSecond + 900
+            spawnUpTo(targetY: sharedTop, viewWidth: spawnW, maxSteps: 3)
+        } else {
+            let playTop = playerY + min(Self.materializeAhead, max(480, viewHeight * 0.9))
+            spawnUpTo(targetY: playTop, viewWidth: spawnW, maxSteps: 1)
+        }
         capPlatformCount()
         purgeBrokenCrumblePlatforms()
 
@@ -332,7 +397,9 @@ final class SnakeJumpEngine {
         nextSpawnY = 130
         plannedTopY = 130
         spawnUpTo(targetY: 520, viewWidth: viewWidth, maxSteps: 6)
-        advanceWorldPlan(ceilingY: playerY + Self.worldBufferAbove, maxSteps: 24)
+        if !isVSMode {
+            advanceWorldPlan(ceilingY: playerY + Self.worldBufferAbove, maxSteps: 24)
+        }
     }
 
     private func spawnUpTo(targetY: Double, viewWidth: Double, maxSteps: Int = 8) {
@@ -475,7 +542,7 @@ final class SnakeJumpEngine {
     }
 
     private func advanceWorldPlan(ceilingY: Double, maxSteps: Int) {
-        let maxX = playableHalfWidth(viewWidth: lastViewWidth)
+        let maxX = playableHalfWidth(viewWidth: spawnViewWidth())
         var steps = 0
         var planY = plannedTopY
         var planSafeX = lastSafeX

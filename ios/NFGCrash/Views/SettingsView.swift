@@ -7,6 +7,7 @@ struct SettingsView: View {
     @State private var isUnlinking = false
     @State private var unlinkError: String?
     @State private var showLegal = false
+    @State private var showVisualPreview = false
     @State private var chatBannerNotificationsEnabled = AppPreferences.chatBannerNotificationsEnabled
 
     private var accountLabel: String {
@@ -30,6 +31,7 @@ struct SettingsView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     accountSection
                     notificationsSection
+                    visualPreviewSection
                     switchAccountSection
                     aboutSection
                 }
@@ -58,6 +60,9 @@ struct SettingsView: View {
             .sheet(isPresented: $showLegal) {
                 LegalComplianceView()
                     .environmentObject(sync)
+            }
+            .sheet(isPresented: $showVisualPreview) {
+                VisualOverhaulPreviewView()
             }
         }
         .preferredColorScheme(.dark)
@@ -109,6 +114,30 @@ struct SettingsView: View {
                     sync.dismissChatBanner()
                 }
             }
+        }
+        .padding(14)
+        .background(NFGTheme.panel)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(NFGTheme.border))
+    }
+
+    private var visualPreviewSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Design")
+                .font(.headline)
+                .foregroundStyle(NFGTheme.text)
+
+            Text("Compare the current look with a proposed “Vault Terminal” refresh. Nothing changes until you approve it.")
+                .font(.caption)
+                .foregroundStyle(NFGTheme.muted)
+
+            Button {
+                showVisualPreview = true
+            } label: {
+                Label("Preview new look", systemImage: "paintpalette")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .foregroundStyle(NFGTheme.accent2)
         }
         .padding(14)
         .background(NFGTheme.panel)

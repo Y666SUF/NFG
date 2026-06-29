@@ -407,6 +407,11 @@ struct ChatActionResult: Codable {
         var target: String?
         var targetDisplayName: String?
         var stolen: Int?
+        var targetCashout: Double?
+        var payout: Int?
+        var grossPayout: Int?
+        var profit: Int?
+        var tax: Int?
         var stealsReady: Int?
     }
 }

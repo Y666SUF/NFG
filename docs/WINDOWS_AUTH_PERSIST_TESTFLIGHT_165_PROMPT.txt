@@ -1,0 +1,167 @@
+# NFG Crash — Windows server update for TestFlight build 165 (auth + TikTok link persistence)
+
+Paste this entire prompt into **Cursor on your Windows PC** (live repo `C:\Users\Yusef\test`, public URL **https://y666suf.com**).
+
+## Goal
+
+Deploy server changes so **TikTok linking is one-time** — users stay linked across TestFlight updates and server restarts. Also includes Jump VS live sync (`elapsed`, device session fixes) from recent Mac work.
+
+**iOS TestFlight build 165** is uploading from Mac now. Server must match before testers update.
+
+**Do not break:** TikTok bridge, crash loop, bets, WebSocket, leaderboard, Electron, Cloudflare tunnel.
+
+---
+
+## Step 1 — Pull latest from GitHub
+
+```powershell
+cd C:\Users\Yusef\test
+.\scripts\sync-pull.ps1 -Merge
+npm install
+```
+
+If `mobile-auth.js` changes are **not on GitHub yet**, copy from Mac repo `server/mobile-auth.js` (or apply sections below manually).
+
+---
+
+## Step 2 — Critical file: `server/mobile-auth.js`
+
+### A. Durable device → TikTok bindings (survives server restart)
+
+State file `data/mobile-sessions.json` now includes **`deviceLinks`**:
+
+```json
+{
+  "pendingLinks": { ... },
+  "sessions": { ... },
+  "deviceLinks": {
+    "<device-uuid>": {
+      "userId": "tiktokusername",
+      "displayName": "Display Name",
+      "linkedAt": 1710000000000,
+      "linkedVia": "tiktok"
+    }
+  }
+}
+```
+
+On **successful !link** (`completeLinkFromTikTok`), call `saveDeviceLink(deviceId, userId, displayName)`.
+
+On **explicit unlink only** (logout with `unlink: true`), call `clearDeviceLink(deviceId)`.
+
+### B. Restore TikTok session on bootstrap (no re-link after restart)
+
+`POST /api/mobile/auth/app-guest` must:
+
+1. Return existing valid session for device (prefer `linkedVia: tiktok` over guest).
+2. If no session but **`deviceLinks[deviceId]`** exists → issue **new TikTok token** (`restored: true`), NOT a new guest.
+3. Accept optional body field **`claimUserId`** — if it matches the stored binding, restore that TikTok user.
+
+Only create a **new app guest** when there is no session AND no device link.
+
+### C. Session TTL + sliding renewal
+
+- `SESSION_TTL_MS` = **365 days**
+- In `validateBearer`, on each valid request: `session.expiresAt = now + SESSION_TTL_MS`
+
+### D. One session per device on link / new guest
+
+- `clearDeviceSessions(deviceId)` before creating TikTok session after link.
+- `findValidSessionForDevice` prefers TikTok over guest.
+
+### E. Logout semantics
+
+`POST /api/mobile/session/logout` body:
+
+```json
+{ "deviceId": "...", "unlink": true }
+```
+
+- Always clears all **sessions** for that device.
+- Clears **`deviceLinks[deviceId]`** only when `unlink: true` (Settings → Unlink).
+- Normal token expiry / app updates must **NOT** send `unlink: true`.
+
+### F. Migration on server start
+
+`migrateDeviceLinksFromSessions()` backfills `deviceLinks` from existing TikTok sessions and completed `pendingLinks` with `status: "linked"`.
+
+---
+
+## Step 3 — Jump VS live sync (`server/jump-vs-lobby.js`)
+
+Confirm `progress` handler relays:
+
+- `playerX`, `playerY`, `velocityY`, `elapsed`
+- `opponent_progress` broadcasts same fields
+
+`match_start` includes `startedAt` (ms timestamp).
+
+---
+
+## Step 4 — Arcade (`server/mobile-arcade.js`)
+
+Confirm:
+
+- `vsMatchSeed` preserved on VS `start` action
+- `stakeBounds()` uses `STAKE_ABS_MAX` (100k)
+
+---
+
+## Step 5 — Manual crash cashout (`server/game.js`) — if not already live
+
+Chat during **running** round:
+
+- `!cashout`, `!cash`, `!out`, `!co` → settle at **current** multiplier
+
+---
+
+## Step 6 — Restart server
+
+```powershell
+cd C:\Users\Yusef\test
+# Stop existing Node (Task Manager or your usual method), then:
+node server/index.js
+# Or your PM2 / scheduled task / Electron launcher
+```
+
+Verify endpoints:
+
+```powershell
+curl https://y666suf.com/api/mobile/link/health
+curl -X POST https://y666suf.com/api/mobile/auth/app-guest -H "Content-Type: application/json" -d "{\"deviceId\":\"test-device\"}"
+```
+
+Second call should return `linkedVia: "app_guest"` for unknown device.
+
+---
+
+## Step 7 — Smoke test (two phones after TestFlight 165)
+
+1. Fresh install or update to build **165** from TestFlight.
+2. Link TikTok once via !link on live.
+3. Force-quit app, reopen → still TikTok user (not App User).
+4. **Restart Node on PC**, reopen app → still TikTok user (server restored from `deviceLinks`).
+5. Install **next** TestFlight build over 165 without unlinking → still TikTok user.
+6. Settings → **Unlink account** → becomes App User; linking again works.
+
+---
+
+## Files checklist
+
+| File | What changed |
+|------|----------------|
+| `server/mobile-auth.js` | `deviceLinks`, restore on bootstrap, `claimUserId`, sliding TTL, unlink flag |
+| `server/jump-vs-lobby.js` | Live opponent kinematics + `elapsed` |
+| `server/mobile-arcade.js` | VS seed + 100k stakes |
+| `server/game.js` | Manual cashout (if not deployed) |
+
+---
+
+## iOS build 165 (already on TestFlight upload queue)
+
+- Keychain-persisted TikTok anchor (link once per install)
+- Never downgrade TikTok → App User on server refresh
+- Jump VS same-map + live player interpolation
+- Auth session recovery without wiping linked accounts
+
+Tell Mac when PC is restarted so testers can update TestFlight.

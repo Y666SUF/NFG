@@ -1,0 +1,159 @@
+# NFG Crash — Fix TikTok linking ("Can't connect right now") on Windows server
+
+Paste this entire prompt into **Cursor on the Windows PC** that runs the live game server at **https://y666suf.com**.
+
+## Symptom
+
+iOS users see **"Can't connect right now"** or **"TikTok linking isn't on this server build yet"** when trying to link TikTok in Profile → Link TikTok.
+
+The app now runs a pre-flight check against:
+- `GET /api/mobile/link/health` (new — preferred)
+- `GET /api/mobile/status` (server reachable)
+- `GET /api/mobile/link/status/:code` (link routes exist)
+
+Linking only works when **all three layers** are up:
+1. Node server + Cloudflare tunnel reachable at `https://y666suf.com`
+2. Mobile auth link routes in `server/mobile-auth.js`
+3. TikTok bridge connected to live so `!link XXXXXX` comments reach `/api/chat`
+
+---
+
+## Step 1 — Pull latest server code
+
+```powershell
+cd C:\Users\Yusef\test
+.\scripts\sync-pull.ps1 -Merge
+npm install
+```
+
+If `-Merge` fails due to conflicts, resolve `server/mobile-auth.js`, `server/mobile-api.js`, and `server/index.js` in favor of **git main** (keep any PC-only env paths).
+
+---
+
+## Step 2 — Verify these files exist and are wired
+
+### `server/mobile-auth.js` must include:
+
+- `GET /api/mobile/link/health` — returns `{ ok: true, linkStart, linkStatus, pendingLinks, tiktokBridge }`
+- `POST /api/mobile/link/start` — body `{ deviceId }` → `{ code, tiktokCommand, expiresInSeconds }`
+- `GET /api/mobile/link/status/:code` — poll status until `linked`
+- `completeLinkFromTikTok()` — called when user comments `!link CODE` on live
+- `POST /api/mobile/auth/app-guest` — guest accounts before link (100k starter)
+
+### `server/mobile-api.js` must register auth with TikTok bridge status:
+
+```js
+registerMobileAuthRoutes(app, { isLocalhost, pointStore, getTikTokBridgeStatus });
+```
+
+### `server/index.js` — `/api/chat` must call link completion:
+
+When a TikTok comment `!link XXXXXX` arrives via the bridge, `completeLinkFromTikTok` in `mobile-auth.js` must run and return success so the app poll sees `status: "linked"`.
+
+Search for `completeLinkFromTikTok` — it should be invoked from the chat handler for non-mobile chat posts.
+
+### `server/tiktok-bridge.js` must be running
+
+- Forwards live comments to `POST http://localhost:<PORT>/api/chat`
+- Logs `[TikTok] Link attempt from @user: !link XXXXXX` when someone tries to link
+- Bridge state should be `"live"` when you're actually live on TikTok
+
+---
+
+## Step 3 — Restart the live server (ONE instance only)
+
+Stop any duplicate Node/Electron processes. Restart the **single** production launcher (pm2 / `run-electron-cloudflare.bat` / your usual script).
+
+After restart, wait ~10 seconds for Cloudflare tunnel.
+
+---
+
+## Step 4 — Run these checks from PowerShell
+
+### A) Server reachable
+
+```powershell
+curl https://y666suf.com/api/mobile/status
+```
+
+Expect JSON with `"service": "nfg-crash"` and `tiktokLive` block.
+
+### B) Link health endpoint (new)
+
+```powershell
+curl https://y666suf.com/api/mobile/link/health
+```
+
+Expect:
+```json
+{
+  "ok": true,
+  "linkStart": true,
+  "linkStatus": true,
+  "pendingLinks": 0,
+  "tiktokBridge": { "enabled": true, "state": "live", "uniqueId": "y666.suf", "isLive": true }
+}
+```
+
+- **404 on /link/health** → PC is on **stale server** — re-pull and restart (Step 1–3).
+- **Connection refused / timeout** → Cloudflare tunnel down or Node not running.
+- **`tiktokBridge.state` not `"live"`** → TikTok bridge not connected — go live on TikTok or restart bridge with correct `TIKTOK_UNIQUE_ID`.
+
+### C) Link routes exist (fallback probe)
+
+```powershell
+curl https://y666suf.com/api/mobile/link/status/000000
+```
+
+Expect `{ "ok": true, "status": "expired_or_unknown" }` — **not** 404.
+
+### D) Start link (smoke test)
+
+```powershell
+curl -X POST https://y666suf.com/api/mobile/link/start -H "Content-Type: application/json" -d "{\"deviceId\":\"pc-smoke-test-001\"}"
+```
+
+Expect `{ "ok": true, "code": "XXXXXX", "tiktokCommand": "!link XXXXXX", ... }`.
+
+### E) Complete link (requires you LIVE on TikTok)
+
+1. Use code from (D)
+2. From your TikTok account, comment exactly `!link XXXXXX` on your **live** stream
+3. Poll:
+
+```powershell
+curl https://y666suf.com/api/mobile/link/status/XXXXXX
+```
+
+Expect `"status": "linked"` with `token` and `userId`.
+
+If (D) works but (E) never links:
+- Check Node logs for `[TikTok] Link attempt`
+- If no log → bridge not forwarding chat
+- If log but no link → `completeLinkFromTikTok` not wired in `/api/chat`
+
+---
+
+## Step 5 — Common fixes
+
+| Problem | Fix |
+|---------|-----|
+| 404 on `/api/mobile/link/*` | Deploy `mobile-auth.js` + restart; confirm `registerMobileAuthRoutes` in `mobile-api.js` |
+| 404 on `/api/mobile/link/health` | Pull latest `main` (Mac pushed health endpoint); restart |
+| Can't connect / timeout | Start Cloudflare tunnel; confirm only one Node on correct port |
+| Link code generated but never completes | TikTok bridge offline or not live; user must comment while **LIVE** |
+| `deviceId required` errors | Normal for empty body; iOS sends deviceId correctly |
+| State file permissions | Ensure `data/mobile-auth-state.json` (or configured path) is writable |
+
+---
+
+## Step 6 — Tell Mac when done
+
+Reply that these pass:
+- [ ] `curl .../api/mobile/link/health` → `ok: true`
+- [ ] `curl .../api/mobile/link/status/000000` → not 404
+- [ ] Test `!link` comment on live completes link
+
+Mac will ship iOS build with pre-flight diagnostics so users see **why** linking failed instead of generic "Can't connect".
+
+When finished, set `docs/cross-device/pending-on-pc.md` frontmatter `cross_device_status: done` if you use that workflow.

@@ -1,0 +1,191 @@
+# NFG Crash — Windows PC server update: manual cashout + Jump VS + recent fixes
+
+Paste this entire prompt into **Cursor on your Windows PC** (live server repo at `C:\Users\Yusef\test`, public URL **https://y666suf.com**).
+
+## Goal
+
+Bring the live Node server up to date so these iOS / livestream features work:
+
+1. **Manual crash cashout** — `!cashout` / `!cash` / `!out` / `!co` pays at the **current live multiplier** during a running round (before crash / before auto target). Same 5% tax on profit as auto cashout.
+2. **NFG Jump VS multiplayer** — WebSocket lobby at `/api/mobile/jump/vs/ws`, 2+ players → 15s countdown → shared match seed → winner takes pot.
+3. **Recent server fixes already on GitHub `main`** (pull if missing): TikTok link account merge, offline arcade `offline_sync`, 100k stake cap constant.
+
+**Do not break:** TikTok bridge, crash game loop, bets, WebSocket state broadcast, mobile auth, app chat, leaderboard, Electron main window, Cloudflare tunnel.
+
+---
+
+## Step 1 — Pull latest from GitHub
+
+```powershell
+cd C:\Users\Yusef\test
+.\scripts\sync-pull.ps1 -Merge
+npm install
+```
+
+After pull, confirm these files exist:
+- `server/jump-vs-lobby.js`
+- `server/mobile-api.js` contains `registerJumpVsRoutes`
+- `server/hangman-proxy.js` contains `tryJumpVsUpgrade`
+- `server/mobile-arcade.js` contains `applyOfflineArcadeSync` and `STAKE_ABS_MAX = 100_000`
+
+---
+
+## Step 2 — Add manual crash cashout to `server/game.js`
+
+**This is NOT on GitHub `main` yet** — implement on PC (or merge if Mac pushed since this prompt).
+
+### 2A. Add helper `_settleBetWin(user, bet, settleMult, opts = {})`
+
+Place after `_finishRound` / before `_tick`. Shared settle logic for auto + manual cashout:
+
+- Round `settleMult` to 2 decimals
+- Reject if below `this.opts.minCashout` (usually 1.05)
+- `grossPayout = floor(amount * mult)`, 5% tax on profit, credit user, add tax to pot
+- Build win row with: `user`, `displayName`, `nameStyle`, `level`, `rank`, `result: "win"`, `grossPayout`, `payout`, `profit`, `tax`, `cashout: mult`, `targetCashout: bet.cashout`, `bet`, `manual: !!opts.manual`
+- Award XP `CASHOUT_SUCCESS`, call `this.onCashoutWin(...)` in try/catch
+- Return the row object
+
+### 2B. Add `manualCashout(rawUser)`
+
+- Only when `this.phase === PHASE.RUNNING`
+- User must have active bet in `this.bets`
+- Settle at **current** `this.multiplier` (floored to 2 decimals), not their target
+- If mult < minCashout → `{ ok: false, reason: "too_early" }`
+- Call `_settleBetWin(user, bet, settleMult, { manual: true })`
+- Remove bet from `this.bets`, push row to `this._winsThisRound`, call `this.onUpdate()`
+- Return `{ ok: true, user, displayName, balance, amount, cashout, targetCashout, grossPayout, payout, profit, tax, ... }`
+
+### 2C. Refactor auto cashout in `_tick()`
+
+Replace inline win-settle block (when `settleAt >= bet.cashout`) with:
+
+```javascript
+const row = this._settleBetWin(user, bet, bet.cashout);
+if (row) {
+  this._winsThisRound.push(row);
+  resolved.push(user);
+}
+```
+
+### 2D. Wire chat commands in `parseChatMessage`
+
+Add **before** the jet-lock check (so players can cash out even when command-locked):
+
+```javascript
+if (lower === "!cashout" || lower === "!cash" || lower === "!out" || lower === "!co") {
+  return { type: "manual_cashout", ...this.manualCashout(user) };
+}
+```
+
+### 2E. Optional livestream UI
+
+If your Electron/desktop crash overlay has a cashout button, wire it to send `!cashout` for the logged-in user (same as TikTok chat path via `/api/chat`).
+
+---
+
+## Step 3 — Fix arcade stake cap in `server/mobile-arcade.js`
+
+`STAKE_ABS_MAX = 100_000` exists on main but `stakeBounds()` may still cap at `Math.floor(def * 3)`.
+
+In `stakeBounds`, change:
+
+```javascript
+const capHigh = Math.floor(def * 3);
+```
+
+to:
+
+```javascript
+const capHigh = STAKE_ABS_MAX;
+```
+
+This lets Wheel / Plinko / Mines / Hi-Lo / Dice / Tower accept stakes up to 100k (still limited by balance).
+
+---
+
+## Step 4 — Verify Jump VS is wired (usually already on main after pull)
+
+No new code if pull succeeded — just confirm:
+
+| Check | Expected |
+|-------|----------|
+| `server/jump-vs-lobby.js` | exists |
+| `registerJumpVsRoutes(app, ...)` in `mobile-api.js` | line ~87 |
+| `tryJumpVsUpgrade(request, socket, head, ctx)` in `hangman-proxy.js` upgrade handler | before crash WSS |
+| `attachHangmanWebSocketProxy(server, wss, { pointStore })` in `index.js` | passes pointStore |
+| `prepareJumpVsMatch` / `finalizeJumpVsMatch` in `mobile-arcade.js` | exported |
+
+VS WebSocket path: **`/api/mobile/jump/vs/ws?token=<bearer>`** on the same port as Crash (3847 / tunnel).
+
+---
+
+## Step 5 — Restart live Node (single instance)
+
+Stop any duplicate Node processes. Restart your usual launcher / `npm start` / PM2.
+
+Only **one** process should bind the live port behind Cloudflare.
+
+---
+
+## Step 6 — Smoke tests
+
+### Manual cashout (during a running round with an active bet)
+
+TikTok chat or API:
+
+```
+!cashout
+```
+
+Or `!cash`, `!out`, `!co`.
+
+Expect JSON from `/api/chat` with `type: "manual_cashout"`, `ok: true`, `cashout` = current multiplier, `payout` credited.
+
+Errors: `not_running`, `no_active_bet`, `too_early` (before 1.05×).
+
+### Jump VS status
+
+```powershell
+curl https://y666suf.com/api/mobile/jump/vs/status -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+Expect: `{ "ok": true, "phase": "waiting", "wsPath": "/api/mobile/jump/vs/ws", ... }`
+
+### Offline sync (if not already verified)
+
+Search `mobile-arcade.js` for `offline_sync` — should credit points without active session.
+
+### Stake cap
+
+Arcade play status for a staked game should show max stake up to 100k (or balance if lower).
+
+---
+
+## Step 7 — Commit & push (optional but recommended)
+
+If you implemented manual cashout on PC:
+
+```powershell
+git add server/game.js server/mobile-arcade.js
+git commit -m "Add manual crash cashout and fix arcade stake cap to STAKE_ABS_MAX."
+git push origin main
+```
+
+---
+
+## iOS note (no PC action)
+
+TestFlight builds carry the **Cash Out** button (Crash) and **Jump VS lobby UI** — server must be updated + restarted first. Two signed-in devices needed to test VS lobby.
+
+---
+
+## Quick checklist
+
+- [ ] Pulled latest `main`
+- [ ] `manualCashout` + `!cashout` in `server/game.js`
+- [ ] `_settleBetWin` shared by auto + manual cashout
+- [ ] `stakeBounds` uses `STAKE_ABS_MAX`
+- [ ] Jump VS files present + WebSocket upgrade works
+- [ ] Node restarted (one instance)
+- [ ] `/api/mobile/jump/vs/status` returns ok
+- [ ] `!cashout` works mid-round on live stream

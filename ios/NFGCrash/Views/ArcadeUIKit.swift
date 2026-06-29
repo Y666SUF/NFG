@@ -967,7 +967,7 @@ struct ArcadeSkillLobbyStat: Identifiable {
     let tint: Color
 }
 
-struct ArcadeSkillLobbyChrome<Middle: View>: View {
+struct ArcadeSkillLobbyChrome<Middle: View, Footer: View>: View {
     let gameId: String
     let title: String
     let subtitle: String
@@ -981,8 +981,11 @@ struct ArcadeSkillLobbyChrome<Middle: View>: View {
     let isLoading: Bool
     let offlinePendingPoints: Int
     let offlinePendingHeight: Int
+    let playTitle: String
+    let playDisabled: Bool
     let onPlay: () -> Void
     @ViewBuilder let middleContent: () -> Middle
+    @ViewBuilder let footerContent: () -> Footer
 
     init(
         gameId: String,
@@ -998,8 +1001,11 @@ struct ArcadeSkillLobbyChrome<Middle: View>: View {
         isLoading: Bool,
         offlinePendingPoints: Int = 0,
         offlinePendingHeight: Int = 0,
+        playTitle: String = "Play",
+        playDisabled: Bool = false,
         onPlay: @escaping () -> Void,
-        @ViewBuilder middleContent: @escaping () -> Middle = { EmptyView() }
+        @ViewBuilder middleContent: @escaping () -> Middle = { EmptyView() },
+        @ViewBuilder footerContent: @escaping () -> Footer = { EmptyView() }
     ) {
         self.gameId = gameId
         self.title = title
@@ -1014,8 +1020,11 @@ struct ArcadeSkillLobbyChrome<Middle: View>: View {
         self.isLoading = isLoading
         self.offlinePendingPoints = offlinePendingPoints
         self.offlinePendingHeight = offlinePendingHeight
+        self.playTitle = playTitle
+        self.playDisabled = playDisabled
         self.onPlay = onPlay
         self.middleContent = middleContent
+        self.footerContent = footerContent
     }
 
     var body: some View {
@@ -1027,11 +1036,12 @@ struct ArcadeSkillLobbyChrome<Middle: View>: View {
             middleContent()
             previewCard
             pendingSyncBanner
+            footerContent()
             ArcadePrimaryButton(
-                title: isLoading ? "Loading…" : "Play",
+                title: isLoading ? "Loading…" : playTitle,
                 icon: "play.fill",
                 tint: playTint,
-                disabled: isLoading
+                disabled: isLoading || playDisabled
             ) {
                 onPlay()
             }

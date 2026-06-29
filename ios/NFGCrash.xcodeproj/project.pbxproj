@@ -22,6 +22,8 @@
 		A1B2C3D40000000000000008 /* PlayerSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D40000000000000019 /* PlayerSession.swift */; };
 		A1B2C3D40000000000000009 /* OfflineQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001A /* OfflineQueue.swift */; };
 		A1B2C3D4000000000000000A /* NFGTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001B /* NFGTheme.swift */; };
+		E2B2C3D60000000000000101 /* NFGThemeVaultTerminal.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2B2C3D60000000000000102 /* NFGThemeVaultTerminal.swift */; };
+		E2B2C3D60000000000000103 /* VisualOverhaulPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2B2C3D60000000000000104 /* VisualOverhaulPreviewView.swift */; };
 		A1B2C3D4000000000000000B /* CrashChartView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001C /* CrashChartView.swift */; };
 		A1B2C3D4000000000000000C /* LeaderboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001D /* LeaderboardView.swift */; };
 		A1B2C3D4000000000000000D /* AuthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4000000000000001E /* AuthStore.swift */; };
@@ -76,6 +78,7 @@
 		E1B2C3D500000000000000BA /* SnakeJumpGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000BB /* SnakeJumpGameView.swift */; };
 		E1B2C3D500000000000000BC /* SnakeJumpTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000BD /* SnakeJumpTheme.swift */; };
 		E1B2C3D500000000000000DE /* SnakeJumpCasinoDraw.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000DF /* SnakeJumpCasinoDraw.swift */; };
+		E1B2C3D500000000000000EC /* SnakeJumpPerformanceSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000ED /* SnakeJumpPerformanceSettings.swift */; };
 		E1B2C3D500000000000000C0 /* BlocksEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000C1 /* BlocksEngine.swift */; };
 		E1B2C3D500000000000000C2 /* BlocksGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000C3 /* BlocksGameView.swift */; };
 		E1B2C3D500000000000000E0 /* BlocksGameScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000E1 /* BlocksGameScreen.swift */; };
@@ -84,6 +87,8 @@
 		E1B2C3D500000000000000E6 /* JumpShopLocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000E7 /* JumpShopLocalStore.swift */; };
 		E1B2C3D500000000000000D5 /* JumpShopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000D6 /* JumpShopSheet.swift */; };
 		E1B2C3D500000000000000E2 /* NFGJumpPersonalBest.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000E3 /* NFGJumpPersonalBest.swift */; };
+		E1B2C3D500000000000000E8 /* NFGJumpLocalEarnedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000E9 /* NFGJumpLocalEarnedStore.swift */; };
+		E1B2C3D500000000000000EA /* LocalUserDataMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000EB /* LocalUserDataMigration.swift */; };
 		E1B2C3D500000000000000E4 /* JumpPendingRunStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000E5 /* JumpPendingRunStore.swift */; };
 		E1B2C3D500000000000000D7 /* BlocksLocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000D8 /* BlocksLocalStore.swift */; };
 		F3B4C5D60000000000000002 /* VaultRunEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3B4C5D60000000000000001 /* VaultRunEngine.swift */; };
@@ -118,6 +123,8 @@
 		A1B2C3D40000000000000019 /* PlayerSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlayerSession.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001A /* OfflineQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineQueue.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001B /* NFGTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFGTheme.swift; sourceTree = "<group>"; };
+		E2B2C3D60000000000000102 /* NFGThemeVaultTerminal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFGThemeVaultTerminal.swift; sourceTree = "<group>"; };
+		E2B2C3D60000000000000104 /* VisualOverhaulPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualOverhaulPreviewView.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001C /* CrashChartView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashChartView.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001D /* LeaderboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LeaderboardView.swift; sourceTree = "<group>"; };
 		A1B2C3D4000000000000001E /* AuthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthStore.swift; sourceTree = "<group>"; };
@@ -171,6 +178,7 @@
 		E1B2C3D500000000000000BB /* SnakeJumpGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnakeJumpGameView.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000BD /* SnakeJumpTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnakeJumpTheme.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000DF /* SnakeJumpCasinoDraw.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnakeJumpCasinoDraw.swift; sourceTree = "<group>"; };
+		E1B2C3D500000000000000ED /* SnakeJumpPerformanceSettings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnakeJumpPerformanceSettings.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000C1 /* BlocksEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocksEngine.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000C3 /* BlocksGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocksGameView.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000E1 /* BlocksGameScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocksGameScreen.swift; sourceTree = "<group>"; };
@@ -179,6 +187,8 @@
 		E1B2C3D500000000000000E7 /* JumpShopLocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpShopLocalStore.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000D6 /* JumpShopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpShopSheet.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000E3 /* NFGJumpPersonalBest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFGJumpPersonalBest.swift; sourceTree = "<group>"; };
+		E1B2C3D500000000000000E9 /* NFGJumpLocalEarnedStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFGJumpLocalEarnedStore.swift; sourceTree = "<group>"; };
+		E1B2C3D500000000000000EB /* LocalUserDataMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalUserDataMigration.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000E5 /* JumpPendingRunStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpPendingRunStore.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000D8 /* BlocksLocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocksLocalStore.swift; sourceTree = "<group>"; };
 		F3B4C5D60000000000000001 /* VaultRunEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VaultRunEngine.swift; sourceTree = "<group>"; };
@@ -235,9 +245,11 @@
 				E1B2C3D500000000000000BB /* SnakeJumpGameView.swift */,
 				E1B2C3D500000000000000BD /* SnakeJumpTheme.swift */,
 				E1B2C3D500000000000000DF /* SnakeJumpCasinoDraw.swift */,
+				E1B2C3D500000000000000ED /* SnakeJumpPerformanceSettings.swift */,
 				E1B2C3D500000000000000E7 /* JumpShopLocalStore.swift */,
 				E1B2C3D500000000000000D6 /* JumpShopSheet.swift */,
 				E1B2C3D500000000000000E3 /* NFGJumpPersonalBest.swift */,
+				E1B2C3D500000000000000E9 /* NFGJumpLocalEarnedStore.swift */,
 				E1B2C3D500000000000000E5 /* JumpPendingRunStore.swift */,
 			);
 			path = Jump;
@@ -328,6 +340,7 @@
 				A1B2C3D4000000000000001A /* OfflineQueue.swift */,
 				E1B2C3D500000000000000D2 /* ArcadeOfflinePointsQueue.swift */,
 				A1B2C3D4000000000000001E /* AuthStore.swift */,
+				E1B2C3D500000000000000EB /* LocalUserDataMigration.swift */,
 				A1B2C3D4000000000000005E /* RewardedAdService.swift */,
 				A1B2C3D40000000000000066 /* AdMobAppStartup.swift */,
 				A1B2C3D4000000000000007B /* StoreKitService.swift */,
@@ -360,6 +373,7 @@
 				A1B2C3D4000000000000007A /* ActiveAppUsersListView.swift */,
 				A1B2C3D4000000000000007D /* AdSetupDiagnosticsView.swift */,
 				A1B2C3D40000000000000081 /* SettingsView.swift */,
+				E2B2C3D60000000000000104 /* VisualOverhaulPreviewView.swift */,
 				A1B2C3D40000000000000085 /* InAppChatBannerView.swift */,
 				A1B2C3D40000000000000089 /* PlayerCosmeticViews.swift */,
 				A1B2C3D4000000000000008B /* CosmeticsShopView.swift */,
@@ -382,6 +396,7 @@
 			isa = PBXGroup;
 			children = (
 				A1B2C3D4000000000000001B /* NFGTheme.swift */,
+				E2B2C3D60000000000000102 /* NFGThemeVaultTerminal.swift */,
 				A1B2C3D400000000000000B1 /* Components.swift */,
 				A1B2C3D4000000000000008D /* VaultBadgeAssets.swift */,
 			);
@@ -490,10 +505,13 @@
 				E1B2C3D500000000000000D1 /* ArcadeOfflinePointsQueue.swift in Sources */,
 				E1B2C3D500000000000000D3 /* LastBetStore.swift in Sources */,
 				A1B2C3D4000000000000000A /* NFGTheme.swift in Sources */,
+				E2B2C3D60000000000000101 /* NFGThemeVaultTerminal.swift in Sources */,
+				E2B2C3D60000000000000103 /* VisualOverhaulPreviewView.swift in Sources */,
 				A1B2C3D4000000000000000B /* CrashChartView.swift in Sources */,
 				A1B2C3D4000000000000000C /* LeaderboardView.swift in Sources */,
 				F2A1B2C300000000000000AE /* MobileGameHostAdminPanel.swift in Sources */,
 				A1B2C3D4000000000000000D /* AuthStore.swift in Sources */,
+				E1B2C3D500000000000000EA /* LocalUserDataMigration.swift in Sources */,
 				A1B2C3D4000000000000000E /* LinkTikTokView.swift in Sources */,
 				A1B2C3D40000000000000037 /* RoundResultPopupView.swift in Sources */,
 				A1B2C3D40000000000000039 /* TikTokLiveBadge.swift in Sources */,
@@ -546,9 +564,11 @@
 				E1B2C3D500000000000000BA /* SnakeJumpGameView.swift in Sources */,
 				E1B2C3D500000000000000BC /* SnakeJumpTheme.swift in Sources */,
 				E1B2C3D500000000000000DE /* SnakeJumpCasinoDraw.swift in Sources */,
+				E1B2C3D500000000000000EC /* SnakeJumpPerformanceSettings.swift in Sources */,
 				E1B2C3D500000000000000E6 /* JumpShopLocalStore.swift in Sources */,
 				E1B2C3D500000000000000D5 /* JumpShopSheet.swift in Sources */,
 				E1B2C3D500000000000000E2 /* NFGJumpPersonalBest.swift in Sources */,
+				E1B2C3D500000000000000E8 /* NFGJumpLocalEarnedStore.swift in Sources */,
 				E1B2C3D500000000000000E4 /* JumpPendingRunStore.swift in Sources */,
 				E1B2C3D500000000000000C0 /* BlocksEngine.swift in Sources */,
 				E1B2C3D500000000000000C2 /* BlocksGameView.swift in Sources */,
@@ -694,7 +714,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 156;
+                CURRENT_PROJECT_VERSION = 165;
 				DEVELOPMENT_TEAM = VM34N9485F;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -723,7 +743,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 156;
+                CURRENT_PROJECT_VERSION = 165;
 				DEVELOPMENT_TEAM = VM34N9485F;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;

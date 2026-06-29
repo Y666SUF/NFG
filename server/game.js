@@ -450,6 +450,83 @@ class CrashGame {
     this._runPostRoundFlow();
   }
 
+  _settleBetWin(user, bet, settleMult, opts = {}) {
+    const mult = Math.round(Number(settleMult) * 100) / 100;
+    if (!Number.isFinite(mult) || mult < this.opts.minCashout) return null;
+    const grossPayout = Math.floor(Number(bet.amount || 0) * mult);
+    const profit = Math.max(0, grossPayout - Number(bet.amount || 0));
+    const tax = Math.max(0, Math.floor(profit * 0.05));
+    const payout = Math.max(0, grossPayout - tax);
+    this.store.credit(user, payout);
+    if (tax > 0 && this.store.addTaxToPot) this.store.addTaxToPot(tax);
+    const v = this._userView(user);
+    const row = {
+      user,
+      displayName: v.displayName,
+      nameStyle: v.nameStyle,
+      level: v.level,
+      rank: v.rank,
+      result: "win",
+      grossPayout,
+      payout,
+      profit,
+      tax,
+      cashout: mult,
+      targetCashout: Number(bet.cashout) || mult,
+      bet: Number(bet.amount || 0),
+      manual: !!opts.manual,
+    };
+    this.store.awardXP(user, "CASHOUT_SUCCESS", Math.max(1, mult / 2));
+    try {
+      this.onCashoutWin({
+        user,
+        displayName: v.displayName,
+        cashout: mult,
+        payout,
+        grossPayout,
+        roundId: this.roundId,
+        at: Date.now(),
+      });
+    } catch (_) {
+      /* ignore website stats hook errors */
+    }
+    return row;
+  }
+
+  manualCashout(rawUser) {
+    const user = this._normUser(rawUser);
+    if (!user) return { ok: false, reason: "invalid_user" };
+    if (this.phase !== PHASE.RUNNING) return { ok: false, reason: "not_running" };
+    const bet = this.bets.get(user);
+    if (!bet) return { ok: false, reason: "no_active_bet" };
+    const settleMult = Math.floor(this.multiplier * 100) / 100;
+    if (settleMult < this.opts.minCashout) {
+      return { ok: false, reason: "too_early", multiplier: settleMult, minCashout: this.opts.minCashout };
+    }
+    const row = this._settleBetWin(user, bet, settleMult, { manual: true });
+    if (!row) return { ok: false, reason: "settle_failed" };
+    this.bets.delete(user);
+    this._winsThisRound.push(row);
+    this.onUpdate();
+    const v = this._userView(user);
+    return {
+      ok: true,
+      user,
+      displayName: v.displayName,
+      nameStyle: v.nameStyle,
+      level: v.level,
+      rank: v.rank,
+      balance: this.store.getBalance(user),
+      amount: row.bet,
+      cashout: settleMult,
+      targetCashout: row.targetCashout,
+      grossPayout: row.grossPayout,
+      payout: row.payout,
+      profit: row.profit,
+      tax: row.tax,
+    };
+  }
+
   _tick() {
     if (this.phase !== PHASE.RUNNING) return;
     if (this.bets.size === 0) return this._finishRound(this.crashPoint);
@@ -490,43 +567,11 @@ class CrashGame {
     const resolved = [];
     for (const [user, bet] of this.bets) {
       if (settleAt >= bet.cashout) {
-        const grossPayout = Math.floor(bet.amount * bet.cashout);
-        const profit = Math.max(0, grossPayout - bet.amount);
-        const tax = Math.max(0, Math.floor(profit * 0.05));
-        const payout = Math.max(0, grossPayout - tax);
-        this.store.credit(user, payout);
-        if (tax > 0 && this.store.addTaxToPot) this.store.addTaxToPot(tax);
-        const v = this._userView(user);
-        const row = {
-          user,
-          displayName: v.displayName,
-          nameStyle: v.nameStyle,
-          level: v.level,
-          rank: v.rank,
-          result: "win",
-          grossPayout,
-          payout,
-          profit,
-          tax,
-          cashout: bet.cashout,
-          bet: Number(bet.amount || 0),
-        };
-        this.store.awardXP(user, "CASHOUT_SUCCESS", Math.max(1, bet.cashout / 2));
-        this._winsThisRound.push(row);
-        try {
-          this.onCashoutWin({
-            user,
-            displayName: v.displayName,
-            cashout: bet.cashout,
-            payout,
-            grossPayout,
-            roundId: this.roundId,
-            at: Date.now(),
-          });
-        } catch (_) {
-          /* ignore website stats hook errors */
+        const row = this._settleBetWin(user, bet, bet.cashout);
+        if (row) {
+          this._winsThisRound.push(row);
+          resolved.push(user);
         }
-        resolved.push(user);
       }
     }
     for (const user of resolved) this.bets.delete(user);
@@ -951,6 +996,10 @@ class CrashGame {
     if (lower === "!backupnow") {
       if (user.toLowerCase() !== BACKUP_COMMAND_HOST) return { type: "backupnow", ok: false, reason: "host_only", user };
       return { type: "backupnow", ...this._runBackupNow(user) };
+    }
+
+    if (lower === "!cashout" || lower === "!cash" || lower === "!out" || lower === "!co") {
+      return { type: "manual_cashout", ...this.manualCashout(user) };
     }
 
     const jetLock = this._getJetLock(user);

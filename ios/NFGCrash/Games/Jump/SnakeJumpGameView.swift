@@ -31,6 +31,8 @@ struct SnakeJumpGameView: View {
     @State private var vsSnapshot: JumpVsSnapshot?
     @State private var vsMatchSeed: Int?
     @State private var vsMatchId: String?
+    @State private var vsMatchStartedAtMs: Int64?
+    @State private var vsConnecting = false
     @State private var showShop = false
     @State private var isLoading = true
     @State private var loadError: String?
@@ -105,7 +107,9 @@ struct SnakeJumpGameView: View {
                 ArcadeSkillLobbyChrome(
                     gameId: "nfg_snake_jump",
                     title: "NFG JUMP",
-                    subtitle: "Emoji climb · +3,000 pts every 2,500m · slide thumb to steer",
+                    subtitle: playMode == .vs
+                        ? "VS mode — join the lobby, wait for rivals, then race together"
+                        : "Emoji climb · +3,000 pts every 2,500m · slide thumb to steer",
                     titleColors: [
                         SnakeJumpTheme.swiftColor(hex: skinFill, fallback: NFGTheme.accent),
                         .white,
@@ -127,21 +131,29 @@ struct SnakeJumpGameView: View {
                             tint: NFGTheme.gold
                         ),
                     ],
-                    previewSystemImage: "hand.draw.fill",
-                    previewTitle: "Tap Play for a locked game window",
-                    previewSubtitle: "No page scroll during play — fixed stage, smooth touch",
-                    previewAccent: SnakeJumpTheme.swiftColor(hex: skinRing, fallback: NFGTheme.gold),
-                    playTint: SnakeJumpTheme.swiftColor(hex: skinFill, fallback: NFGTheme.accent),
+                    previewSystemImage: playMode == .vs ? "person.3.fill" : "hand.draw.fill",
+                    previewTitle: playMode == .vs ? "Multiplayer VS lobby" : "Tap Play for a locked game window",
+                    previewSubtitle: playMode == .vs
+                        ? "2+ players trigger a 15s countdown — winner takes the pot"
+                        : "No page scroll during play — fixed stage, smooth touch",
+                    previewAccent: playMode == .vs
+                        ? NFGTheme.accent2
+                        : SnakeJumpTheme.swiftColor(hex: skinRing, fallback: NFGTheme.gold),
+                    playTint: playMode == .vs ? NFGTheme.accent2 : SnakeJumpTheme.swiftColor(hex: skinFill, fallback: NFGTheme.accent),
                     isLoading: isLoading,
                     offlinePendingPoints: offlinePendingPoints,
                     offlinePendingHeight: offlinePendingHeight,
-                    onPlay: { Task { await openPlaySession() } },
-                    middleContent: { hudRow }
+                    playTitle: vsPlayButtonTitle,
+                    playDisabled: vsPlayButtonDisabled,
+                    onPlay: { Task { await handlePrimaryPlayAction() } },
+                    middleContent: { hudRow },
+                    footerContent: {
+                        if playMode == .vs {
+                            vsLobbyPanel
+                        }
+                    }
                 )
                 jumpLeaderboard
-                if playMode == .vs {
-                    vsLobbyPanel
-                }
                 if !message.isEmpty {
                     Text(message)
                         .font(.system(size: 12))
@@ -169,9 +181,17 @@ struct SnakeJumpGameView: View {
         canvas.resetSteering()
         canvas.running = false
         canvas.sessionActive = false
-        canvas.resetSteering()
-        canvas.configureMatchSeed(playMode == .vs ? vsMatchSeed : nil)
-        canvas.resetEngine(viewWidth: Double(w))
+        if playMode == .vs, let seed = vsMatchSeed {
+            canvas.configureMatchSeed(seed)
+            canvas.resetEngine(
+                viewWidth: SnakeJumpEngine.vsCanonicalViewWidth,
+                matchSeed: seed,
+                matchStartedAtMs: vsMatchStartedAtMs
+            )
+        } else {
+            canvas.configureMatchSeed(nil)
+            canvas.resetEngine(viewWidth: Double(w))
+        }
         canvas.skinFill = skinFill
         canvas.skinRing = skinRing
         canvas.sessionPoints = sessionPoints
@@ -195,6 +215,10 @@ struct SnakeJumpGameView: View {
 
     private func toggleVsMode() {
         if playMode == .solo {
+            guard PlayerSession.isLoggedIn else {
+                message = "Sign in to use Jump VS multiplayer."
+                return
+            }
             playMode = .vs
             joinVs()
         } else {
@@ -203,14 +227,84 @@ struct SnakeJumpGameView: View {
         }
     }
 
+    private var vsPlayerCount: Int {
+        vsSnapshot?.players.count ?? vsClient?.players.count ?? 0
+    }
+
+    private var vsPlayButtonTitle: String {
+        guard playMode == .vs else { return "Play" }
+        if vsConnecting || (vsClient != nil && vsClient?.isConnected != true) {
+            return "Connecting…"
+        }
+        if vsClient == nil {
+            return "Join VS Lobby"
+        }
+        switch vsSnapshot?.phase ?? "waiting" {
+        case "countdown":
+            return "Starting in \(vsSnapshot?.countdownSeconds ?? 0)s…"
+        case "match":
+            return showPlaySession ? "Match live" : "Start VS Match"
+        case "results":
+            return "Back to VS Lobby"
+        default:
+            return vsPlayerCount >= 2 ? "Waiting for countdown…" : "Waiting for players (\(vsPlayerCount)/2)…"
+        }
+    }
+
+    private var vsPlayButtonDisabled: Bool {
+        guard playMode == .vs else { return false }
+        if vsConnecting { return true }
+        if vsClient == nil { return false }
+        if vsClient?.isConnected != true { return true }
+        switch vsSnapshot?.phase ?? "waiting" {
+        case "match":
+            return showPlaySession
+        case "results":
+            return false
+        default:
+            return true
+        }
+    }
+
+    @MainActor
+    private func handlePrimaryPlayAction() async {
+        if playMode == .solo {
+            await openPlaySession()
+            return
+        }
+        if vsClient == nil {
+            joinVs()
+            return
+        }
+        if vsSnapshot?.phase == "results" {
+            vsSnapshot = nil
+            joinVs()
+            return
+        }
+        if vsSnapshot?.phase == "match", vsMatchSeed != nil, !showPlaySession {
+            await openPlaySession()
+        }
+    }
+
     private var hudRow: some View {
         HStack(spacing: 8) {
             JumpVsToggleButton(isVS: playMode == .vs) {
                 toggleVsMode()
             }
-            if playMode == .vs, let vsSnapshot {
-                Text("VS lobby · \(vsSnapshot.opponents.count) waiting")
-                    .foregroundStyle(NFGTheme.accent2)
+            if playMode == .vs {
+                if vsConnecting {
+                    Text("Connecting to VS…")
+                        .foregroundStyle(NFGTheme.muted)
+                } else if let vsSnapshot {
+                    Text("VS · \(vsSnapshot.players.count) in lobby · \(vsPhaseLabel)")
+                        .foregroundStyle(NFGTheme.accent2)
+                } else if vsClient != nil {
+                    Text("VS · joining lobby…")
+                        .foregroundStyle(NFGTheme.accent2)
+                } else {
+                    Text("VS · tap Join below")
+                        .foregroundStyle(NFGTheme.muted)
+                }
             } else {
                 Text("Solo climb")
             }
@@ -224,42 +318,115 @@ struct SnakeJumpGameView: View {
     }
 
     private var vsLobbyPanel: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Jump VS")
+                Label("Jump VS Lobby", systemImage: "person.3.fill")
                     .font(.system(size: 14, weight: .bold))
                 Spacer()
                 Text(vsPhaseLabel)
                     .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(NFGTheme.accent)
+                    .foregroundStyle(NFGTheme.accent2)
             }
+
             Text(vsHelpText)
                 .font(.system(size: 11))
                 .foregroundStyle(NFGTheme.muted)
+
             if let players = vsSnapshot?.players, !players.isEmpty {
-                ForEach(players) { player in
-                    HStack {
-                        Text(player.displayName ?? player.id)
-                        Spacer()
-                        Text("\(player.height ?? 0)m")
-                            .monospacedDigit()
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(players) { player in
+                            VStack(spacing: 4) {
+                                Circle()
+                                    .fill(SnakeJumpTheme.swiftColor(hex: player.fill ?? "#596ff2", fallback: NFGTheme.accent))
+                                    .frame(width: 36, height: 36)
+                                    .overlay(
+                                        Circle()
+                                            .stroke(SnakeJumpTheme.swiftColor(hex: player.ring ?? "#f2c733", fallback: NFGTheme.gold), lineWidth: 2)
+                                    )
+                                    .overlay {
+                                        if player.id == AuthStore.verifiedUserId {
+                                            Text("You")
+                                                .font(.system(size: 8, weight: .heavy))
+                                                .foregroundStyle(.white)
+                                        }
+                                    }
+                                Text(player.displayName ?? "Player")
+                                    .font(.system(size: 10, weight: .semibold))
+                                    .lineLimit(1)
+                                    .frame(maxWidth: 72)
+                            }
+                        }
                     }
-                    .font(.system(size: 12))
+                    .padding(.vertical, 4)
                 }
+            }
+
+            if vsConnecting || (vsClient != nil && vsClient?.isConnected != true) {
+                HStack(spacing: 8) {
+                    ProgressView()
+                        .scaleEffect(0.85)
+                    Text("Connecting to multiplayer…")
+                        .font(.system(size: 12))
+                        .foregroundStyle(NFGTheme.muted)
+                }
+            } else if let players = vsSnapshot?.players, !players.isEmpty {
+                VStack(spacing: 6) {
+                    ForEach(players) { player in
+                        HStack(spacing: 8) {
+                            Circle()
+                                .fill(SnakeJumpTheme.swiftColor(hex: player.fill ?? "#596ff2", fallback: NFGTheme.accent))
+                                .frame(width: 10, height: 10)
+                                .overlay(Circle().stroke(SnakeJumpTheme.swiftColor(hex: player.ring ?? "#f2c733", fallback: NFGTheme.gold), lineWidth: 1))
+                            Text(player.displayName ?? player.id)
+                                .lineLimit(1)
+                            if player.id == AuthStore.verifiedUserId {
+                                Text("You")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(NFGTheme.accent2)
+                            }
+                            Spacer(minLength: 0)
+                            if player.eliminated == true {
+                                Text("Out")
+                                    .font(.system(size: 10, weight: .bold))
+                                    .foregroundStyle(NFGTheme.danger)
+                            } else if vsSnapshot?.phase == "match" {
+                                Text("\(player.height ?? 0)m")
+                                    .monospacedDigit()
+                            } else {
+                                Text("Ready")
+                                    .foregroundStyle(NFGTheme.muted)
+                            }
+                        }
+                        .font(.system(size: 12, weight: .semibold))
+                    }
+                }
+            } else if vsClient != nil {
+                Text("You're in the lobby — waiting for other players to join…")
+                    .font(.system(size: 12))
+                    .foregroundStyle(NFGTheme.muted)
             } else {
-                Text("Waiting for players…")
+                Text("Tap Join VS Lobby to enter matchmaking.")
                     .font(.system(size: 12))
                     .foregroundStyle(NFGTheme.muted)
             }
-            HStack {
+
+            if vsSnapshot?.phase == "countdown", let sec = vsSnapshot?.countdownSeconds {
+                Text("Match starts in \(sec)s — tap Start VS Match when the countdown hits 0")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(NFGTheme.gold)
+            }
+
+            HStack(spacing: 8) {
                 if vsClient == nil {
-                    Button("Join VS lobby") {
+                    Button("Join VS Lobby") {
                         joinVs()
                     }
                     .buttonStyle(.borderedProminent)
-                    .tint(NFGTheme.accent)
+                    .tint(NFGTheme.accent2)
                 } else {
-                    Button("Leave lobby") {
+                    Button("Leave Lobby") {
+                        playMode = .solo
                         leaveVs()
                     }
                     .buttonStyle(.bordered)
@@ -269,9 +436,7 @@ struct SnakeJumpGameView: View {
         .padding(12)
         .background(NFGTheme.panel)
         .clipShape(RoundedRectangle(cornerRadius: 12))
-        .overlay(RoundedRectangle(cornerRadius: 12).stroke(NFGTheme.border))
-        .padding(.horizontal, 12)
-        .padding(.top, 8)
+        .overlay(RoundedRectangle(cornerRadius: 12).stroke(NFGTheme.accent2.opacity(0.35)))
     }
 
     @MainActor
@@ -279,6 +444,10 @@ struct SnakeJumpGameView: View {
         await startRunOnServer()
         preparePlaySession()
         showPlaySession = true
+        if playMode == .vs, vsMatchSeed != nil {
+            let w = max(UIScreen.main.bounds.width - 32, 280)
+            canvas.autoStartVSMatch(viewWidth: w, startedAtMs: vsMatchStartedAtMs)
+        }
     }
 
     @MainActor
@@ -388,7 +557,16 @@ struct SnakeJumpGameView: View {
         canvas.onProgressTick = { height, points in
             let userKey = ArcadeOfflinePointsQueue.userKey()
             NFGJumpPersonalBest.save(for: userKey, height: height)
-            vsClient?.reportProgress(height: height, sessionPoints: points)
+        }
+        canvas.onVsNetworkTick = { playerX, playerY, velocityY, height, points, elapsed in
+            vsClient?.reportLiveState(
+                playerX: playerX,
+                playerY: playerY,
+                velocityY: velocityY,
+                height: height,
+                sessionPoints: points,
+                elapsed: elapsed
+            )
         }
     }
 
@@ -610,23 +788,44 @@ struct SnakeJumpGameView: View {
         hooks.skinId = equippedSkin
         hooks.fill = skinFill
         hooks.ring = skinRing
+        hooks.onConnected = {
+            Task { @MainActor in
+                vsConnecting = false
+                message = "In VS lobby — waiting for rivals…"
+            }
+        }
+        hooks.onDisconnected = {
+            Task { @MainActor in
+                vsConnecting = false
+                if playMode == .vs {
+                    message = "Disconnected from VS lobby."
+                }
+            }
+        }
         hooks.onLobbyState = { state in
             Task { @MainActor in
+                vsConnecting = false
                 vsSnapshot = state
             }
         }
         hooks.onMatchStart = { state in
             Task { @MainActor in
+                vsConnecting = false
                 vsSnapshot = state
                 vsMatchSeed = state.matchSeed
                 vsMatchId = state.matchId
+                vsMatchStartedAtMs = state.matchStartedAtMs
                 canvas.configureMatchSeed(state.matchSeed)
-            canvas.ghostOpponents = JumpVSClient.ghostOpponents(from: state.opponents)
+                canvas.applyLiveOpponents(state.opponents)
+                message = "VS match started — tap Start VS Match!"
+                if !showPlaySession, state.matchSeed != nil {
+                    await openPlaySession()
+                }
             }
         }
-        hooks.onOpponents = { opponents in
+        hooks.onOpponentUpdate = { opp in
             Task { @MainActor in
-                canvas.ghostOpponents = JumpVSClient.ghostOpponents(from: opponents)
+                canvas.applyOpponentUpdate(opp)
             }
         }
         hooks.onEliminated = { reason in
@@ -640,12 +839,14 @@ struct SnakeJumpGameView: View {
             Task { @MainActor in
                 vsMatchSeed = nil
                 vsMatchId = nil
+                vsMatchStartedAtMs = nil
                 vsSnapshot = JumpVsSnapshot(
                     phase: "results",
                     players: vsSnapshot?.players ?? [],
                     countdownSeconds: 0,
                     matchSeed: nil,
                     matchId: nil,
+                    matchStartedAtMs: nil,
                     eliminated: false,
                     opponents: [],
                     pot: msg["pot"] as? Int ?? 0,
@@ -654,31 +855,45 @@ struct SnakeJumpGameView: View {
             }
         }
         hooks.onError = { err in
-            Task { @MainActor in message = err }
+            Task { @MainActor in
+                vsConnecting = false
+                message = err
+            }
         }
         return hooks
     }
 
     private func joinVs() {
-        guard let api else { return }
+        guard PlayerSession.isLoggedIn else {
+            message = "Sign in to use Jump VS multiplayer."
+            return
+        }
+        guard let api else {
+            message = "Connect to the server to use Jump VS."
+            return
+        }
+        vsConnecting = true
+        message = "Connecting to Jump VS…"
         let client = JumpVSClient(api: api, hooks: makeVsHooks())
         vsClient = client
         do {
             try client.connect()
-            message = "Connecting to Jump VS…"
         } catch {
+            vsConnecting = false
             message = error.localizedDescription
             vsClient = nil
         }
     }
 
     private func leaveVs() {
+        vsConnecting = false
         vsClient?.disconnect()
         vsClient = nil
         vsSnapshot = nil
         vsMatchSeed = nil
         vsMatchId = nil
-        canvas.ghostOpponents = []
+        vsMatchStartedAtMs = nil
+        canvas.clearLiveOpponents()
     }
 }
 

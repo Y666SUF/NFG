@@ -284,7 +284,7 @@ function defaultStake(gameId, skill) {
 function stakeBounds(gameId, skill, balance) {
   const def = defaultStake(gameId, skill);
   const min = Math.max(100, Math.floor(def * 0.25));
-  const capHigh = Math.floor(def * 3);
+  const capHigh = STAKE_ABS_MAX;
   const bal = Math.max(0, Math.floor(Number(balance) || 0));
   const max = bal > 0 ? Math.max(min, Math.min(bal, capHigh)) : Math.max(min, capHigh);
   return { min, max, default: def };
@@ -1985,6 +1985,7 @@ function defaultSnakeJumpSession() {
     lastMilestoneAt: 0,
     peakHeight: 0,
     vsMatchId: null,
+    vsMatchSeed: null,
     vsDeferred: false,
   };
 }
@@ -2009,6 +2010,7 @@ function snakeJumpPayload(gRec) {
     stakeMax: 0,
     suggestedStake: 0,
     vsMatchId: s.vsMatchId || null,
+    vsMatchSeed: s.vsMatchSeed ?? null,
     vsDeferred: !!s.vsDeferred,
   };
 }
@@ -2063,11 +2065,17 @@ function handleSnakeJump(user, userRec, action, payload, pointStore) {
   }
 
   if (act === "start") {
+    const incomingVsId = payload?.vsMatchId ? String(payload.vsMatchId).slice(0, 64) : null;
+    const preservedSeed = gRec.session?.vsMatchSeed;
+    const preservedId = gRec.session?.vsMatchId;
     gRec.session = defaultSnakeJumpSession();
     gRec.session.active = true;
-    if (payload?.vsMatchId) {
-      gRec.session.vsMatchId = String(payload.vsMatchId).slice(0, 64);
+    if (incomingVsId) {
+      gRec.session.vsMatchId = incomingVsId;
       gRec.session.vsDeferred = true;
+      if (preservedId === incomingVsId && preservedSeed != null) {
+        gRec.session.vsMatchSeed = preservedSeed;
+      }
     }
     gRec.bestHeight = gRec.bestHeight || 0;
     userRec.games.nfg_snake_jump = gRec;

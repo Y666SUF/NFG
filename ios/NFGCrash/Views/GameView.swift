@@ -13,6 +13,7 @@ struct GameView: View {
     @State private var betAmount = "100"
     @State private var cashoutTarget = "2.00"
     @State private var repeatLastBet = AppPreferences.repeatLastBetEnabled
+    @State private var isCashingOut = false
 
     var body: some View {
         GeometryReader { geo in
@@ -291,6 +292,10 @@ struct GameView: View {
             quickStakeRow
             quickCashoutRow
 
+            if let activeBet = sync.activeCrashBet, sync.gameState.phase == .running {
+                activeBetCashOutSection(activeBet)
+            }
+
             Toggle(isOn: $repeatLastBet) {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.triangle.2.circlepath")
@@ -363,6 +368,94 @@ struct GameView: View {
                 )
         )
         .shadow(color: NFGTheme.accent.opacity(0.14), radius: 16, y: -4)
+    }
+
+    private func activeBetCashOutSection(_ bet: OpenBet) -> some View {
+        let mult = sync.gameState.multiplier
+        let payout = sync.estimatedManualCashoutPayout(for: bet)
+        let canCashOut = sync.canManualCashout && !isCashingOut
+
+        return VStack(spacing: NFGSpacing.sm) {
+            HStack(spacing: 8) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(NFGTheme.accent2)
+                Text("Live bet · \(bet.amount.formatted()) @ \(String(format: "%.2f", bet.cashout))×")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(NFGTheme.text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                Spacer(minLength: 0)
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(String(format: "%.2f", mult))
+                    .font(NFGFont.numeric(28, weight: .heavy))
+                    .foregroundStyle(NFGTheme.accent2)
+                    .contentTransition(.numericText())
+                Text("×")
+                    .font(NFGFont.numeric(18, weight: .heavy))
+                    .foregroundStyle(NFGTheme.accent2.opacity(0.85))
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("You'd get")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(NFGTheme.muted)
+                    Text("\(payout.formatted()) pts")
+                        .font(NFGFont.numeric(16, weight: .heavy))
+                        .foregroundStyle(NFGTheme.gold)
+                        .contentTransition(.numericText())
+                }
+            }
+
+            Button {
+                guard canCashOut else { return }
+                dismissBetKeyboard()
+                isCashingOut = true
+                Task {
+                    await sync.manualCashout()
+                    isCashingOut = false
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    if isCashingOut {
+                        ProgressView()
+                            .tint(.black.opacity(0.85))
+                    } else {
+                        Image(systemName: "banknote.fill")
+                            .font(.system(size: 14, weight: .bold))
+                    }
+                    Text(isCashingOut ? "CASHING OUT…" : "CASH OUT NOW")
+                        .tracking(1.3)
+                }
+            }
+            .buttonStyle(NFGPrimaryButtonStyle(
+                tintGradient: NFGTheme.goldGradient,
+                glowColor: NFGTheme.gold,
+                isDisabled: !canCashOut || !PlayerSession.isLoggedIn
+            ))
+            .disabled(!canCashOut || !PlayerSession.isLoggedIn)
+
+            if mult < 1.05 {
+                Text("Wait until 1.05× to cash out early")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(NFGTheme.muted)
+            } else if bet.cashout > mult {
+                Text("Auto cashout at \(String(format: "%.2f", bet.cashout))× if you hold — or tap above to take profit now")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(NFGTheme.mutedSoft)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(NFGSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                .fill(NFGTheme.accent2.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                .stroke(NFGTheme.accent2.opacity(0.35), lineWidth: 1)
+        )
     }
 
     private var quickStakeRow: some View {

@@ -8,7 +8,7 @@ const { mergeArcadeUserRecords } = require("./mobile-arcade");
 const DATA_DIR = path.join(getAppRoot(), "data");
 const SESSIONS_FILE = path.join(DATA_DIR, "mobile-sessions.json");
 const LINK_CODE_TTL_MS = 10 * 60 * 1000;
-const SESSION_TTL_MS = 90 * 24 * 60 * 60 * 1000;
+const SESSION_TTL_MS = 365 * 24 * 60 * 60 * 1000;
 const APP_GUEST_DISPLAY_NAME = "App User";
 
 let _pointStore = null;
@@ -51,6 +51,7 @@ function createEmptyState() {
   return {
     pendingLinks: {},
     sessions: {},
+    deviceLinks: {},
   };
 }
 
@@ -61,14 +62,58 @@ function loadState() {
     const raw = fs.readFileSync(SESSIONS_FILE, "utf8");
     const parsed = JSON.parse(raw);
     if (!parsed || typeof parsed !== "object") return createEmptyState();
-    return {
+    const state = {
       pendingLinks:
         parsed.pendingLinks && typeof parsed.pendingLinks === "object" ? { ...parsed.pendingLinks } : {},
       sessions: parsed.sessions && typeof parsed.sessions === "object" ? { ...parsed.sessions } : {},
+      deviceLinks:
+        parsed.deviceLinks && typeof parsed.deviceLinks === "object" ? { ...parsed.deviceLinks } : {},
     };
+    migrateDeviceLinksFromSessions(state);
+    return state;
   } catch {
     return createEmptyState();
   }
+}
+
+/** Backfill durable device→TikTok bindings from existing sessions / completed links. */
+function migrateDeviceLinksFromSessions(targetState) {
+  if (!targetState.deviceLinks) targetState.deviceLinks = {};
+  let changed = false;
+  for (const rec of Object.values(targetState.sessions || {})) {
+    if (String(rec.linkedVia || "") !== "tiktok") continue;
+    const deviceId = String(rec.deviceId || "").trim();
+    const userId = normalizeUser(rec.userId);
+    if (!deviceId || !userId) continue;
+    if (targetState.deviceLinks[deviceId]?.userId === userId) continue;
+    targetState.deviceLinks[deviceId] = {
+      userId,
+      displayName: String(rec.displayName || userId),
+      linkedAt: Number(rec.linkedAt) || Number(rec.issuedAt) || nowMs(),
+      linkedVia: "tiktok",
+    };
+    changed = true;
+  }
+  for (const rec of Object.values(targetState.pendingLinks || {})) {
+    if (String(rec.status || "") !== "linked") continue;
+    const deviceId = String(rec.deviceId || "").trim();
+    const userId = normalizeUser(rec.userId);
+    if (!deviceId || !userId) continue;
+    if (targetState.deviceLinks[deviceId]?.userId === userId) continue;
+    targetState.deviceLinks[deviceId] = {
+      userId,
+      displayName: String(rec.displayName || userId),
+      linkedAt: Number(rec.linkedAt) || nowMs(),
+      linkedVia: "tiktok",
+    };
+    changed = true;
+  }
+  if (changed) saveStateFrom(targetState);
+}
+
+function saveStateFrom(targetState) {
+  ensureDataDir();
+  fs.writeFileSync(SESSIONS_FILE, JSON.stringify(targetState, null, 2), "utf8");
 }
 
 let state = loadState();
@@ -142,12 +187,106 @@ function sessionPayload(session, token, now) {
 
 function findValidSessionForDevice(deviceId) {
   const now = nowMs();
+  let guest = null;
+  let linked = null;
+  let fallback = null;
   for (const [token, rec] of Object.entries(state.sessions)) {
     if (String(rec.deviceId || "") !== deviceId) continue;
     if ((Number(rec.expiresAt) || 0) <= now) continue;
-    return { token, rec };
+    const via = String(rec.linkedVia || "");
+    const entry = { token, rec };
+    if (via === "tiktok") linked = entry;
+    else if (via === "app_guest" || isAppGuestUserId(rec.userId)) guest = entry;
+    else if (!fallback) fallback = entry;
   }
-  return null;
+  return linked || guest || fallback;
+}
+
+function clearDeviceSessions(deviceId, exceptToken = null) {
+  const id = String(deviceId || "");
+  if (!id) return;
+  let changed = false;
+  for (const [token, rec] of Object.entries(state.sessions)) {
+    if (String(rec.deviceId || "") !== id) continue;
+    if (exceptToken && token === exceptToken) continue;
+    delete state.sessions[token];
+    changed = true;
+  }
+  if (changed) saveState();
+}
+
+function saveDeviceLink(deviceId, userId, displayName) {
+  const id = String(deviceId || "").trim();
+  const uid = normalizeUser(userId);
+  if (!id || !uid) return;
+  state.deviceLinks[id] = {
+    userId: uid,
+    displayName: String(displayName || uid),
+    linkedAt: nowMs(),
+    linkedVia: "tiktok",
+  };
+  saveState();
+}
+
+function clearDeviceLink(deviceId) {
+  const id = String(deviceId || "").trim();
+  if (!id || !state.deviceLinks[id]) return;
+  delete state.deviceLinks[id];
+  saveState();
+}
+
+function deviceLinkFor(deviceId) {
+  const id = String(deviceId || "").trim();
+  if (!id) return null;
+  const rec = state.deviceLinks[id];
+  if (!rec || String(rec.linkedVia || "") !== "tiktok") return null;
+  const userId = normalizeUser(rec.userId);
+  if (!userId || isAppGuestUserId(userId)) return null;
+  return {
+    userId,
+    displayName: String(rec.displayName || userId),
+    linkedAt: Number(rec.linkedAt) || 0,
+  };
+}
+
+function displayNameForUser(userId, fallback = "") {
+  const uid = normalizeUser(userId);
+  if (!uid) return String(fallback || "");
+  if (_pointStore && typeof _pointStore.getDisplayName === "function") {
+    const fromStore = String(_pointStore.getDisplayName(uid) || "").trim();
+    if (fromStore) return fromStore;
+  }
+  const cleaned = String(fallback || "").trim();
+  return cleaned || uid;
+}
+
+function issueSession(deviceId, userId, displayName, linkedVia, linkedAt = 0) {
+  const now = nowMs();
+  const token = newSessionToken();
+  const uid = normalizeUser(userId);
+  clearDeviceSessions(deviceId);
+  state.sessions[token] = {
+    token,
+    deviceId: String(deviceId || "").trim().slice(0, 200),
+    userId: uid,
+    displayName: String(displayName || uid),
+    linkedVia: String(linkedVia || ""),
+    issuedAt: now,
+    linkedAt: linkedAt > 0 ? linkedAt : linkedVia === "tiktok" ? now : 0,
+    lastSeenAt: now,
+    expiresAt: now + SESSION_TTL_MS,
+  };
+  saveState();
+  return { token, userId: uid, displayName: String(displayName || uid), linkedVia: String(linkedVia || "") };
+}
+
+function restoreTikTokSessionForDevice(deviceId, claimUserId = "") {
+  const binding = deviceLinkFor(deviceId);
+  if (!binding) return null;
+  const claim = normalizeUser(claimUserId);
+  if (claim && claim !== binding.userId) return null;
+  const displayName = displayNameForUser(binding.userId, binding.displayName);
+  return issueSession(deviceId, binding.userId, displayName, "tiktok", binding.linkedAt || 0);
 }
 
 function validateBearer(req) {
@@ -163,6 +302,7 @@ function validateBearer(req) {
     return { ok: false, error: "auth_required" };
   }
   session.lastSeenAt = now;
+  session.expiresAt = now + SESSION_TTL_MS;
   saveState();
   return {
     ok: true,
@@ -246,6 +386,7 @@ function completeLinkFromTikTok(userId, displayName, message) {
 
   const token = newSessionToken();
   const expiresAt = now + SESSION_TTL_MS;
+  clearDeviceSessions(deviceId);
   state.sessions[token] = {
     token,
     deviceId,
@@ -257,6 +398,7 @@ function completeLinkFromTikTok(userId, displayName, message) {
     lastSeenAt: now,
     expiresAt,
   };
+  saveDeviceLink(deviceId, normalizedUser, tiktokDisplayName);
 
   state.pendingLinks[code] = {
     ...pending,
@@ -378,6 +520,7 @@ function registerMobileAuthRoutes(app, ctx = {}) {
     if (!deviceId) return res.status(400).json({ ok: false, error: "deviceId required" });
 
     const now = nowMs();
+    const claimUserId = normalizeUser(req.body?.claimUserId || "");
     const existing = findValidSessionForDevice(deviceId);
     if (existing) {
       const rec = existing.rec;
@@ -391,7 +534,43 @@ function registerMobileAuthRoutes(app, ctx = {}) {
         linkedVia: String(rec.linkedVia || (isAppGuestUserId(userId) ? "app_guest" : "tiktok")),
         starterGranted: false,
         balance,
+        restored: false,
       });
+    }
+
+    const restored = restoreTikTokSessionForDevice(deviceId, claimUserId);
+    if (restored) {
+      const balance = _pointStore ? _pointStore.getBalance(restored.userId) : 0;
+      return res.json({
+        ok: true,
+        token: restored.token,
+        userId: restored.userId,
+        displayName: restored.displayName,
+        linkedVia: "tiktok",
+        starterGranted: false,
+        balance,
+        restored: true,
+      });
+    }
+
+    if (claimUserId) {
+      const binding = deviceLinkFor(deviceId);
+      if (binding && binding.userId === claimUserId) {
+        const again = restoreTikTokSessionForDevice(deviceId, claimUserId);
+        if (again) {
+          const balance = _pointStore ? _pointStore.getBalance(again.userId) : 0;
+          return res.json({
+            ok: true,
+            token: again.token,
+            userId: again.userId,
+            displayName: again.displayName,
+            linkedVia: "tiktok",
+            starterGranted: false,
+            balance,
+            restored: true,
+          });
+        }
+      }
     }
 
     const userId = appUserIdFromDevice(deviceId);
@@ -406,6 +585,7 @@ function registerMobileAuthRoutes(app, ctx = {}) {
     }
 
     const token = newSessionToken();
+    clearDeviceSessions(deviceId);
     state.sessions[token] = {
       token,
       deviceId,
@@ -506,10 +686,26 @@ function registerMobileAuthRoutes(app, ctx = {}) {
 
   app.post("/api/mobile/session/logout", (req, res) => {
     const auth = validateBearer(req);
-    if (!auth.ok) return res.status(401).json({ ok: false, error: "auth_required" });
-    delete state.sessions[auth.token];
-    saveState();
-    res.json({ ok: true, loggedOut: true });
+    const body = req.body && typeof req.body === "object" ? req.body : {};
+    const explicitUnlink = body.unlink === true || body.unlink === "true";
+    const deviceId = String(
+      (auth.ok && auth.session && auth.session.deviceId) ||
+        body.deviceId ||
+        req.headers["x-device-id"] ||
+        ""
+    ).trim();
+    if (auth.ok) {
+      delete state.sessions[auth.token];
+    }
+    if (deviceId) {
+      clearDeviceSessions(deviceId);
+      if (explicitUnlink) {
+        clearDeviceLink(deviceId);
+      }
+    } else if (auth.ok) {
+      saveState();
+    }
+    res.json({ ok: true, loggedOut: true, unlinked: explicitUnlink });
   });
 }
 

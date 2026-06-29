@@ -1,0 +1,294 @@
+# NFG Crash — Full Windows PC server update (June 2026)
+
+Paste this entire prompt into **Cursor on your Windows PC** (live repo `C:\Users\Yusef\test`, public URL **https://y666suf.com**).
+
+## Goal
+
+Update the live Node server so the iOS app (build 161+) and livestream work with:
+
+1. **Manual crash cashout** — `!cashout` / `!cash` / `!out` / `!co` during a running round
+2. **NFG Jump VS multiplayer** — WebSocket lobby, shared match seed, winner takes pot
+3. **Jump VS live players** — sync real X/Y/velocity (RuneScape-style visibility, not height-only ghosts)
+4. **Arcade fixes** — 100k stake cap in `stakeBounds`, preserve `vsMatchSeed` on VS run start
+5. **Already on GitHub `main`** (pull first): TikTok link merge, offline `offline_sync`, Jump VS base files
+
+**Do not break:** TikTok bridge, crash loop, bets, WebSocket broadcast, mobile auth, app chat, leaderboard, Electron window, Cloudflare tunnel.
+
+---
+
+## Step 1 — Pull latest
+
+```powershell
+cd C:\Users\Yusef\test
+.\scripts\sync-pull.ps1 -Merge
+npm install
+```
+
+Confirm after pull:
+- `server/jump-vs-lobby.js` exists
+- `server/mobile-api.js` → `registerJumpVsRoutes`
+- `server/hangman-proxy.js` → `tryJumpVsUpgrade` in upgrade handler
+- `server/mobile-arcade.js` → `applyOfflineArcadeSync`, `STAKE_ABS_MAX = 100_000`
+
+---
+
+## Step 2 — Manual crash cashout (`server/game.js`)
+
+**Likely NOT on GitHub `main` yet** — implement if missing after pull.
+
+### 2A. Add `_settleBetWin(user, bet, settleMult, opts = {})`
+
+Shared settle for auto + manual cashout (place before `_tick`):
+
+- Round mult to 2 decimals; reject if `< this.opts.minCashout`
+- `grossPayout = floor(amount * mult)`, 5% tax on profit, credit user, tax to pot
+- Win row: `user`, `displayName`, `nameStyle`, `level`, `rank`, `result: "win"`, `grossPayout`, `payout`, `profit`, `tax`, `cashout: mult`, `targetCashout: bet.cashout`, `bet`, `manual: !!opts.manual`
+- XP `CASHOUT_SUCCESS`, `onCashoutWin(...)` in try/catch
+- Return row
+
+### 2B. Add `manualCashout(rawUser)`
+
+- Only `PHASE.RUNNING`, user must have bet in `this.bets`
+- Settle at **current** `this.multiplier` (floor 2 decimals), not target
+- `{ ok: false, reason: "too_early" }` if mult < minCashout
+- Remove bet, push to `_winsThisRound`, `onUpdate()`
+- Return `{ ok: true, type fields..., cashout, targetCashout, payout, balance, ... }`
+
+### 2C. Refactor `_tick()` auto cashout
+
+Replace inline win block with:
+
+```javascript
+const row = this._settleBetWin(user, bet, bet.cashout);
+if (row) {
+  this._winsThisRound.push(row);
+  resolved.push(user);
+}
+```
+
+### 2D. Wire chat in `parseChatMessage` (before jet-lock check)
+
+```javascript
+if (lower === "!cashout" || lower === "!cash" || lower === "!out" || lower === "!co") {
+  return { type: "manual_cashout", ...this.manualCashout(user) };
+}
+```
+
+Optional: wire Electron/livestream cashout button to same command via `/api/chat`.
+
+---
+
+## Step 3 — Jump VS live player sync (`server/jump-vs-lobby.js`)
+
+iOS sends full kinematic state 30×/sec. Server must store and relay it.
+
+### 3A. Player object on connect — add fields
+
+In `tryJumpVsUpgrade`, when creating `player`:
+
+```javascript
+playerX: 0,
+playerY: 120,
+velocityY: 0,
+```
+
+### 3B. `match_start` broadcast — include server clock
+
+In `startMatch()`, broadcast must include:
+
+```javascript
+broadcast({
+  type: "match_start",
+  matchSeed,
+  matchId,
+  startedAt: activeMatch.startedAt,  // REQUIRED — ms timestamp for sync
+  players: publicLobbyPlayers(),
+});
+```
+
+(`activeMatch.startedAt` is already set to `Date.now()` when match starts.)
+
+### 3C. `progress` handler — accept and relay live position
+
+In `handleClientMessage`, when `type === "progress"` and `lobbyPhase === "match"`:
+
+**Accept from client:**
+
+```javascript
+const height = Math.max(0, Math.floor(Number(msg.height) || 0));
+const playerX = Number(msg.playerX);
+const playerY = Number(msg.playerY);
+const velocityY = Number(msg.velocityY);
+rec.player.height = height;
+if (Number.isFinite(playerX)) rec.player.playerX = playerX;
+if (Number.isFinite(playerY)) rec.player.playerY = playerY;
+if (Number.isFinite(velocityY)) rec.player.velocityY = velocityY;
+```
+
+**Broadcast to other clients (`opponent_progress`):**
+
+```javascript
+broadcast({
+  type: "opponent_progress",
+  id: userId,
+  displayName: rec.player.displayName,
+  height,
+  playerX: rec.player.playerX ?? 0,
+  playerY: rec.player.playerY ?? height + 80,
+  velocityY: rec.player.velocityY ?? 0,
+  skinId: rec.player.skinId,
+  fill: rec.player.fill,
+  ring: rec.player.ring,
+  sessionPoints: rec.player.sessionPoints,
+  eliminated: !!rec.player.eliminated,
+}, userId);
+```
+
+Do **not** throttle below what clients send — relay immediately so movement looks live.
+
+### 3D. Verify Jump VS wiring (usually already on main)
+
+| File | Check |
+|------|--------|
+| `server/jump-vs-lobby.js` | exists |
+| `server/mobile-api.js` | `registerJumpVsRoutes(app, { validateBearer, pointStore, game })` |
+| `server/hangman-proxy.js` | `tryJumpVsUpgrade(request, socket, head, ctx)` before crash WSS |
+| `server/index.js` | `attachHangmanWebSocketProxy(server, wss, { pointStore })` |
+| `server/mobile-arcade.js` | `prepareJumpVsMatch`, `finalizeJumpVsMatch` exported |
+
+WebSocket: `wss://y666suf.com/api/mobile/jump/vs/ws?token=<bearer>`
+
+---
+
+## Step 4 — Jump VS session seed (`server/mobile-arcade.js`)
+
+### 4A. `defaultSnakeJumpSession()` — add `vsMatchSeed`
+
+```javascript
+vsMatchId: null,
+vsMatchSeed: null,
+vsDeferred: false,
+```
+
+### 4B. `snakeJumpPayload()` — expose seed
+
+```javascript
+vsMatchId: s.vsMatchId || null,
+vsMatchSeed: s.vsMatchSeed ?? null,
+vsDeferred: !!s.vsDeferred,
+```
+
+(`prepareJumpVsMatch` already sets `vsMatchSeed` on session.)
+
+### 4C. `handleSnakeJump` — `start` action preserve seed
+
+Replace naive session reset so VS start doesn't wipe the match seed:
+
+```javascript
+if (act === "start") {
+  const incomingVsId = payload?.vsMatchId ? String(payload.vsMatchId).slice(0, 64) : null;
+  const preservedSeed = gRec.session?.vsMatchSeed;
+  const preservedId = gRec.session?.vsMatchId;
+  gRec.session = defaultSnakeJumpSession();
+  gRec.session.active = true;
+  if (incomingVsId) {
+    gRec.session.vsMatchId = incomingVsId;
+    gRec.session.vsDeferred = true;
+    if (preservedId === incomingVsId && preservedSeed != null) {
+      gRec.session.vsMatchSeed = preservedSeed;
+    }
+  }
+  // ... rest unchanged
+}
+```
+
+### 4D. Arcade stake cap fix
+
+In `stakeBounds()`, change:
+
+```javascript
+const capHigh = Math.floor(def * 3);
+```
+
+to:
+
+```javascript
+const capHigh = STAKE_ABS_MAX;
+```
+
+(`STAKE_ABS_MAX = 100_000` should already exist.)
+
+---
+
+## Step 5 — Restart Node (single instance)
+
+Stop duplicate processes. Restart your usual launcher. Only **one** Node behind Cloudflare.
+
+---
+
+## Step 6 — Smoke tests
+
+### Manual cashout (active bet, running round)
+
+Chat or `/api/chat`: `!cashout`
+
+Expect: `{ type: "manual_cashout", ok: true, cashout: <current mult>, payout: ... }`
+
+### Jump VS status
+
+```powershell
+curl https://y666suf.com/api/mobile/jump/vs/status -H "Authorization: Bearer YOUR_TOKEN"
+```
+
+Expect: `{ ok: true, phase: "waiting", wsPath: "/api/mobile/jump/vs/ws" }`
+
+### Jump VS live sync (two devices)
+
+1. Both join VS lobby on iOS
+2. Match starts — both should see **same platforms** (shared `matchSeed`)
+3. Both should see **each other as live players** (not ghosts) moving smoothly
+4. Server logs should show `opponent_progress` with `playerX`, `playerY`, `velocityY`
+
+### Offline sync (if not verified)
+
+Search `mobile-arcade.js` for `offline_sync` / `applyOfflineArcadeSync`.
+
+### Stake cap
+
+Arcade staked games should allow up to 100k (or balance).
+
+---
+
+## Step 7 — Commit & push (recommended)
+
+```powershell
+git add server/game.js server/jump-vs-lobby.js server/mobile-arcade.js
+git commit -m "Add manual crash cashout, Jump VS live player sync, and VS session seed fixes."
+git push origin main
+```
+
+---
+
+## iOS note (no PC action)
+
+TestFlight / device build **161+** includes:
+- Crash **Cash Out** button
+- Jump VS lobby + **live player rendering** (not ghosts)
+- Shared map via match seed + synchronized match start
+
+Server **must** be updated and restarted for VS live sync and cashout to work end-to-end.
+
+---
+
+## Checklist
+
+- [ ] Pulled latest `main`
+- [ ] `manualCashout` + `!cashout` in `server/game.js`
+- [ ] `_settleBetWin` shared by auto + manual cashout
+- [ ] `jump-vs-lobby.js`: `playerX/Y/velocityY` in progress + opponent_progress
+- [ ] `match_start` includes `startedAt`
+- [ ] `mobile-arcade.js`: preserve `vsMatchSeed` on VS start, `stakeBounds` uses `STAKE_ABS_MAX`
+- [ ] Jump VS WebSocket upgrade works
+- [ ] Node restarted (one instance)
+- [ ] `!cashout` works on live stream
+- [ ] Two-phone VS test: same map + live other player visible

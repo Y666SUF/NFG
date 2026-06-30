@@ -302,6 +302,7 @@ class CrashGame {
       crashPoint: this.phase === PHASE.ENDED ? this.crashPoint : null,
       bettingEndsAt: this.bettingEndsAt,
       nextRoundStartsAt: this.nextRoundStartsAt,
+      runStartedAt: this.phase === PHASE.RUNNING && this._runStartedAt > 0 ? this._runStartedAt : null,
       opts: { ...this.opts },
       lastResult: this.lastResult,
       openBets: this.phase === PHASE.BETTING ? this.listOpenBets() : [],
@@ -444,7 +445,13 @@ class CrashGame {
     this.phase = PHASE.ENDED;
     this.crashPoint = resultCrash;
     this.multiplier = resultCrash;
-    this.lastResult = { roundId: this.roundId, crashPoint: resultCrash, wins: [...this._winsThisRound], losses: lost };
+    this.lastResult = {
+      roundId: this.roundId,
+      crashPoint: resultCrash,
+      wins: [...this._winsThisRound],
+      losses: lost,
+      emptyRound: this._winsThisRound.length === 0 && lost.length === 0,
+    };
     this._clearTimers();
     this.onUpdate();
     this._runPostRoundFlow();

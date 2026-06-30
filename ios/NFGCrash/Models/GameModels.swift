@@ -150,6 +150,12 @@ struct RoundLastResult: Codable, Equatable {
     var crashPoint: Double
     var wins: [RoundOutcome]
     var losses: [RoundOutcome]
+    var emptyRound: Bool?
+
+    var isEmptyRound: Bool {
+        if let emptyRound { return emptyRound }
+        return wins.isEmpty && losses.isEmpty
+    }
 }
 
 struct RoundResultSummary: Identifiable, Equatable {
@@ -179,6 +185,15 @@ struct RoundResultSummary: Identifiable, Equatable {
     }
 }
 
+struct CrashGameOpts: Codable, Equatable {
+    var multiplierPerSecond: Double?
+
+    var rate: Double {
+        let v = multiplierPerSecond ?? 0.42
+        return v > 0 ? v : 0.42
+    }
+}
+
 struct CrashGameState: Codable, Equatable {
     var phase: GamePhase
     var roundId: Int
@@ -186,6 +201,8 @@ struct CrashGameState: Codable, Equatable {
     var crashPoint: Double?
     var bettingEndsAt: Int64
     var nextRoundStartsAt: Int64?
+    var runStartedAt: Int64?
+    var opts: CrashGameOpts?
     var openBets: [OpenBet]
     var queuedBets: [OpenBet]
     var taxPot: TaxPotStatus?
@@ -199,6 +216,8 @@ struct CrashGameState: Codable, Equatable {
         crashPoint: nil,
         bettingEndsAt: 0,
         nextRoundStartsAt: nil,
+        runStartedAt: nil,
+        opts: nil,
         openBets: [],
         queuedBets: [],
         taxPot: nil,
@@ -208,6 +227,7 @@ struct CrashGameState: Codable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case phase, roundId, multiplier, crashPoint, bettingEndsAt, nextRoundStartsAt
+        case runStartedAt, opts
         case openBets, queuedBets, taxPot, lastResult, recentCrashes
     }
 
@@ -218,6 +238,8 @@ struct CrashGameState: Codable, Equatable {
         crashPoint: Double?,
         bettingEndsAt: Int64,
         nextRoundStartsAt: Int64?,
+        runStartedAt: Int64? = nil,
+        opts: CrashGameOpts? = nil,
         openBets: [OpenBet],
         queuedBets: [OpenBet],
         taxPot: TaxPotStatus?,
@@ -230,6 +252,8 @@ struct CrashGameState: Codable, Equatable {
         self.crashPoint = crashPoint
         self.bettingEndsAt = bettingEndsAt
         self.nextRoundStartsAt = nextRoundStartsAt
+        self.runStartedAt = runStartedAt
+        self.opts = opts
         self.openBets = openBets
         self.queuedBets = queuedBets
         self.taxPot = taxPot
@@ -245,6 +269,8 @@ struct CrashGameState: Codable, Equatable {
         crashPoint = try c.decodeIfPresent(Double.self, forKey: .crashPoint)
         bettingEndsAt = try c.decodeIfPresent(Int64.self, forKey: .bettingEndsAt) ?? 0
         nextRoundStartsAt = try c.decodeIfPresent(Int64.self, forKey: .nextRoundStartsAt)
+        runStartedAt = try c.decodeIfPresent(Int64.self, forKey: .runStartedAt)
+        opts = try c.decodeIfPresent(CrashGameOpts.self, forKey: .opts)
         openBets = try c.decodeIfPresent([OpenBet].self, forKey: .openBets) ?? []
         queuedBets = try c.decodeIfPresent([OpenBet].self, forKey: .queuedBets) ?? []
         taxPot = try c.decodeIfPresent(TaxPotStatus.self, forKey: .taxPot)

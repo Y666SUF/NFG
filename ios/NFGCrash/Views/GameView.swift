@@ -22,7 +22,7 @@ struct GameView: View {
             let chartHeight = min(168, max(120, layoutHeight * 0.26))
 
             ZStack {
-                NFGSceneBackground(phase: sync.gameState.phase, multiplier: sync.gameState.multiplier)
+                NFGSceneBackground(phase: sync.gameState.phase, multiplier: sync.displayMultiplier)
 
                 VStack(spacing: 0) {
                     VStack(spacing: NFGSpacing.sm) {
@@ -62,7 +62,7 @@ struct GameView: View {
                         CrashChartView(
                             history: sync.multiplierHistory,
                             phase: sync.gameState.phase,
-                            multiplier: sync.gameState.multiplier,
+                            multiplier: sync.displayMultiplier,
                             crashPoint: sync.gameState.crashPoint,
                             bettingEndsAt: sync.gameState.bettingEndsAt,
                             openBets: sync.gameState.openBets,
@@ -371,7 +371,7 @@ struct GameView: View {
     }
 
     private func activeBetCashOutSection(_ bet: OpenBet) -> some View {
-        let mult = sync.gameState.multiplier
+        let mult = sync.displayMultiplier
         let payout = sync.estimatedManualCashoutPayout(for: bet)
         let canCashOut = sync.canManualCashout && !isCashingOut
 

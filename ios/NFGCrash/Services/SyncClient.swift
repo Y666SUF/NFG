@@ -26,6 +26,8 @@ final class SyncClient: ObservableObject {
     @Published var pendingArcadeSyncPoints: Int = 0
     @Published var pendingArcadeSyncCount: Int = 0
     @Published var multiplierHistory: [Double] = [1]
+    /// Smooth 60fps multiplier for chart/UI — wall-clock projection during running.
+    @Published var displayMultiplier: Double = 1
     @Published var sublineText = "Connecting…"
     @Published var taxPotAmount: Int = 0
     @Published var fullBalances: [LeaderboardRow] = []
@@ -71,6 +73,8 @@ final class SyncClient: ObservableObject {
     private var lastRoundId: Int = 0
     private var lastRoundResultShownId: Int = 0
     private var pingTimer: Timer?
+    private var displayMultTimer: Timer?
+    private var localRunStartedAtMs: Int64 = 0
     private var liveStatusTimer: Timer?
     private var presenceTimer: Timer?
     private var knownPresenceUserIds = Set<String>()
@@ -165,6 +169,7 @@ final class SyncClient: ObservableObject {
             webSocketTask?.resume()
             receiveLoop()
             startPing()
+            startDisplayMultiplierTimer()
         }
     }
 
@@ -191,6 +196,7 @@ final class SyncClient: ObservableObject {
     func disconnect() {
         pingTimer?.invalidate()
         pingTimer = nil
+        stopDisplayMultiplierTimer()
         liveStatusTimer?.invalidate()
         liveStatusTimer = nil
         presenceTimer?.invalidate()
@@ -794,7 +800,7 @@ final class SyncClient: ObservableObject {
             lastActionMessage = "No active bet this round."
             return
         }
-        guard gameState.multiplier >= 1.05 else {
+        guard displayMultiplier >= 1.05 else {
             lastActionMessage = "Too early — wait until at least 1.05×"
             return
         }
@@ -810,11 +816,11 @@ final class SyncClient: ObservableObject {
     }
 
     var canManualCashout: Bool {
-        activeCrashBet != nil && gameState.multiplier >= 1.05
+        activeCrashBet != nil && displayMultiplier >= 1.05
     }
 
     func estimatedManualCashoutPayout(for bet: OpenBet) -> Int {
-        let mult = gameState.multiplier
+        let mult = displayMultiplier
         guard mult >= 1.05 else { return 0 }
         let gross = Int((Double(bet.amount) * mult).rounded(.down))
         let profit = max(0, gross - bet.amount)
@@ -1388,6 +1394,20 @@ final class SyncClient: ObservableObject {
     /// Keeps last-five crash list when server sends it; falls back to local tracking on older PC builds.
     private func enrichState(_ s: CrashGameState) -> CrashGameState {
         var out = enrichOpenBets(s)
+
+        if out.phase == .running {
+            if let serverStart = out.runStartedAt, serverStart > 0 {
+                localRunStartedAtMs = serverStart
+            } else if localRunStartedAtMs <= 0 {
+                localRunStartedAtMs = Int64(Date().timeIntervalSince1970 * 1000)
+            }
+            if out.runStartedAt == nil {
+                out.runStartedAt = localRunStartedAtMs
+            }
+        } else if out.phase != .running {
+            localRunStartedAtMs = 0
+        }
+
         if !out.recentCrashes.isEmpty {
             localRecentCrashes = out.recentCrashes
             return out
@@ -1536,31 +1556,79 @@ final class SyncClient: ObservableObject {
         if s.roundId != lastRoundId {
             lastRoundId = s.roundId
             multiplierHistory = [1]
+            displayMultiplier = 1
             if s.phase != .ended {
                 roundResultPopup = nil
                 pendingRoundResultPopup = nil
             }
         }
+
+        if s.phase == .running && previousPhase != .running {
+            localRunStartedAtMs = s.runStartedAt ?? Int64(Date().timeIntervalSince1970 * 1000)
+            displayMultiplier = 1
+            multiplierHistory = [1]
+        }
+
         taxPotAmount = s.taxPot?.displayAmount ?? 0
         updateSubline(s)
         updateRoundResultPopup(s)
-        if s.phase == .running {
-            let m = max(s.multiplier, 1)
-            let last = multiplierHistory.last ?? 1
-            if multiplierHistory.isEmpty || abs(last - m) > 0.0005 {
-                multiplierHistory.append(m)
-                if multiplierHistory.count > 240 { multiplierHistory.removeFirst() }
-            }
-        } else if s.phase == .ended {
+        if s.phase == .ended {
             let final = max(s.crashPoint ?? s.multiplier, 1)
+            displayMultiplier = final
             let last = multiplierHistory.last ?? 1
             if abs(last - final) > 0.0005 {
                 multiplierHistory.append(final)
                 if multiplierHistory.count > 240 { multiplierHistory.removeFirst() }
             }
-        } else if s.phase == .betting {
-            multiplierHistory = [1]
+        } else if s.phase == .betting || s.phase == .idle {
+            displayMultiplier = 1
+            if s.phase == .betting {
+                multiplierHistory = [1]
+            }
         }
+    }
+
+    func projectedRunningMult(for s: CrashGameState) -> Double {
+        guard s.phase == .running else { return max(s.multiplier, 1) }
+        let rate = s.opts?.rate ?? 0.42
+        let started = s.runStartedAt ?? (localRunStartedAtMs > 0 ? localRunStartedAtMs : nil)
+        guard let started, started > 0 else { return max(s.multiplier, 1) }
+        let elapsed = max(0, (Date().timeIntervalSince1970 * 1000 - Double(started)) / 1000)
+        return floor((1 + rate * elapsed) * 100) / 100
+    }
+
+    private func tickDisplayMultiplier() {
+        let s = gameState
+        switch s.phase {
+        case .running:
+            displayMultiplier = projectedRunningMult(for: s)
+            let last = multiplierHistory.last ?? 1
+            if multiplierHistory.isEmpty || abs(last - displayMultiplier) > 0.0005 {
+                multiplierHistory.append(displayMultiplier)
+                if multiplierHistory.count > 240 { multiplierHistory.removeFirst() }
+            }
+        case .ended:
+            displayMultiplier = max(s.crashPoint ?? s.multiplier, 1)
+        default:
+            displayMultiplier = 1
+        }
+    }
+
+    private func startDisplayMultiplierTimer() {
+        displayMultTimer?.invalidate()
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.tickDisplayMultiplier()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        displayMultTimer = timer
+        tickDisplayMultiplier()
+    }
+
+    private func stopDisplayMultiplierTimer() {
+        displayMultTimer?.invalidate()
+        displayMultTimer = nil
     }
 
     private func maybeRepeatLastBet(roundId: Int) {
@@ -1640,7 +1708,10 @@ final class SyncClient: ObservableObject {
                 sublineText = "Multiplier climbing — auto cashout when targets hit."
             }
         case .ended:
-            if let crash = s.crashPoint {
+            let crashValue = s.crashPoint ?? s.lastResult?.crashPoint
+            if s.lastResult?.isEmptyRound == true, let crash = crashValue {
+                sublineText = "No players this round — would have crashed at \(String(format: "%.2f", crash))×"
+            } else if let crash = crashValue {
                 sublineText = "Crashed at \(String(format: "%.2f", crash))×"
             } else {
                 sublineText = "Round ended"

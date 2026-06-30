@@ -2,36 +2,30 @@
 cross_device_status: done
 from_device: pc
 target_device: mac
-created_at: 2026-06-10T14:00:00Z
-title: Retro Pixel Jump iOS — y666suf.com + black screen fix
+created_at: 2026-06-10T18:00:00Z
+title: iOS smooth crash multiplier TestFlight build
 related_paths:
- - .env
- - app.config.js
- - app.config.ts
- - app/_layout.tsx
- - src/
+ - ios/NFGCrash/Models/GameModels.swift
+ - ios/NFGCrash/Services/SyncClient.swift
+ - ios/NFGCrash/Views/GameView.swift
+ - server/game.js
 ---
 
-# Mac companion task: Retro Pixel Jump iOS (backend URL + black screen)
+# Mac companion task: iOS smooth crash multiplier (TestFlight)
 
-## Context (PC — already done)
+Ship iOS build with 60fps wall-clock multiplier projection matching the fixed PC overlay.
 
-Retro Pixel Jump backend is proxied through the **same Cloudflare tunnel as NFG Crash**:
+## Done on Mac
 
-| Layer | Value |
-|-------|--------|
-| Public base | `https://y666suf.com/api/pixel-jump` |
-| Health | `GET https://y666suf.com/api/pixel-jump/` |
-| Leaderboard | `GET/POST https://y666suf.com/api/pixel-jump/leaderboard` |
-| Multiplayer | `POST https://y666suf.com/api/pixel-jump/mp/rooms` |
-| WebSocket | `wss://y666suf.com/api/pixel-jump/ws/mp/{roomId}?playerId=...` |
-| PC launcher | `run-electron-cloudflare.bat` (Node 3847 → uvicorn 8001) |
+- `CrashGameState.runStartedAt`, `opts.multiplierPerSecond`, `RoundLastResult.emptyRound`
+- `SyncClient.displayMultiplier` at 60fps via `Timer`; `projectedRunningMult(for:)` uses wall-clock (no server cap)
+- Chart/UI uses `displayMultiplier` instead of raw server ticks
+- Empty-round subline: "No players this round — would have crashed at X×"
+- Server exposes `runStartedAt` + `emptyRound` in game state
+- Build **166** archived and uploaded to TestFlight
 
-**Do NOT use** old `trycloudflare.com` URLs — they expire when cloudflared restarts.
+## Smoke test (device → https://y666suf.com)
 
-Room API returns relative `wsUrl` like `/api/pixel-jump/ws/mp/ABCD?playerId=...` — resolve against `https://y666suf.com` (not against backend base with an extra `/api`).
-
-## When done
-
-- Set `cross_device_status: done` in frontmatter
-- `./scripts/sync-push.sh`
+- [ ] Round with bets: multiplier climbs smoothly (no 1s freeze/jump)
+- [ ] Skip a round (no bet): chart shows would-have crash, not 1×
+- [ ] Manual cashout still works

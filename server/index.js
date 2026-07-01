@@ -275,6 +275,12 @@ app.get("/ads.txt", (_req, res) => {
   return res.sendFile(adsTxtFile);
 });
 
+const robotsTxtFile = path.join(publicDir, "robots.txt");
+app.get("/robots.txt", (_req, res) => {
+  res.type("text/plain; charset=utf-8");
+  return res.sendFile(robotsTxtFile);
+});
+
 registerIpaDownloads(app);
 app.post("/api/contact", async (req, res) => {
   const name = String(req.body?.name || "").trim();

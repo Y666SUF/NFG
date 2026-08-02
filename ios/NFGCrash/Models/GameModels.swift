@@ -647,6 +647,21 @@ struct PlayerWallet: Codable, Equatable {
     }
 }
 
+struct OfflineInventorySyncResponse: Decodable {
+    var ok: Bool?
+    var message: String?
+    var applied: Int?
+    var remaining: [OfflineInventorySpendDTO]?
+    var wallet: PlayerWallet?
+}
+
+struct OfflineInventorySpendDTO: Decodable, Equatable {
+    var id: String?
+    var kind: String?
+    var count: Int?
+    var target: String?
+}
+
 struct AdminPlayerSeed: Equatable {
     var balance: Int
     var allTime: Int

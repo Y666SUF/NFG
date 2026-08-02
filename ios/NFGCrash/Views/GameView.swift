@@ -36,6 +36,10 @@ struct GameView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
+                        if sync.isOfflinePlayMode || sync.connectionStatus == "Offline" {
+                            offlineSyncBanner
+                        }
+
                         if let nearMiss = sync.nearMissMessage {
                             HStack(spacing: 6) {
                                 Image(systemName: "target")
@@ -184,6 +188,53 @@ struct GameView: View {
         )
     }
 
+    // MARK: - Offline banner
+
+    private var offlineSyncBanner: some View {
+        let pendingBits: [String] = [
+            sync.pendingArcadeSyncCount > 0
+                ? "\(sync.pendingArcadeSyncPoints.formatted()) pts"
+                : nil,
+            sync.pendingInventorySyncCount > 0
+                ? "\(sync.pendingInventorySyncCount) steal\(sync.pendingInventorySyncCount == 1 ? "" : "s")"
+                : nil,
+            sync.pendingOfflineCount > 0
+                ? "\(sync.pendingOfflineCount) action\(sync.pendingOfflineCount == 1 ? "" : "s")"
+                : nil,
+        ].compactMap { $0 }
+
+        return HStack(spacing: 8) {
+            Image(systemName: "wifi.slash")
+                .font(.system(size: 11, weight: .bold))
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Offline — Arcade still works")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                Text(
+                    pendingBits.isEmpty
+                        ? "Crash bets pause until the server is back. Progress syncs automatically."
+                        : "Pending sync: \(pendingBits.joined(separator: " · "))"
+                )
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(NFGTheme.muted)
+            }
+            Spacer(minLength: 0)
+            Button("Retry") { sync.connect() }
+                .font(.system(size: 11, weight: .bold, design: .rounded))
+                .foregroundStyle(NFGTheme.accent2)
+        }
+        .foregroundStyle(NFGTheme.gold)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                .fill(NFGTheme.gold.opacity(0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                .stroke(NFGTheme.gold.opacity(0.35), lineWidth: 1)
+        )
+    }
+
     // MARK: - Bet dock
 
     private func dismissBetKeyboard() {
@@ -196,9 +247,12 @@ struct GameView: View {
     }
 
     private var displayBalance: Int {
-        if sync.liveBalance > 0 { return sync.liveBalance }
-        if sync.wallet.balance > 0 { return sync.wallet.balance }
-        return sync.profile.balance
+        let base: Int = {
+            if sync.liveBalance > 0 { return sync.liveBalance }
+            if sync.wallet.balance > 0 { return sync.wallet.balance }
+            return sync.profile.balance
+        }()
+        return max(0, base + max(0, sync.pendingArcadeSyncPoints))
     }
 
     private let quickStakeAmounts = [1000, 5000, 10000, 25000]
@@ -336,19 +390,6 @@ struct GameView: View {
                     Text("!bal")
                 }
                 .buttonStyle(NFGSecondaryButtonStyle(tint: NFGTheme.accent2))
-            }
-
-            Button {
-                dismissBetKeyboard()
-                Task { await sync.sendCommand("!all 2") }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 10))
-                    Text("All-in @ 2× (!all 2)")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                }
-                .foregroundStyle(NFGTheme.gold.opacity(0.85))
             }
         }
         .padding(NFGSpacing.md)

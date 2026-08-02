@@ -83,6 +83,8 @@
 		E1B2C3D500000000000000C2 /* BlocksGameView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000C3 /* BlocksGameView.swift */; };
 		E1B2C3D500000000000000E0 /* BlocksGameScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000E1 /* BlocksGameScreen.swift */; };
 		E1B2C3D500000000000000D1 /* ArcadeOfflinePointsQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000D2 /* ArcadeOfflinePointsQueue.swift */; };
+		E2B2C3D70000000000000201 /* LocalWalletStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2B2C3D70000000000000202 /* LocalWalletStore.swift */; };
+		E2B2C3D70000000000000203 /* OfflineInventoryLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2B2C3D70000000000000204 /* OfflineInventoryLedger.swift */; };
 		E1B2C3D500000000000000D3 /* LastBetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000D4 /* LastBetStore.swift */; };
 		E1B2C3D500000000000000E6 /* JumpShopLocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000E7 /* JumpShopLocalStore.swift */; };
 		E1B2C3D500000000000000D5 /* JumpShopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000D6 /* JumpShopSheet.swift */; };
@@ -183,6 +185,8 @@
 		E1B2C3D500000000000000C3 /* BlocksGameView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocksGameView.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000E1 /* BlocksGameScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BlocksGameScreen.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000D2 /* ArcadeOfflinePointsQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeOfflinePointsQueue.swift; sourceTree = "<group>"; };
+		E2B2C3D70000000000000202 /* LocalWalletStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalWalletStore.swift; sourceTree = "<group>"; };
+		E2B2C3D70000000000000204 /* OfflineInventoryLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineInventoryLedger.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000D4 /* LastBetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastBetStore.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000E7 /* JumpShopLocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpShopLocalStore.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000D6 /* JumpShopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpShopSheet.swift; sourceTree = "<group>"; };
@@ -339,6 +343,8 @@
 				A1B2C3D40000000000000019 /* PlayerSession.swift */,
 				A1B2C3D4000000000000001A /* OfflineQueue.swift */,
 				E1B2C3D500000000000000D2 /* ArcadeOfflinePointsQueue.swift */,
+				E2B2C3D70000000000000202 /* LocalWalletStore.swift */,
+				E2B2C3D70000000000000204 /* OfflineInventoryLedger.swift */,
 				A1B2C3D4000000000000001E /* AuthStore.swift */,
 				E1B2C3D500000000000000EB /* LocalUserDataMigration.swift */,
 				A1B2C3D4000000000000005E /* RewardedAdService.swift */,
@@ -503,6 +509,8 @@
 				A1B2C3D40000000000000008 /* PlayerSession.swift in Sources */,
 				A1B2C3D40000000000000009 /* OfflineQueue.swift in Sources */,
 				E1B2C3D500000000000000D1 /* ArcadeOfflinePointsQueue.swift in Sources */,
+				E2B2C3D70000000000000201 /* LocalWalletStore.swift in Sources */,
+				E2B2C3D70000000000000203 /* OfflineInventoryLedger.swift in Sources */,
 				E1B2C3D500000000000000D3 /* LastBetStore.swift in Sources */,
 				A1B2C3D4000000000000000A /* NFGTheme.swift in Sources */,
 				E2B2C3D60000000000000101 /* NFGThemeVaultTerminal.swift in Sources */,
@@ -714,7 +722,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 166;
+                CURRENT_PROJECT_VERSION = 167;
 				DEVELOPMENT_TEAM = VM34N9485F;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;
@@ -743,7 +751,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-                CURRENT_PROJECT_VERSION = 166;
+                CURRENT_PROJECT_VERSION = 167;
 				DEVELOPMENT_TEAM = VM34N9485F;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = NO;

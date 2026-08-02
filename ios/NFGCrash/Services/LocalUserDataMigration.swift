@@ -34,6 +34,8 @@ enum LocalUserDataMigration {
         clearGuestKeys(from: from)
         ArcadeOfflinePointsQueue.migrateQueue(from: from, to: to)
         JumpPendingRunStore.migratePendingHeight(from: from, to: to)
+        LocalWalletStore.migrate(from: from, to: to)
+        OfflineInventoryLedger.migrate(from: from, to: to)
     }
 
     private static func normalized(_ user: String) -> String {

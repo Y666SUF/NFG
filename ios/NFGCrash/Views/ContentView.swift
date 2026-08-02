@@ -99,12 +99,20 @@ struct ContentView: View {
             }
             .onChange(of: sync.connectionStatus) { _, status in
                 guard PlayerSession.isLoggedIn, status == "Online" else { return }
-                Task { await sync.refreshActiveAppUsers() }
+                Task {
+                    await sync.flushAllPendingOnReconnect(silent: true)
+                    await sync.refreshActiveAppUsers()
+                }
             }
             .onChange(of: scenePhase) { _, phase in
                 guard phase == .active else { return }
                 Task {
                     _ = await AuthStore.refreshSessionFromServer()
+                    if sync.connectionStatus != "Online" {
+                        sync.connect()
+                    } else {
+                        await sync.flushAllPendingOnReconnect(silent: true)
+                    }
                     await sync.refreshActiveAppUsers()
                     await sync.refreshMobileStatus()
                 }

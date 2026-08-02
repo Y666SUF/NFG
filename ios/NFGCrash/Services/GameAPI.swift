@@ -856,6 +856,31 @@ struct GameAPI {
         return decoded
     }
 
+    /// Flush offline powerup spends (steal charges, etc.) so server inventory matches the app.
+    func syncOfflineInventory(spends: [[String: Any]]) async throws -> OfflineInventorySyncResponse {
+        guard authToken != nil else { throw GameAPIError.notLoggedIn }
+        let req = try authorizedRequest(
+            url: baseURL.appending(path: "/api/mobile/inventory/sync"),
+            method: "POST",
+            jsonBody: ["spends": spends]
+        )
+        let (data, response) = try await GameHTTP.data(for: req)
+        guard let http = response as? HTTPURLResponse else {
+            throw GameAPIError.serverError("No response")
+        }
+        if http.statusCode == 401 { throw GameAPIError.notLoggedIn }
+        if http.statusCode == 404 {
+            throw GameAPIError.serverError(
+                "Inventory sync is not on the game server yet. Pull latest server files and restart Node."
+            )
+        }
+        let decoded = try JSONDecoder().decode(OfflineInventorySyncResponse.self, from: data)
+        if http.statusCode >= 400 || decoded.ok == false {
+            throw GameAPIError.serverError(decoded.message ?? "Inventory sync failed")
+        }
+        return decoded
+    }
+
     func updateDisplayName(_ displayName: String) async throws -> PlayerWallet {
         guard authToken != nil else { throw GameAPIError.notLoggedIn }
         let req = try authorizedRequest(

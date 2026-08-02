@@ -21,6 +21,7 @@ const { buildWalletPayload } = require("./mobile-wallet");
 const { buildPlatformStatus, registerMobilePlatformRoutes } = require("./mobile-platform");
 const { registerHangmanMobileRoutes } = require("./mobile-hangman");
 const { registerMobileProfileRoutes } = require("./mobile-profile");
+const { registerMobileInventoryRoutes } = require("./mobile-inventory");
 const { registerMobileArcadeRoutes } = require("./mobile-arcade");
 const { registerTikTokAvatarRoutes } = require("./tiktok-profile-avatar");
 const { registerMobileGameAdminRoutes } = require("./mobile-game-admin");
@@ -80,6 +81,7 @@ function registerMobileApi(app, ctx) {
   registerMobilePlatformRoutes(app, { game, pointStore, validateBearer, broadcast });
   registerHangmanMobileRoutes(app, { validateBearer });
   registerMobileProfileRoutes(app, { validateBearer, pointStore, game });
+  registerMobileInventoryRoutes(app, { validateBearer, pointStore, game });
   registerMobileArcadeRoutes(app, { validateBearer, pointStore, game });
   registerTikTokAvatarRoutes(app, { validateBearer });
   registerMobileGameAdminRoutes(app, { validateBearer, pointStore, game, broadcast, pushState });

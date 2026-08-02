@@ -25,6 +25,9 @@ final class SyncClient: ObservableObject {
     @Published var pendingOfflineCount: Int = OfflineQueue.count
     @Published var pendingArcadeSyncPoints: Int = 0
     @Published var pendingArcadeSyncCount: Int = 0
+    @Published var pendingInventorySyncCount: Int = OfflineInventoryLedger.pendingCount()
+    /// True when the app is usable with a cached session/wallet while the live server is down.
+    @Published private(set) var isOfflinePlayMode = false
     @Published var multiplierHistory: [Double] = [1]
     /// Smooth 60fps multiplier for chart/UI — wall-clock projection during running.
     @Published var displayMultiplier: Double = 1
@@ -95,6 +98,52 @@ final class SyncClient: ObservableObject {
     private var lastPhase: GamePhase = .idle
     private var lastAutoBetRoundId: Int = -1
     private var pendingBetAmountText: String?
+    init() {
+        restoreCachedWalletIfNeeded()
+        refreshPendingArcadeSyncCount()
+        pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+        pendingOfflineCount = OfflineQueue.count
+    }
+
+    var isServerReachable: Bool { connectionStatus == "Online" }
+
+    /// Balance shown in UI — includes pending offline arcade credits still waiting to sync.
+    var displayBalanceIncludingPending: Int {
+        max(0, liveBalance + max(0, pendingArcadeSyncPoints))
+    }
+
+    private func restoreCachedWalletIfNeeded() {
+        guard PlayerSession.isLoggedIn, let cached = LocalWalletStore.load() else { return }
+        wallet = cached
+        liveBalance = cached.balance
+        profile.balance = cached.balance
+        profile.allTime = cached.allTime
+        profile.displayName = cached.displayName.isEmpty ? profile.displayName : cached.displayName
+        profile.level = cached.level
+        profile.rank = cached.rank
+    }
+
+    private func persistWalletLocally() {
+        guard PlayerSession.isLoggedIn else { return }
+        var snap = wallet
+        if snap.user.isEmpty {
+            snap.user = AuthStore.verifiedUserId
+        }
+        LocalWalletStore.save(snap)
+    }
+
+    private func enterOfflinePlayMode(reason: String) {
+        isOfflinePlayMode = true
+        connectionStatus = "Offline"
+        restoreCachedWalletIfNeeded()
+        refreshPendingArcadeSyncCount()
+        pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+        pendingOfflineCount = OfflineQueue.count
+        sublineText = "Offline mode — Arcade still works. Scores & steals sync when the server is back."
+        appendFeed(reason)
+        syncPresencePillFromState()
+        scheduleReconnect()
+    }
 
     private func bootstrapFromServer(api: GameAPI) async {
         await refreshMobileStatus()
@@ -104,13 +153,13 @@ final class SyncClient: ObservableObject {
             gameState = enrichState(try await api.fetchState())
             applyStateSideEffects(gameState)
             connectionStatus = "Online"
+            isOfflinePlayMode = false
             syncPresencePillFromState()
 
             await refreshProfile()
             await refreshWallet()
             await loadAppChatHistory()
-            await flushOfflineQueue()
-            await flushArcadeOfflineQueue(silent: true)
+            await flushAllPendingOnReconnect(silent: true)
             await refreshLeaderboard()
             startLiveStatusPolling()
             startPresencePolling()
@@ -118,9 +167,7 @@ final class SyncClient: ObservableObject {
             startArcadeSyncPolling()
             await refreshActiveAppUsers()
         } catch {
-            connectionStatus = "Offline"
-            syncPresencePillFromState()
-            appendFeed("Connection lost")
+            enterOfflinePlayMode(reason: "Server unreachable — playing offline. Progress will sync when it returns.")
         }
     }
 
@@ -148,6 +195,11 @@ final class SyncClient: ObservableObject {
             }
             isBootstrappingSession = false
 
+            // Cached session → stay playable even if the server is down.
+            if PlayerSession.isLoggedIn {
+                restoreCachedWalletIfNeeded()
+            }
+
             guard PlayerSession.isLoggedIn else {
                 connectionStatus = "Server unreachable"
                 return
@@ -156,7 +208,7 @@ final class SyncClient: ObservableObject {
             do {
                 api = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
             } catch {
-                connectionStatus = error.localizedDescription
+                enterOfflinePlayMode(reason: "Can't reach server — Arcade + cached wallet still available.")
                 return
             }
 
@@ -295,6 +347,7 @@ final class SyncClient: ObservableObject {
         guard next != wallet else { return }
         wallet = next
         liveBalance = next.balance
+        persistWalletLocally()
     }
 
     func refreshWallet(force: Bool = false) async {
@@ -349,6 +402,24 @@ final class SyncClient: ObservableObject {
             }
         }
         syncCosmeticsCatalogFromWallet(next)
+        reconcilePendingInventorySpends()
+        persistWalletLocally()
+    }
+
+    /// Keep steal-charge UI aligned with spends already taken in the app while offline.
+    private func reconcilePendingInventorySpends() {
+        let stealPending = OfflineInventoryLedger.pendingStealSpends()
+        guard stealPending > 0 else {
+            pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+            return
+        }
+        let adjusted = max(0, wallet.inventory.stealCharges - stealPending)
+        if adjusted != wallet.inventory.stealCharges {
+            var next = wallet
+            next.inventory.stealCharges = adjusted
+            wallet = next
+        }
+        pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
     }
 
     func applyBalanceFromServer(balance: Int, allTime: Int? = nil) {
@@ -777,6 +848,10 @@ final class SyncClient: ObservableObject {
             lastActionMessage = "Enter amount (e.g. 100, 30k) and cashout ≥ 1.05"
             return
         }
+        guard isServerReachable else {
+            lastActionMessage = "Crash bets need the live server — play Arcade offline; scores sync when you're back."
+            return
+        }
         guard let amount = BetAmountParser.parse(trimmed) else {
             lastActionMessage = "Enter a valid amount (e.g. 100, 30k, 3m)"
             return
@@ -790,6 +865,10 @@ final class SyncClient: ObservableObject {
     func manualCashout() async {
         guard PlayerSession.isLoggedIn else {
             lastActionMessage = "Sign in required."
+            return
+        }
+        guard isServerReachable else {
+            lastActionMessage = "Cash out needs the live server."
             return
         }
         guard gameState.phase == .running else {
@@ -840,12 +919,53 @@ final class SyncClient: ObservableObject {
             lastActionMessage = "Pick a player to steal from"
             return
         }
-        await sendCommand("!steal @\(target)")
+        guard wallet.inventory.stealCharges > 0 else {
+            lastActionMessage = "No steal charges left"
+            return
+        }
+
+        if let api, isServerReachable {
+            let user = AuthStore.verifiedUserId
+            let name = resolvedChatDisplayName()
+            do {
+                let result = try await api.sendChat(
+                    message: "!steal @\(target)",
+                    userId: user,
+                    displayName: name
+                )
+                handleChatResult(result)
+                await refreshWallet()
+                return
+            } catch {
+                // Fall through to offline queue so the spend is not lost.
+            }
+        }
+
+        // Offline / flaky: spend locally, sync charge + steal when the server returns.
+        patchWallet { w in
+            w.inventory.stealCharges = max(0, w.inventory.stealCharges - 1)
+        }
+        OfflineInventoryLedger.enqueue(kind: "steal", count: 1, target: target)
+        pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+        lastActionMessage = "Steal queued — will sync when the server is back (\(wallet.inventory.stealCharges) left)"
+        appendFeed("Queued steal on @\(target)")
     }
 
     func flushOfflineQueue() async {
         guard let api, PlayerSession.isLoggedIn else { return }
-        var queue = OfflineQueue.load()
+        // Drop stale crash bets/cashouts queued while offline — those rounds are gone.
+        let queue = OfflineQueue.load().filter { item in
+            let msg = item.message.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if msg.hasPrefix("!cashout") { return false }
+            if msg.hasPrefix("!all ") { return false }
+            // Bare amount bets like "!100 2" / "!3m 2.5"
+            if msg.hasPrefix("!"), !msg.hasPrefix("!steal"), !msg.hasPrefix("!balance"), !msg.hasPrefix("!bal") {
+                let rest = msg.dropFirst()
+                if rest.first?.isNumber == true || rest.hasPrefix("all") { return false }
+            }
+            return true
+        }
+        OfflineQueue.save(queue)
         guard !queue.isEmpty else {
             pendingOfflineCount = 0
             return
@@ -853,6 +973,10 @@ final class SyncClient: ObservableObject {
 
         var remaining: [QueuedChat] = []
         for item in queue {
+            // Steals are handled by inventory sync (avoids double-spend).
+            if item.message.lowercased().contains("!steal") {
+                continue
+            }
             do {
                 let result = try await api.sendChat(
                     message: item.message,
@@ -868,14 +992,91 @@ final class SyncClient: ObservableObject {
         OfflineQueue.save(remaining)
         pendingOfflineCount = remaining.count
         if remaining.isEmpty && !queue.isEmpty {
-            appendFeed("Synced \(queue.count) offline action(s) to your account.")
+            appendFeed("Synced offline actions to your account.")
         }
         await refreshProfile()
+    }
+
+    /// Sync offline steal / powerup spends so server inventory matches the app.
+    @discardableResult
+    func flushInventoryLedger(silent: Bool = false) async -> Int {
+        guard let api, PlayerSession.isLoggedIn, connectionStatus == "Online" else { return 0 }
+        let items = OfflineInventoryLedger.load()
+        pendingInventorySyncCount = items.count
+        guard !items.isEmpty else { return 0 }
+
+        let payload: [[String: Any]] = items.map { item in
+            var row: [String: Any] = [
+                "id": item.id,
+                "kind": item.kind,
+                "count": item.count,
+            ]
+            if let target = item.target, !target.isEmpty {
+                row["target"] = target
+            }
+            return row
+        }
+
+        do {
+            let result = try await api.syncOfflineInventory(spends: payload)
+            if let wallet = result.wallet {
+                applyWalletFromServer(wallet)
+            } else {
+                await refreshWallet(force: true)
+            }
+            let remainingDTOs = result.remaining ?? []
+            let remaining: [OfflineInventorySpend] = remainingDTOs.compactMap { dto in
+                guard let id = dto.id, let kind = dto.kind else { return nil }
+                return OfflineInventorySpend(
+                    id: id,
+                    kind: kind,
+                    count: dto.count ?? 1,
+                    target: dto.target,
+                    createdAt: Date().timeIntervalSince1970
+                )
+            }
+            OfflineInventoryLedger.replaceAll(remaining)
+            pendingInventorySyncCount = remaining.count
+            let applied = result.applied ?? max(0, items.count - remaining.count)
+            if applied > 0, !silent {
+                appendFeed("Synced \(applied) steal/powerup action(s).")
+                lastActionMessage = "Steal charges synced with the server."
+            }
+            return applied
+        } catch {
+            if !silent {
+                lastActionMessage = "Still syncing steals — retrying…"
+            }
+            return 0
+        }
+    }
+
+    /// Full offline → online catch-up: inventory, arcade points, chat queue, wallet.
+    func flushAllPendingOnReconnect(silent: Bool = false) async {
+        guard connectionStatus == "Online", PlayerSession.isLoggedIn else { return }
+        refreshPendingArcadeSyncCount()
+        let hadPending =
+            pendingInventorySyncCount > 0
+            || pendingOfflineCount > 0
+            || pendingArcadeSyncCount > 0
+            || JumpPendingRunStore.pendingHeight(for: ArcadeOfflinePointsQueue.userKey()) > 0
+        guard hadPending || isOfflinePlayMode else { return }
+
+        let inv = await flushInventoryLedger(silent: silent)
+        await flushOfflineQueue()
+        let arcade = await flushArcadeOfflineQueue(silent: silent)
+        if inv > 0 || arcade > 0 || hadPending {
+            await refreshWallet(force: true)
+        }
+        isOfflinePlayMode = false
+        refreshPendingArcadeSyncCount()
     }
 
     func refreshPendingArcadeSyncCount() {
         pendingArcadeSyncPoints = ArcadeOfflinePointsQueue.pendingPointsTotal()
         pendingArcadeSyncCount = ArcadeOfflinePointsQueue.pendingCount()
+        pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+        pendingOfflineCount = OfflineQueue.count
     }
 
     /// Pushes queued arcade milestone/level rewards to the server when online.
@@ -1078,8 +1279,9 @@ final class SyncClient: ObservableObject {
                 applyStateSideEffects(enriched)
                 if connectionStatus != "Online" {
                     connectionStatus = "Online"
+                    isOfflinePlayMode = false
                     syncPresencePillFromState()
-                    Task { await flushArcadeOfflineQueue(silent: true) }
+                    Task { await flushAllPendingOnReconnect(silent: true) }
                 }
             }
         case "chat_result":
@@ -1223,7 +1425,7 @@ final class SyncClient: ObservableObject {
         arcadeSyncTimer?.invalidate()
         arcadeSyncTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                await self?.flushArcadeOfflineQueue(silent: true)
+                await self?.flushAllPendingOnReconnect(silent: true)
             }
         }
     }

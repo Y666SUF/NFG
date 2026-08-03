@@ -26,6 +26,7 @@ final class SyncClient: ObservableObject {
     @Published var pendingArcadeSyncPoints: Int = 0
     @Published var pendingArcadeSyncCount: Int = 0
     @Published var multiplierHistory: [Double] = [1]
+    @Published var displayMultiplier: Double = 1
     @Published var sublineText = "Connecting…"
     @Published var taxPotAmount: Int = 0
     @Published var fullBalances: [LeaderboardRow] = []
@@ -78,6 +79,7 @@ final class SyncClient: ObservableObject {
     private var presenceJoinDismissTask: Task<Void, Never>?
     private var walletRefreshTimer: Timer?
     private var arcadeSyncTimer: Timer?
+    private var smoothMultTimer: Timer?
     /// Bumped whenever wallet balance is updated from a purchase or `applyWalletFromServer` — stale `refreshWallet` responses are ignored.
     private var walletDataRevision: UInt64 = 0
     private var api: GameAPI?
@@ -164,6 +166,7 @@ final class SyncClient: ObservableObject {
             webSocketTask?.resume()
             receiveLoop()
             startPing()
+            startSmoothMultTimer()
         }
     }
 
@@ -200,6 +203,7 @@ final class SyncClient: ObservableObject {
         walletRefreshTimer = nil
         arcadeSyncTimer?.invalidate()
         arcadeSyncTimer = nil
+        stopSmoothMultTimer()
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
         if connectionStatus != "Server unreachable" {
@@ -1446,6 +1450,7 @@ final class SyncClient: ObservableObject {
         if s.roundId != lastRoundId {
             lastRoundId = s.roundId
             multiplierHistory = [1]
+            displayMultiplier = 1
             if s.phase != .ended {
                 roundResultPopup = nil
                 pendingRoundResultPopup = nil
@@ -1454,14 +1459,8 @@ final class SyncClient: ObservableObject {
         taxPotAmount = s.taxPot?.displayAmount ?? 0
         updateSubline(s)
         updateRoundResultPopup(s)
-        if s.phase == .running {
-            let m = max(s.multiplier, 1)
-            let last = multiplierHistory.last ?? 1
-            if multiplierHistory.isEmpty || abs(last - m) > 0.0005 {
-                multiplierHistory.append(m)
-                if multiplierHistory.count > 240 { multiplierHistory.removeFirst() }
-            }
-        } else if s.phase == .ended {
+        tickDisplayMultiplier(from: s)
+        if s.phase == .ended {
             let final = max(s.crashPoint ?? s.multiplier, 1)
             let last = multiplierHistory.last ?? 1
             if abs(last - final) > 0.0005 {
@@ -1470,6 +1469,49 @@ final class SyncClient: ObservableObject {
             }
         } else if s.phase == .betting {
             multiplierHistory = [1]
+        }
+    }
+
+    private func multRatePerSecond(from s: CrashGameState) -> Double {
+        s.opts?.multiplierPerSecond ?? 0.42
+    }
+
+    private func projectedRunningMult(for s: CrashGameState) -> Double {
+        guard s.phase == .running else { return max(s.multiplier, 1) }
+        guard let started = s.runStartedAt, started > 0 else { return max(s.multiplier, 1) }
+        let nowMs = Date().timeIntervalSince1970 * 1000
+        let elapsed = max(0, (nowMs - Double(started)) / 1000)
+        let rate = multRatePerSecond(from: s)
+        return floor((1 + rate * elapsed) * 100) / 100
+    }
+
+    private func startSmoothMultTimer() {
+        guard smoothMultTimer == nil else { return }
+        smoothMultTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.tickDisplayMultiplier() }
+        }
+    }
+
+    private func stopSmoothMultTimer() {
+        smoothMultTimer?.invalidate()
+        smoothMultTimer = nil
+    }
+
+    private func tickDisplayMultiplier(from state: CrashGameState? = nil) {
+        let s = state ?? gameState
+        switch s.phase {
+        case .running:
+            displayMultiplier = projectedRunningMult(for: s)
+            let m = displayMultiplier
+            let last = multiplierHistory.last ?? 1
+            if multiplierHistory.isEmpty || abs(last - m) > 0.0005 {
+                multiplierHistory.append(m)
+                if multiplierHistory.count > 240 { multiplierHistory.removeFirst() }
+            }
+        case .ended:
+            displayMultiplier = max(s.crashPoint ?? s.multiplier, 1)
+        default:
+            displayMultiplier = 1
         }
     }
 
@@ -1546,7 +1588,9 @@ final class SyncClient: ObservableObject {
         case .running:
             sublineText = "Multiplier climbing — auto cashout when targets hit."
         case .ended:
-            if let crash = s.crashPoint {
+            if s.lastResult?.emptyRound == true, let crash = s.lastResult?.crashPoint {
+                sublineText = "No players this round — would have crashed at \(String(format: "%.2f", crash))×"
+            } else if let crash = s.crashPoint {
                 sublineText = "Crashed at \(String(format: "%.2f", crash))×"
             } else {
                 sublineText = "Round ended"

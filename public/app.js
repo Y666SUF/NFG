@@ -64,6 +64,8 @@ const roundWinList = document.getElementById("roundWinList");
 const roundLoseList = document.getElementById("roundLoseList");
 const roundTopCards = document.getElementById("roundTopCards");
 const roundRecentMult = document.getElementById("roundRecentMult");
+const boardScrollSection = document.getElementById("boardScrollSection");
+const boardScrollInner = document.getElementById("boardScrollInner");
 const pinnedSlot = document.getElementById("pinnedSlot");
 const pinnedText = document.getElementById("pinnedText");
 const pinnedTimer = document.getElementById("pinnedTimer");
@@ -93,14 +95,25 @@ let historyMult = [1];
 let crashChart = null;
 let serverMult = 1;
 let smoothMult = 1;
-let serverSampleMult = 1;
-let serverSampleAt = 0;
-let derivedMultRate = 0.235;
+let runPeakCashout = 1;
+let runMultDisplay = 1;
+/** Last server multiplier + time — extrapolate locally, never run far ahead of server. */
+let multAnchor = { mult: 1, at: 0 };
+let lastBetsSignature = "";
 let lastRoundId = 0;
 let prevPhase = null;
 let lastSummaryRoundId = 0;
 let missionsRenderSeq = 0;
 let recentCrashMults = [];
+try {
+  const storedRecentMults = sessionStorage.getItem("nfg.recentCrashMults");
+  if (storedRecentMults) {
+    const parsed = JSON.parse(storedRecentMults);
+    if (Array.isArray(parsed)) recentCrashMults = parsed.slice(-10);
+  }
+} catch {
+  recentCrashMults = [];
+}
 let boardRefreshInFlight = false;
 let boardRefreshQueued = false;
 let boardRefreshQueuedTimer = null;
@@ -173,6 +186,17 @@ function rememberUserPerks(obj) {
 function userLabel(obj) {
   if (!obj) return "Player";
   return String(obj.displayName || obj.user || "Player").trim();
+}
+
+function scrollLeaderboardName(row) {
+  const display = userLabel(row);
+  const user = String((row && row.user) || "").trim();
+  const displayEsc = escHtml(display);
+  if (user) {
+    const handle = `@${escHtml(user)}`;
+    return `${displayEsc} <span class="board-scroll-handle">${handle}</span>`;
+  }
+  return displayEsc;
 }
 
 function stripLeadingCrown(name) {
@@ -278,17 +302,20 @@ function renderStyledName(obj, opts) {
   const icon = meta.icon ? `<span class="namefx-icon">${meta.icon}</span>` : "";
   const level = Math.max(1, Math.floor(Number((obj && obj.level) || 1)));
   const rank = String((obj && obj.rank) || "Rookie").toLowerCase();
-  const superFanBadge = superFan
-    ? `<span class="name-badge name-badge--superfan" data-fan-level="${superFanLevel}"><span class="name-badge-ico">🧡</span>NFG</span>`
-    : "";
+  const showSuperfanVisuals = !IS_STREAM_UI;
+  const superFanBadge =
+    showSuperfanVisuals && superFan
+      ? `<span class="name-badge name-badge--superfan" data-fan-level="${superFanLevel}"><span class="name-badge-ico">🧡</span>NFG</span>`
+      : "";
   const statusIcon = renderNameStatusIcon(activeBadge);
   const identityParts = [superFanBadge, statusIcon, icon, `<span class="namefx-text">${name}</span>`].filter(
     Boolean
   );
   const identityInner = identityParts.join("");
-  const identityWrap = superFan
-    ? `<span class="namefx-superfan-frame">${identityInner}</span>`
-    : `<span class="namefx-identity">${identityInner}</span>`;
+  const identityWrap =
+    showSuperfanVisuals && superFan
+      ? `<span class="namefx-superfan-frame">${identityInner}</span>`
+      : `<span class="namefx-identity">${identityInner}</span>`;
   const levelBadge = omitLevel
     ? ""
     : `<span class="lvl-badge rank-${escHtml(rank)}">Lv.${level}</span>`;
@@ -354,7 +381,6 @@ function renderTopProfiles(rows) {
     const balance = Number(row.balance || 0);
     const balanceColor = topBalanceColor(balance);
     const user = escHtml(String((row && row.user) || ""));
-    const superFan = !!row.superFan;
     const effect = escHtml(profileEffectTitle(level));
     const tierClass = profileCardTier(level);
     const shieldActive = row.shieldActive && row.shieldMsLeft > 0;
@@ -362,7 +388,7 @@ function renderTopProfiles(rows) {
     const jetLockActive = row.jetLockActive && row.jetLockMsLeft > 0;
     const jetLockTimer = jetLockActive ? `✈️ lock ${fmtDurationMs(row.jetLockMsLeft)}` : "";
     const card = document.createElement("article");
-    card.className = `top-profile-card rank-${rank} ${tierClass}${superFan ? " top-profile-card--superfan" : ""}`;
+    card.className = `top-profile-card rank-${rank} ${tierClass}`;
     card.innerHTML = `
       <div class="top-profile-head">
         <span class="top-profile-pos">#${i + 1}</span>
@@ -374,11 +400,60 @@ function renderTopProfiles(rows) {
       ${shieldActive ? `<div class="top-profile-shield">${escHtml(shieldTimer)}</div>` : ""}
       ${jetLockActive ? `<div class="top-profile-lock">${escHtml(jetLockTimer)}</div>` : ""}
       <div class="top-profile-balance" style="color:${balanceColor}; text-shadow:0 0 8px color-mix(in srgb, ${balanceColor} 38%, transparent);">${balance.toLocaleString()} pts</div>
-      ${superFan ? `<div class="top-profile-superfan-mascot" aria-label="Superfan mascot" title="Superfan">${escHtml(superFanMascotFor(row))}</div>` : ""}
     `;
     frag.appendChild(card);
   });
   topProfiles.replaceChildren(frag);
+}
+
+function rememberRecentCrashMult(value) {
+  const crashVal = Number(value);
+  if (!Number.isFinite(crashVal) || crashVal <= 0) return;
+  recentCrashMults.push(crashVal);
+  if (recentCrashMults.length > 10) recentCrashMults = recentCrashMults.slice(-10);
+  try {
+    sessionStorage.setItem("nfg.recentCrashMults", JSON.stringify(recentCrashMults));
+  } catch {
+    /* ignore quota errors */
+  }
+}
+
+function recentMultsMarkup(rows) {
+  return `
+    <div class="round-recent-title">Last 10 multipliers</div>
+    <div class="round-recent-grid">
+      ${rows.map((m) => `<span class="round-recent-pill">${fmtMult(m)}</span>`).join("")}
+    </div>
+  `;
+}
+
+function renderBoardScrollTail(balances) {
+  if (!boardScrollSection || !boardScrollInner) return;
+  const tail = (balances || []).slice(5, 20);
+  if (!tail.length) {
+    boardScrollSection.hidden = true;
+    boardScrollInner.replaceChildren();
+    boardScrollInner.style.removeProperty("--board-scroll-duration");
+    return;
+  }
+  boardScrollSection.hidden = false;
+  const frag = document.createDocumentFragment();
+  const renderItem = (row, rank) => {
+    rememberUserPerks(row);
+    const item = document.createElement("span");
+    item.className = "board-scroll-item";
+    item.title = `${userLabel(row)} (@${row.user || row}): ${row.balance} pts`;
+    const name = scrollLeaderboardName(row);
+    const pts = Number(row.balance || 0).toLocaleString();
+    item.innerHTML = `<span class="board-scroll-rank">#${rank}</span><span class="board-scroll-name">${name}</span><span class="board-scroll-pts">${pts} pts</span>`;
+    return item;
+  };
+  tail.forEach((row, i) => frag.appendChild(renderItem(row, i + 6)));
+  tail.forEach((row, i) => frag.appendChild(renderItem(row, i + 6)));
+  boardScrollInner.replaceChildren(frag);
+  const durationSec = Math.max(28, Math.min(72, tail.length * 4.5));
+  boardScrollInner.style.setProperty("--board-scroll-duration", `${durationSec}s`);
+  updateBalanceShieldTooltips();
 }
 
 function renderTaxPotBanner(gameState) {
@@ -507,12 +582,7 @@ function showRoundSummary(res) {
     if (!rows.length) {
       roundRecentMult.innerHTML = "";
     } else {
-      roundRecentMult.innerHTML = `
-        <div class="round-recent-title">Last 10 multipliers</div>
-        <div class="round-recent-grid">
-          ${rows.map((m) => `<span class="round-recent-pill">${fmtMult(m)}</span>`).join("")}
-        </div>
-      `;
+      roundRecentMult.innerHTML = recentMultsMarkup(rows);
     }
   }
 
@@ -682,74 +752,56 @@ function showSpinOverlay(p) {
   }, Math.max(2200, spinMs + 900));
 }
 
-function estimateMultRate(mult) {
-  const m = Math.max(Number(mult) || 1, 1);
-  let early = 0.56;
-  if (m > 1 && m < 5) early = 0.56 + ((m - 1) / 4) * 0.44;
-  else if (m >= 5) early = 1;
-  const perSec = Number(state?.opts?.multiplierPerSecond) || 0.42;
-  return perSec * early;
+function multRatePerSecond() {
+  return Number(state?.opts?.multiplierPerSecond) || 0.42;
 }
 
-function resetMultMotion() {
-  serverMult = 1;
-  smoothMult = 1;
-  serverSampleMult = 1;
-  serverSampleAt = 0;
-  derivedMultRate = estimateMultRate(1);
-}
-
-/** Track server multiplier samples — only reset the clock when mult actually rises. */
-function syncServerMultSample(mult, now = performance.now()) {
-  const m = Math.max(Number(mult) || 1, 1);
-  serverMult = m;
-
-  if (serverSampleAt <= 0 || m < serverSampleMult - 0.001) {
-    serverSampleMult = m;
-    serverSampleAt = now;
-    return;
-  }
-
-  if (m > serverSampleMult + 0.0001) {
-    const dt = (now - serverSampleAt) / 1000;
-    if (dt >= 0.015 && dt <= 0.3) {
-      const measured = (m - serverSampleMult) / dt;
-      if (Number.isFinite(measured) && measured > 0) {
-        derivedMultRate = derivedMultRate * 0.3 + measured * 0.7;
-      }
-    }
-    serverSampleMult = m;
-    serverSampleAt = now;
-  }
-  // Same mult (e.g. cashout-only WS) — keep extrapolating, don't reset the clock.
+function projectedRunningMult() {
+  const started = Number(state?.runStartedAt) || 0;
+  if (started <= 0) return Math.max(Number(state?.multiplier) || 1, 1);
+  const elapsed = Math.max(0, (Date.now() - started) / 1000);
+  return Math.floor((1 + multRatePerSecond() * elapsed) * 100) / 100;
 }
 
 function displayMultForUi() {
   if (!state) return 1;
   if (state.phase === "ended") return Math.max(Number(state.crashPoint ?? state.multiplier) || 1, 1);
-  if (state.phase === "running") return Math.max(smoothMult, 1);
+  if (state.phase === "running") return Math.max(projectedRunningMult(), 1);
   return 1;
 }
 
-function tickSmoothMult(now = performance.now()) {
+function tickSmoothMult() {
   if (!state) return;
-  if (state.phase !== "running") {
-    if (state.phase === "ended") {
-      smoothMult = Math.max(Number(state.crashPoint ?? state.multiplier) || 1, 1);
-    } else {
-      smoothMult = 1;
-    }
+  serverMult = Math.max(Number(state.multiplier) || 1, 1);
+  smoothMult = displayMultForUi();
+  runMultDisplay = smoothMult;
+  if (state.phase === "ended") clampHistoryToCrash(smoothMult);
+}
+
+function resetMultMotion() {
+  serverMult = 1;
+  smoothMult = 1;
+  runMultDisplay = 1;
+  multAnchor = { mult: 1, at: 0 };
+  runPeakCashout = 1;
+  lastSmoothFrameAt = 0;
+  pushSmoothHistory.lastAt = 0;
+  lastBetsSignature = "";
+}
+
+function clampHistoryToCrash(endM) {
+  const cap = Math.max(Number(endM) || 1, 1);
+  if (!historyMult.length) {
+    historyMult = [1, cap];
     return;
   }
-
-  if (serverSampleAt <= 0) syncServerMultSample(serverMult, now);
-
-  const rate = derivedMultRate > 0 ? derivedMultRate : estimateMultRate(serverSampleMult);
-  const elapsed = (now - serverSampleAt) / 1000;
-  let next = serverSampleMult + rate * Math.max(0, elapsed);
-  next = Math.max(next, serverMult);
-  const maxLead = Math.max(rate * 0.1, 0.015);
-  smoothMult = Math.min(next, serverMult + maxLead);
+  let prev = 1;
+  historyMult = historyMult.map((v) => {
+    const next = Math.min(Math.max(Number(v) || 1, prev), cap);
+    prev = next;
+    return next;
+  });
+  historyMult[historyMult.length - 1] = cap;
 }
 
 function pushSmoothHistory() {
@@ -760,12 +812,8 @@ function pushSmoothHistory() {
     historyMult.push(m);
     return;
   }
-  historyMult[historyMult.length - 1] = m;
-  const anchor = historyMult[historyMult.length - 2];
-  if (Math.abs(m - anchor) > 0.003) {
-    historyMult.push(m);
-    if (historyMult.length > 400) historyMult.shift();
-  }
+  const last = historyMult[historyMult.length - 1];
+  historyMult[historyMult.length - 1] = Math.max(last, m);
 }
 
 function updateChartChrome(s) {
@@ -818,8 +866,15 @@ function renderChartEntries(open, queued) {
   chartEntries.innerHTML = html;
 }
 
-function refreshCrashVisuals() {
+function refreshCrashVisuals(opts = {}) {
   if (!state) return;
+  const runningOnly = opts.runningOnly === true;
+  if (runningOnly) {
+    if (multDisplay && state.phase === "running") {
+      multDisplay.textContent = fmtMult(displayMultForUi());
+    }
+    return;
+  }
   updateChartChrome(state);
   renderChartEntries(state.openBets, state.queuedBets);
   if (crashChart) {
@@ -836,9 +891,14 @@ function startCrashVisualLoop() {
   crashChart.onFrame = (now) => {
     tickSmoothMult(now);
     if (state?.phase === "running") pushSmoothHistory();
-    if (multDisplay && state?.phase === "running") {
-      multDisplay.textContent = fmtMult(displayMultForUi());
+    if (crashChart && state?.phase === "ended") {
+      crashChart.update({
+        ...state,
+        multiplier: displayMultForUi(),
+        history: historyMult,
+      });
     }
+    refreshCrashVisuals({ runningOnly: state?.phase === "running" });
   };
 }
 
@@ -952,12 +1012,14 @@ function renderLast(res) {
 }
 
 function applyState(s) {
+  const prev = prevPhase;
   if (s.roundId !== lastRoundId) {
     lastRoundId = s.roundId;
     historyMult = [1];
     resetMultMotion();
   }
-  const phaseBecameEnded = prevPhase !== "ended" && s.phase === "ended";
+  const phaseBecameEnded = prev !== "ended" && s.phase === "ended";
+  const phaseChanged = prev !== s.phase;
   state = s;
   document.body.classList.remove("phase-idle", "phase-betting", "phase-running", "phase-ended");
   document.body.classList.add(`phase-${s.phase}`);
@@ -967,11 +1029,16 @@ function applyState(s) {
   if (s.phase === "betting" || s.phase === "idle") {
     resetMultMotion();
   } else if (s.phase === "running") {
-    syncServerMultSample(Number(s.multiplier) || 1);
-    if (smoothMult < 1 || smoothMult > serverMult + 0.6) smoothMult = serverMult;
+    serverMult = Math.max(Number(s.multiplier) || 1, 1);
+    if (prev !== "running") {
+      smoothMult = displayMultForUi();
+      runMultDisplay = smoothMult;
+    }
   } else if (s.phase === "ended") {
-    smoothMult = Math.max(Number(s.crashPoint ?? s.multiplier) || 1, 1);
-    serverSampleAt = 0;
+    const endM = Math.max(Number(s.crashPoint ?? s.multiplier) || 1, 1);
+    smoothMult = endM;
+    runMultDisplay = endM;
+    clampHistoryToCrash(endM);
   }
 
   if (chartWrap) {
@@ -1007,9 +1074,11 @@ function applyState(s) {
       historyMult = [1];
     }
   } else if (s.phase === "running") {
-    subline.textContent = "Multiplier climbing — auto cashout when targets hit.";
+    subline.textContent = "Multiplier climbing — !cashout or cashout to exit early · auto cashout when target hits.";
   } else if (s.phase === "ended") {
-    if (s.pendingSpinCount > 0 || s.spinPauseEndsAt) {
+    if (s.lastResult?.emptyRound) {
+      subline.textContent = `No players this round — would have crashed at ${fmtMult(s.lastResult.crashPoint)}.`;
+    } else if (s.pendingSpinCount > 0 || s.spinPauseEndsAt) {
       const sec = Math.max(0, Math.ceil((Number(s.spinPauseEndsAt) - Date.now()) / 1000));
       subline.textContent =
         sec > 0
@@ -1019,11 +1088,9 @@ function applyState(s) {
       subline.textContent = "Round finished — next starts automatically.";
     }
     const endM = s.crashPoint != null ? s.crashPoint : s.multiplier;
-    const last = historyMult[historyMult.length - 1];
-    if (last == null || Math.abs(last - endM) > 0.02) {
-      historyMult.push(endM);
-      if (historyMult.length > 200) historyMult.shift();
-    }
+    smoothMult = Math.max(Number(endM) || 1, 1);
+    runMultDisplay = smoothMult;
+    clampHistoryToCrash(smoothMult);
   } else {
     if (s.nextRoundStartsAt) {
       subline.textContent = "Waiting for next round…";
@@ -1035,6 +1102,20 @@ function applyState(s) {
     historyMult = [1];
   }
 
+  const betsSignature = `${s.phase}|${JSON.stringify(s.openBets)}|${JSON.stringify(s.queuedBets)}`;
+  const betsChanged = betsSignature !== lastBetsSignature;
+  lastBetsSignature = betsSignature;
+
+  if (s.phase === "running" && prev === "running" && !phaseChanged) {
+    serverMult = Math.max(Number(s.multiplier) || 1, 1);
+    if (betsChanged) {
+      renderBets(s.openBets, s.queuedBets);
+      renderChartEntries(s.openBets, s.queuedBets);
+    }
+    prevPhase = s.phase;
+    return;
+  }
+
   refreshCrashVisuals();
   renderBets(s.openBets, s.queuedBets);
   renderLast(s.lastResult);
@@ -1042,11 +1123,7 @@ function applyState(s) {
   renderTaxPotBanner(s);
 
   if (phaseBecameEnded && s.lastResult) {
-    const crashVal = Number(s.lastResult.crashPoint);
-    if (Number.isFinite(crashVal) && crashVal > 0) {
-      recentCrashMults.push(crashVal);
-      if (recentCrashMults.length > 10) recentCrashMults = recentCrashMults.slice(-10);
-    }
+    rememberRecentCrashMult(s.lastResult.crashPoint);
     refreshBoard(true)
       .then(() => flashLeaderboardFromLast(s.lastResult))
       .catch(() => {});
@@ -1942,6 +2019,27 @@ function handleChatResult(p) {
       const reasonText = reasonMap[p.reason] || p.reason || "unknown";
       pushFeed(`<strong>${renderStyledName(p)}</strong> entry failed: ${reasonText}`);
     }
+    return;
+  }
+  if (p.type === "cashout_line") {
+    if (p.ok) {
+      const early = Number(p.cashout) < Number(p.target);
+      const mode = early ? "early cashout" : "auto target hit";
+      pushFeed(
+        `<strong>${renderStyledName(p)}</strong> ${mode} at ${fmtMult(p.cashout)}× — paid ${Number(p.payout).toLocaleString()} (+${Number(p.profit).toLocaleString()} net) · bal ${Number(p.balance).toLocaleString()}`
+      );
+      refreshBoard();
+    } else {
+      const reasonMap = {
+        not_running: "round is not running",
+        no_active_bet: "no active entry this round",
+        too_early: "multiplier not live yet",
+        cashout_failed: "cashout failed",
+      };
+      const reasonText = reasonMap[p.reason] || p.reason || "unknown";
+      pushFeed(`<strong>${renderStyledName(p)}</strong> cashout failed: ${reasonText}`);
+    }
+    return;
   }
 }
 
@@ -2053,9 +2151,11 @@ async function refreshBoard(force = false) {
     const jb = await rb.json();
     const balances = jb.balances || [];
     renderTopProfiles(balances);
-    if (lbTitle) lbTitle.textContent = "Balances";
+    renderBoardScrollTail(balances);
+    if (lbTitle) lbTitle.textContent = "Top 5";
+    const topFive = balances.slice(0, 5);
     const frag = document.createDocumentFragment();
-    balances.forEach((row, i) => {
+    topFive.forEach((row, i) => {
       rememberUserPerks(row);
       const li = document.createElement("li");
       li.title = `${userLabel(row)}: ${row.balance} pts`;
@@ -2359,16 +2459,8 @@ fetch("/api/state")
 
 initCrashChart();
 
-// Best-effort lookup window for browser mode only.
-try {
-  const isElectron = /electron/i.test(navigator.userAgent || "");
-  if (!isElectron && !sessionStorage.getItem("nfg_lookup_opened")) {
-    sessionStorage.setItem("nfg_lookup_opened", "1");
-    setTimeout(() => {
-      window.open("/player-lookup.html", "NFGCrashLookup", "width=720,height=900");
-    }, 500);
-  }
-} catch {
-  /* ignore popup/session storage restrictions */
-}
+hen(applyState)
+  .catch(() => {});
+
+initCrashChart();
 

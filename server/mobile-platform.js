@@ -9,12 +9,17 @@ async function buildPlatformStatus(game, pointStore) {
   const presence = presencePayload(pointStore);
   const tiktokCrash = getTikTokBridgeStatus();
   const crashLive = tiktokCrash.state === "live";
+  const hangmanEnabled = String(process.env.NFG_START_HANGMAN || "0").trim() !== "0";
 
-  const hangmanProbe = await fetchHangmanJson("/api/hangman/status", 900);
-  const hangmanBody = hangmanProbe.ok && hangmanProbe.body ? hangmanProbe.body : null;
-  const hangmanLive =
-    hangmanBody &&
-    (hangmanBody.tiktok_status === "connected" || hangmanBody.tiktok_status === "connecting");
+  let hangmanBody = null;
+  let hangmanLive = false;
+  if (hangmanEnabled) {
+    const hangmanProbe = await fetchHangmanJson("/api/hangman/status", 900);
+    hangmanBody = hangmanProbe.ok && hangmanProbe.body ? hangmanProbe.body : null;
+    hangmanLive =
+      hangmanBody &&
+      (hangmanBody.tiktok_status === "connected" || hangmanBody.tiktok_status === "connecting");
+  }
 
   const state = game.getState();
   const anyLive = !!(crashLive || hangmanLive);
@@ -50,7 +55,7 @@ async function buildPlatformStatus(game, pointStore) {
             isLive: !!hangmanLive,
             reachable: true,
           }
-        : { reachable: false, isLive: false, tiktok_status: "unreachable" },
+        : { reachable: false, isLive: false, tiktok_status: hangmanEnabled ? "unreachable" : "disabled" },
     },
     games: {
       crash: {
@@ -60,7 +65,9 @@ async function buildPlatformStatus(game, pointStore) {
         multiplier: state.multiplier,
         playerCount: pointStore.listBalances ? pointStore.listBalances(999999).length : 0,
       },
-      hangman: hangmanBody || { service: "nfg-hangman", reachable: false },
+      hangman: hangmanEnabled
+        ? hangmanBody || { service: "nfg-hangman", reachable: false }
+        : { service: "nfg-hangman", reachable: false, disabled: true },
     },
     sharedChat: true,
     hangmanBackend: HANGMAN_BACKEND_URL,

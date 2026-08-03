@@ -150,6 +150,25 @@ struct RoundLastResult: Codable, Equatable {
     var crashPoint: Double
     var wins: [RoundOutcome]
     var losses: [RoundOutcome]
+    var emptyRound: Bool?
+
+    enum CodingKeys: String, CodingKey {
+        case roundId, crashPoint, wins, losses, emptyRound
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        roundId = try c.decodeIfPresent(Int.self, forKey: .roundId) ?? 0
+        crashPoint = try c.decodeIfPresent(Double.self, forKey: .crashPoint) ?? 1
+        wins = try c.decodeIfPresent([RoundOutcome].self, forKey: .wins) ?? []
+        losses = try c.decodeIfPresent([RoundOutcome].self, forKey: .losses) ?? []
+        emptyRound = try c.decodeIfPresent(Bool.self, forKey: .emptyRound)
+    }
+}
+
+struct CrashGameOpts: Codable, Equatable {
+    var multiplierPerSecond: Double?
+    var tickMs: Int?
 }
 
 struct RoundResultSummary: Identifiable, Equatable {
@@ -184,6 +203,7 @@ struct CrashGameState: Codable, Equatable {
     var roundId: Int
     var multiplier: Double
     var crashPoint: Double?
+    var runStartedAt: Int64?
     var bettingEndsAt: Int64
     var nextRoundStartsAt: Int64?
     var openBets: [OpenBet]
@@ -191,24 +211,27 @@ struct CrashGameState: Codable, Equatable {
     var taxPot: TaxPotStatus?
     var lastResult: RoundLastResult?
     var recentCrashes: [Double]
+    var opts: CrashGameOpts?
 
     static let empty = CrashGameState(
         phase: .idle,
         roundId: 0,
         multiplier: 1,
         crashPoint: nil,
+        runStartedAt: nil,
         bettingEndsAt: 0,
         nextRoundStartsAt: nil,
         openBets: [],
         queuedBets: [],
         taxPot: nil,
         lastResult: nil,
-        recentCrashes: []
+        recentCrashes: [],
+        opts: nil
     )
 
     enum CodingKeys: String, CodingKey {
-        case phase, roundId, multiplier, crashPoint, bettingEndsAt, nextRoundStartsAt
-        case openBets, queuedBets, taxPot, lastResult, recentCrashes
+        case phase, roundId, multiplier, crashPoint, runStartedAt, bettingEndsAt, nextRoundStartsAt
+        case openBets, queuedBets, taxPot, lastResult, recentCrashes, opts
     }
 
     init(
@@ -216,18 +239,21 @@ struct CrashGameState: Codable, Equatable {
         roundId: Int,
         multiplier: Double,
         crashPoint: Double?,
+        runStartedAt: Int64?,
         bettingEndsAt: Int64,
         nextRoundStartsAt: Int64?,
         openBets: [OpenBet],
         queuedBets: [OpenBet],
         taxPot: TaxPotStatus?,
         lastResult: RoundLastResult?,
-        recentCrashes: [Double] = []
+        recentCrashes: [Double] = [],
+        opts: CrashGameOpts? = nil
     ) {
         self.phase = phase
         self.roundId = roundId
         self.multiplier = multiplier
         self.crashPoint = crashPoint
+        self.runStartedAt = runStartedAt
         self.bettingEndsAt = bettingEndsAt
         self.nextRoundStartsAt = nextRoundStartsAt
         self.openBets = openBets
@@ -235,6 +261,7 @@ struct CrashGameState: Codable, Equatable {
         self.taxPot = taxPot
         self.lastResult = lastResult
         self.recentCrashes = recentCrashes
+        self.opts = opts
     }
 
     init(from decoder: Decoder) throws {
@@ -243,6 +270,7 @@ struct CrashGameState: Codable, Equatable {
         roundId = try c.decodeIfPresent(Int.self, forKey: .roundId) ?? 0
         multiplier = try c.decodeIfPresent(Double.self, forKey: .multiplier) ?? 1
         crashPoint = try c.decodeIfPresent(Double.self, forKey: .crashPoint)
+        runStartedAt = try c.decodeIfPresent(Int64.self, forKey: .runStartedAt)
         bettingEndsAt = try c.decodeIfPresent(Int64.self, forKey: .bettingEndsAt) ?? 0
         nextRoundStartsAt = try c.decodeIfPresent(Int64.self, forKey: .nextRoundStartsAt)
         openBets = try c.decodeIfPresent([OpenBet].self, forKey: .openBets) ?? []
@@ -250,6 +278,7 @@ struct CrashGameState: Codable, Equatable {
         taxPot = try c.decodeIfPresent(TaxPotStatus.self, forKey: .taxPot)
         lastResult = try c.decodeIfPresent(RoundLastResult.self, forKey: .lastResult)
         recentCrashes = try c.decodeIfPresent([Double].self, forKey: .recentCrashes) ?? []
+        opts = try c.decodeIfPresent(CrashGameOpts.self, forKey: .opts)
     }
 }
 

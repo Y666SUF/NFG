@@ -59,7 +59,9 @@ if not defined WORD_GAMES_PYTHON set "WORD_GAMES_PYTHON=%HANGMAN_PYTHON%"
 if not defined NFG_PLATFORM_URL set "NFG_PLATFORM_URL=http://127.0.0.1:%PORT%"
 if not defined NFG_INTERNAL_SECRET set "NFG_INTERNAL_SECRET=nfg-dev-internal"
 if not defined NFG_CHAT_ADMIN_USERS set "NFG_CHAT_ADMIN_USERS=y666.suf"
-if not defined NFG_START_HANGMAN set "NFG_START_HANGMAN=1"
+if not defined NFG_START_HANGMAN set "NFG_START_HANGMAN=0"
+if not defined NFG_OPEN_HANGMAN_WINDOW set "NFG_OPEN_HANGMAN_WINDOW=0"
+if not defined NFG_OPEN_PLAYER_LOOKUP set "NFG_OPEN_PLAYER_LOOKUP=0"
 if not defined HANGMAN_PYTHON set "HANGMAN_PYTHON=py"
 if not defined NFG_HANGMAN_GUESS_TIMEOUT_MS set "NFG_HANGMAN_GUESS_TIMEOUT_MS=12000"
 rem Auto-restart OFF by default. Set NFG_AUTO_RESTART=1 to re-enable after crashes.
@@ -85,13 +87,12 @@ if not exist "node_modules\" (
   echo.
 )
 
-echo Platform port %PORT% ^| Hangman %HANGMAN_PORT% proxied on %PORT% ^| Word Games %WORD_GAMES_PORT% proxied on %PORT%
-echo Mobile Hangman: GET /api/mobile/hangman/state  POST /api/mobile/hangman/guess  WS /hangman/ws
+echo Platform port %PORT% ^| Word Games %WORD_GAMES_PORT% proxied on %PORT%
 echo Mobile Words:  GET https://y666suf.com/api/word-games/health  POST /api/word-games/players/login
 set "PATH=%~dp0node_modules\.bin;%PATH%"
-echo Clearing stale listeners on %PORT% / %HANGMAN_PORT% before launch...
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports "%PORT%,%HANGMAN_PORT%" -KillElectron -KillNodeNfg -RepoRoot "%~dp0" -Quiet
-echo Launching Electron ^(Crash + Hangman windows, shared Node server^)...
+echo Clearing stale listeners on %PORT% before launch...
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports "%PORT%,19876,%WORD_GAMES_PORT%" -KillElectron -KillNodeNfg -RepoRoot "%~dp0" -Quiet
+echo Launching Electron ^(Crash + App Chat windows^)...
 echo.
 if "%NFG_AUTO_RESTART%"=="0" (
   call "%NPM_CMD%" run start:electron
@@ -124,7 +125,7 @@ if "%NFG_AUTO_RESTART%"=="0" (
     goto :electron_failed
   )
   echo Clearing stale NFG processes before auto-restart...
-  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports "%PORT%,%HANGMAN_PORT%" -KillElectron -KillNodeNfg -RepoRoot "%~dp0" -Quiet
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports "%PORT%,19876,%WORD_GAMES_PORT%" -KillElectron -KillNodeNfg -RepoRoot "%~dp0" -Quiet
   timeout /t 3 /nobreak >nul
   cls
   echo Auto-restart attempt %NFG_RESTART_COUNT% / %NFG_AUTO_RESTART_MAX_RETRIES% in %NFG_AUTO_RESTART_DELAY_SECONDS%s...

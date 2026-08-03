@@ -85,7 +85,8 @@ function registerHangmanHttpProxy(app) {
 }
 
 function attachHangmanWebSocketProxy(httpServer, crashWss, ctx = {}) {
-  const hangmanWss = new WebSocket.Server({ noServer: true });
+  const hangmanEnabled = ctx.hangmanWs !== false && String(process.env.NFG_START_HANGMAN || "0").trim() !== "0";
+  const hangmanWss = hangmanEnabled ? new WebSocket.Server({ noServer: true }) : null;
 
   httpServer.on("upgrade", (request, socket, head) => {
     let pathname = "/";
@@ -95,7 +96,7 @@ function attachHangmanWebSocketProxy(httpServer, crashWss, ctx = {}) {
       pathname = String(request.url || "/").split("?")[0] || "/";
     }
 
-    if (pathname === "/hangman/ws" || pathname === "/api/hangman/ws") {
+    if (hangmanEnabled && (pathname === "/hangman/ws" || pathname === "/api/hangman/ws")) {
       hangmanWss.handleUpgrade(request, socket, head, (clientWs) => {
         const upstream = new WebSocket(hangmanWsTarget());
         let clientOpen = true;

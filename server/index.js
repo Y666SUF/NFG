@@ -10,6 +10,7 @@ const { WebSocketServer } = require("ws");
 const { PointStore, normalizeUser } = require("./store");
 const { CrashGame, listNameBadgeShop } = require("./game");
 const { resolveGiftPayout } = require("./gift-payout");
+const { lookupPopularPointsPerCoin } = require("./gift-coins");
 const { appendGiftLedger } = require("./gift-ledger");
 const { isDuplicateGiftPayout, isDuplicateStreakSettlement } = require("./gift-dedupe");
 const { startTikTokBridge, getTikTokBridgeStatus } = require("./tiktok-bridge");
@@ -36,6 +37,7 @@ const {
 const { registerIpaDownloads, getIpaDownloadMeta, IPA_CATALOG } = require("./ipa-downloads");
 const { registerHangmanCompanionWeb } = require("./hangman-companion-web");
 
+const START_HANGMAN = String(process.env.NFG_START_HANGMAN || "0").trim() !== "0";
 const PORT = Number(process.env.PORT) || 3847;
 const STARTER_POINTS = Number(process.env.STARTER_POINTS) || 5000;
 const SHARE_BONUS = Number(process.env.SHARE_BONUS_POINTS) || 100;
@@ -104,10 +106,12 @@ app.use((req, res, next) => {
 });
 
 function shutdownNfg(exitCode = 0) {
-  try {
-    stopHangmanProcess();
-  } catch (_e) {
-    /* ignore */
+  if (START_HANGMAN) {
+    try {
+      stopHangmanProcess();
+    } catch (_e) {
+      /* ignore */
+    }
   }
   process.exit(exitCode);
 }
@@ -262,6 +266,22 @@ app.get("/privacy.html", (_req, res) => res.redirect(302, "/privacy"));
 app.get("/legal.html", (_req, res) => res.redirect(302, "/legal"));
 app.get("/sideload.html", (_req, res) => res.redirect(302, "/sideload"));
 app.get("/contact.html", (_req, res) => res.status(404).send("Not found"));
+/** AdMob authorization — must return plain text on y666suf.com (not the React SPA). */
+const appAdsTxtFile = path.join(publicDir, "app-ads.txt");
+const adsTxtFile = path.join(publicDir, "ads.txt");
+app.get("/app-ads.txt", (_req, res) => {
+  res.type("text/plain; charset=utf-8");
+  return res.sendFile(appAdsTxtFile);
+});
+app.get("/ads.txt", (_req, res) => {
+  res.type("text/plain; charset=utf-8");
+  return res.sendFile(adsTxtFile);
+});
+const robotsTxtFile = path.join(publicDir, "robots.txt");
+app.get("/robots.txt", (_req, res) => {
+  res.type("text/plain; charset=utf-8");
+  return res.sendFile(robotsTxtFile);
+});
 registerIpaDownloads(app);
 app.post("/api/contact", async (req, res) => {
   const name = String(req.body?.name || "").trim();
@@ -447,8 +467,10 @@ app.get("/api/state", (_req, res) => {
 });
 
 registerMobileApi(app, { game, pointStore, isLocalhost, broadcast, pushState });
-registerHangmanCompanionWeb(app);
-registerHangmanHttpProxy(app);
+if (START_HANGMAN) {
+  registerHangmanCompanionWeb(app);
+  registerHangmanHttpProxy(app);
+}
 registerWordGamesHttpProxy(app);
 registerPixelJumpHttpProxy(app);
 
@@ -667,6 +689,13 @@ app.post("/api/chat", async (req, res) => {
       );
     }
     broadcast({ type: "chat_result", payload: parsed });
+  } else if (parsed.type === "manual_cashout") {
+    if (parsed.ok) {
+      console.log(
+        `[Cashout] @${parsed.user} ${parsed.amount} manual @${parsed.cashout}x (target ${parsed.target}x) -> paid ${parsed.payout}`
+      );
+    }
+    broadcast({ type: "chat_result", payload: { type: "cashout_line", ...parsed } });
   } else if (parsed.type === "steal") {
     broadcast({ type: "chat_result", payload: { type: "steal_line", ...parsed } });
   } else if (parsed.type === "shield_break") {
@@ -888,12 +917,20 @@ app.post("/api/tiktok/reward", (req, res) => {
         shieldStacks: stacks,
       };
     }
-    if (superFanActive) {
+    if (superFanActive && !lookupPopularPointsPerCoin(giftName)) {
       rewardMeta = {
         ...(rewardMeta || {}),
         superfanGiftBoost: true,
         multiplier: 2,
         baseGiftCoinMultiplier: GIFT_COIN_MULTIPLIER,
+      };
+    }
+    const popularRate = lookupPopularPointsPerCoin(giftName);
+    if (popularRate > 0) {
+      rewardMeta = {
+        ...(rewardMeta || {}),
+        popularGiftBonus: true,
+        pointsPerCoin: popularRate,
       };
     }
     rewardMeta = {
@@ -1336,16 +1373,20 @@ server.listen(PORT, SERVER_HOST, () => {
     console.log("LAN URLs for iPhone/Mac:");
     for (const lan of lanUrls) console.log("  ", lan);
   }
-  console.log(`Hangman backend port: ${HANGMAN_PORT} (WebSocket proxy: /hangman/ws)`);
   console.log(`Word Games backend port: ${WORD_GAMES_PORT} (HTTP proxy: /api/word-games/*)`);
   console.log(`Pixel Jump backend port: ${PIXEL_JUMP_PORT} (HTTP proxy: /api/pixel-jump/*, WS: /api/ws/mp/*)`);
   console.log("Tower World: /api/mobile/tower/world/profile + WebSocket /api/mobile/tower/world/ws");
-  startHangmanProcess();
+  if (START_HANGMAN) {
+    console.log(`Hangman backend port: ${HANGMAN_PORT} (WebSocket proxy: /hangman/ws)`);
+    startHangmanProcess();
+    waitForHangman()
+      .then(() => console.log("[Hangman] Ready (proxied through this server)."))
+      .catch((e) => console.warn("[Hangman] Not ready yet:", e.message));
+  } else {
+    console.log("[Hangman] Disabled (NFG_START_HANGMAN=0). NFG Words + Crash still active.");
+  }
   startWordGamesProcess();
   startPixelJumpProcess();
-  waitForHangman()
-    .then(() => console.log("[Hangman] Ready (proxied through this server)."))
-    .catch((e) => console.warn("[Hangman] Not ready yet:", e.message));
   waitForWordGames()
     .then(() => console.log("[WordGames] Ready (proxied through this server)."))
     .catch((e) => console.warn("[WordGames] Not ready yet:", e.message));

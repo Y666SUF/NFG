@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 192" fill="none">
+  <defs>
+    <linearGradient id="bodyMain" x1="64" y1="8" x2="64" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#ffc9b5"/>
+      <stop offset="45%" stop-color="#ff9f8a"/>
+      <stop offset="100%" stop-color="#e87f6d"/>
+    </linearGradient>
+    <linearGradient id="bodyShade" x1="20" y1="40" x2="108" y2="140" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#f4a088" stop-opacity="0"/>
+      <stop offset="55%" stop-color="#d96b58" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#c45645" stop-opacity="0.55"/>
+    </linearGradient>
+    <linearGradient id="shortsMain" x1="64" y1="118" x2="64" y2="152" gradientUnits="userSpaceOnUse">
+      <stop offset="0%" stop-color="#c8eb5a"/>
+      <stop offset="100%" stop-color="#8fbf2f"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-10%" width="140%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#3b1410" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#softShadow)">
+    <!-- main body — show-accurate pink cone blob, not a starfish -->
+    <path d="M64 6
+      C78 6 88 14 94 28
+      C102 46 106 68 104 88
+      C102 108 96 122 88 132
+      C82 138 74 140 64 140
+      C54 140 46 138 40 132
+      C32 122 26 108 24 88
+      C22 68 26 46 34 28
+      C40 14 50 6 64 6Z"
+      fill="url(#bodyMain)" stroke="#b85a48" stroke-width="2.2" stroke-linejoin="round"/>
+
+    <path d="M64 6
+      C78 6 88 14 94 28
+      C102 46 106 68 104 88
+      C102 108 96 122 88 132
+      C82 138 74 140 64 140
+      C54 140 46 138 40 132
+      C32 122 26 108 24 88
+      C22 68 26 46 34 28
+      C40 14 50 6 64 6Z"
+      fill="url(#bodyShade)"/>
+
+    <!-- belly highlight -->
+    <ellipse cx="64" cy="92" rx="26" ry="34" fill="#ffd4c4" opacity="0.55"/>
+
+    <!-- swim trunks -->
+    <path d="M36 118
+      C38 128 48 136 64 136
+      C80 136 90 128 92 118
+      L92 148
+      C90 154 78 158 64 158
+      C50 158 38 154 36 148Z"
+      fill="url(#shortsMain)" stroke="#6d9424" stroke-width="2"/>
+    <path d="M36 118 C48 124 80 124 92 118" stroke="#5a7a1c" stroke-width="1.6" fill="none"/>
+
+    <!-- purple flowers on shorts -->
+    <g fill="#b44fd4" stroke="#7a2d96" stroke-width="1">
+      <circle cx="50" cy="132" r="5"/>
+      <circle cx="64" cy="136" r="5"/>
+      <circle cx="78" cy="132" r="5"/>
+    </g>
+    <g fill="#e9b8f5">
+      <circle cx="50" cy="132" r="2"/>
+      <circle cx="64" cy="136" r="2"/>
+      <circle cx="78" cy="132" r="2"/>
+    </g>
+
+    <!-- stub arms at sides -->
+    <ellipse cx="22" cy="98" rx="9" ry="7" fill="#ff9f8a" stroke="#b85a48" stroke-width="1.8"/>
+    <ellipse cx="106" cy="98" rx="9" ry="7" fill="#ff9f8a" stroke="#b85a48" stroke-width="1.8"/>
+
+    <!-- stub legs + feet -->
+    <path d="M52 154 L48 172 C46 178 50 182 56 182 L60 182 C64 182 66 178 64 172 L62 154Z"
+      fill="#ff9f8a" stroke="#b85a48" stroke-width="1.8" stroke-linejoin="round"/>
+    <path d="M76 154 L78 172 C80 178 76 182 70 182 L66 182 C62 182 60 178 62 172 L64 154Z"
+      fill="#ff9f8a" stroke="#b85a48" stroke-width="1.8" stroke-linejoin="round"/>
+
+    <!-- eyebrows -->
+    <path d="M44 42 C48 36 54 34 58 38" stroke="#2a1512" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+    <path d="M84 42 C80 36 74 34 70 38" stroke="#2a1512" stroke-width="3.2" stroke-linecap="round" fill="none"/>
+
+    <!-- eyes -->
+    <ellipse cx="50" cy="52" rx="11" ry="14" fill="#fff" stroke="#2a1512" stroke-width="2"/>
+    <ellipse cx="78" cy="52" rx="11" ry="14" fill="#fff" stroke="#2a1512" stroke-width="2"/>
+    <ellipse cx="52" cy="54" rx="4.5" ry="6" fill="#1a1010"/>
+    <ellipse cx="80" cy="54" rx="4.5" ry="6" fill="#1a1010"/>
+    <circle cx="53.5" cy="51" r="1.6" fill="#fff"/>
+    <circle cx="81.5" cy="51" r="1.6" fill="#fff"/>
+
+    <!-- goofy open smile -->
+    <path d="M48 72
+      C54 80 74 80 80 72
+      C78 78 70 82 64 82
+      C58 82 50 78 48 72Z"
+      fill="#2a1512"/>
+    <path d="M50 72 C56 76 72 76 78 72" stroke="#ff8a75" stroke-width="1.2" fill="none"/>
+  </g>
+</svg>

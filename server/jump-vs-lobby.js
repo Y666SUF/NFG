@@ -165,6 +165,10 @@ function startMatch() {
 
   for (const rec of clients.values()) {
     rec.player.height = 0;
+    rec.player.playerX = 0;
+    rec.player.playerY = 120;
+    rec.player.velocityY = 0;
+    rec.player.elapsed = 0;
     rec.player.eliminated = false;
     rec.player.sessionPoints = 0;
   }
@@ -185,6 +189,7 @@ function startMatch() {
     type: "match_start",
     matchSeed,
     matchId,
+    startedAt: activeMatch.startedAt,
     players: publicLobbyPlayers(),
   });
   sendLobbyState();
@@ -349,7 +354,15 @@ function handleClientMessage(userId, raw, pointStore) {
 
   if (type === "progress" && lobbyPhase === "match") {
     const height = Math.max(0, Math.floor(Number(msg.height) || 0));
+    const playerX = Number(msg.playerX);
+    const playerY = Number(msg.playerY);
+    const velocityY = Number(msg.velocityY);
+    const elapsed = Math.max(0, Math.floor(Number(msg.elapsed) || 0));
     rec.player.height = height;
+    if (Number.isFinite(playerX)) rec.player.playerX = playerX;
+    if (Number.isFinite(playerY)) rec.player.playerY = playerY;
+    if (Number.isFinite(velocityY)) rec.player.velocityY = velocityY;
+    rec.player.elapsed = elapsed;
     if (msg.sessionPoints != null) {
       rec.player.sessionPoints = Math.max(0, Math.floor(Number(msg.sessionPoints) || 0));
     } else {
@@ -360,7 +373,12 @@ function handleClientMessage(userId, raw, pointStore) {
       {
         type: "opponent_progress",
         id: userId,
+        displayName: rec.player.displayName,
         height,
+        playerX: rec.player.playerX ?? 0,
+        playerY: rec.player.playerY ?? height + 80,
+        velocityY: rec.player.velocityY ?? 0,
+        elapsed: rec.player.elapsed ?? 0,
         skinId: rec.player.skinId,
         fill: rec.player.fill,
         ring: rec.player.ring,
@@ -434,6 +452,10 @@ function tryJumpVsUpgrade(request, socket, head, ctx) {
       id: userId,
       displayName: String(session.displayName || userId),
       height: 0,
+      playerX: 0,
+      playerY: 120,
+      velocityY: 0,
+      elapsed: 0,
       skinId: cosmetics.skinId,
       fill: cosmetics.fill,
       ring: cosmetics.ring,

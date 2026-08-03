@@ -66,6 +66,15 @@ const els = {
 let crashChart = null;
 if (els.crashCanvas && els.chartWrap) {
   crashChart = new CrashChartRenderer(els.crashCanvas, els.chartWrap);
+  crashChart.getLiveMult = () => displayMultForUi();
+  crashChart.getLiveHistory = () => historyMult;
+  crashChart.onFrame = () => {
+    tickSmoothMult();
+    if (state?.phase === "running") pushSmoothHistory();
+    if (els.multDisplay && (state?.phase === "running" || state?.phase === "ended")) {
+      els.multDisplay.textContent = fmtMult(displayMultForUi());
+    }
+  };
 }
 
 const mobileShellMq = window.matchMedia("(max-width: 520px), (hover: none) and (pointer: coarse) and (max-width: 820px)");
@@ -142,6 +151,44 @@ let historyMult = [1];
 let lastRoundId = 0;
 let prevPhase = null;
 let lastActionForChart = "";
+let serverMult = 1;
+let smoothMult = 1;
+
+function multRatePerSecond() {
+  return Number(state?.opts?.multiplierPerSecond) || 0.42;
+}
+
+function projectedRunningMult() {
+  const started = Number(state?.runStartedAt) || 0;
+  if (started <= 0) return Math.max(Number(state?.multiplier) || 1, 1);
+  const elapsed = Math.max(0, (Date.now() - started) / 1000);
+  return Math.floor((1 + multRatePerSecond() * elapsed) * 100) / 100;
+}
+
+function displayMultForUi() {
+  if (!state) return 1;
+  if (state.phase === "ended") return Math.max(Number(state.crashPoint ?? state.multiplier) || 1, 1);
+  if (state.phase === "running") return Math.max(projectedRunningMult(), 1);
+  return 1;
+}
+
+function tickSmoothMult() {
+  if (!state) return;
+  serverMult = Math.max(Number(state.multiplier) || 1, 1);
+  smoothMult = displayMultForUi();
+}
+
+function pushSmoothHistory() {
+  if (!state || state.phase !== "running") return;
+  const m = displayMultForUi();
+  if (!historyMult.length) historyMult = [1];
+  if (historyMult.length === 1) {
+    historyMult.push(m);
+    return;
+  }
+  const last = historyMult[historyMult.length - 1];
+  historyMult[historyMult.length - 1] = Math.max(last, m);
+}
 let linkPollTimer = null;
 let linkCode = "";
 let presenceTimer = null;
@@ -226,7 +273,7 @@ function updateChartChrome(s) {
   }
   if (els.chartMultEyebrow) els.chartMultEyebrow.hidden = !crashed;
 
-  const multVal = crashed ? (s.crashPoint ?? s.multiplier) : s.multiplier;
+  const multVal = displayMultForUi();
   if (els.multDisplay) els.multDisplay.textContent = fmtMult(multVal);
 
   if (els.chartStatus) {
@@ -251,6 +298,8 @@ function applyState(s) {
   if (s.roundId !== lastRoundId) {
     lastRoundId = s.roundId;
     historyMult = [1];
+    serverMult = 1;
+    smoothMult = 1;
   }
   const phaseBecameEnded = prevPhase !== "ended" && s.phase === "ended";
   prevPhase = s.phase;
@@ -281,15 +330,19 @@ function applyState(s) {
     els.subline.textContent = `Entry window ${sec}s — join the round below`;
     if (!historyMult.length || historyMult[historyMult.length - 1] !== 1) historyMult = [1];
   } else if (s.phase === "running") {
-    els.subline.textContent = "Multiplier climbing — score when your target is reached.";
-    const m = s.multiplier;
-    if (!historyMult.length || Math.abs(historyMult[historyMult.length - 1] - m) > 0.001) {
-      historyMult.push(m);
-      if (historyMult.length > 200) historyMult.shift();
-    }
+    els.subline.textContent = "Multiplier climbing — !cashout or cashout to exit early · auto cashout at your target.";
+    serverMult = Math.max(Number(s.multiplier) || 1, 1);
+    if (prevPhase !== "running") smoothMult = serverMult;
+    tickSmoothMult();
+    pushSmoothHistory();
   } else if (s.phase === "ended") {
-    els.subline.textContent = "Round finished — next round starts automatically.";
-    const endM = s.crashPoint != null ? s.crashPoint : s.multiplier;
+    if (s.lastResult?.emptyRound) {
+      els.subline.textContent = `No players this round — would have crashed at ${fmtMult(s.lastResult.crashPoint)}.`;
+    } else {
+      els.subline.textContent = "Round finished — next round starts automatically.";
+    }
+    smoothMult = Math.max(Number(s.crashPoint ?? s.multiplier) || 1, 1);
+    const endM = smoothMult;
     const last = historyMult[historyMult.length - 1];
     if (last == null || Math.abs(last - endM) > 0.02) {
       historyMult.push(endM);
@@ -299,7 +352,7 @@ function applyState(s) {
     els.subline.textContent = s.nextRoundStartsAt ? "Waiting for next round…" : "Stand by for the next round.";
   }
   if (crashChart) {
-    crashChart.update({ ...s, history: historyMult });
+    crashChart.update({ ...s, multiplier: displayMultForUi(), history: historyMult });
   }
   updateChartChrome(s);
   renderChartEntries(s.openBets, s.queuedBets);
@@ -423,6 +476,13 @@ function handleChatResult(data) {
       parsed.ok ? `Joined: ${parsed.amount} pts · target ${parsed.cashout}×` : betError(parsed.reason),
       !parsed.ok
     );
+  } else if (parsed.type === "manual_cashout") {
+    setActionMsg(
+      parsed.ok
+        ? `Cashed out at ${Number(parsed.cashout).toFixed(2)}× — paid ${fmtPts(parsed.payout)} (+${fmtPts(parsed.profit)} net)`
+        : cashoutError(parsed.reason),
+      !parsed.ok
+    );
   } else if (parsed.type === "balance_shout") {
     if (parsed.ok && parsed.balance != null) setActionMsg(`Balance: ${fmtPts(parsed.balance)}`);
     else setActionMsg(parsed.cooldown ? `Balance cooldown — ${parsed.secondsLeft || "?"}s` : "Balance on cooldown.", true);
@@ -431,6 +491,16 @@ function handleChatResult(data) {
   } else {
     setActionMsg("OK");
   }
+}
+
+function cashoutError(reason) {
+  const map = {
+    not_running: "Round is not running.",
+    no_active_bet: "No active entry this round.",
+    too_early: "Multiplier not live yet.",
+    cashout_failed: "Cashout failed.",
+  };
+  return map[reason] || reason || "Could not cash out.";
 }
 
 function betError(reason) {

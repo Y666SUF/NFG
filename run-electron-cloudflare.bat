@@ -1,15 +1,13 @@
 @echo off
 setlocal EnableExtensions
 cd /d "%~dp0"
-title NFG Platform - Crash + Hangman + Cloudflare
+title NFG Platform - Crash + Cloudflare
 
 rem =============================================================================
-rem NFG Platform launcher (Crash + Hangman + public tunnel)
-rem   Node platform     : PORT 3847  (Crash, website, mobile APIs, IPA downloads)
-rem   Hangman Python    : HANGMAN_PORT 19876  (FastAPI in hangman v2\)
-rem   Hangman proxied   : /hangman/ws  and  /api/hangman/*  on 3847
-rem   iOS Hangman app   : polls GET /api/mobile/hangman/state every 2s
-rem                       guesses POST /api/mobile/hangman/guess
+rem NFG Platform launcher (Crash + Word Games + public tunnel)
+rem   Node platform     : PORT 3847
+rem   Word Games Python : WORD_GAMES_PORT 19877
+rem   Hangman           : OFF by default (NFG_START_HANGMAN=0)
 rem   Public origin     : https://y666suf.com  (Cloudflare tunnel)
 rem Pull latest from GitHub before live streams so mobile + desktop stay in sync.
 rem =============================================================================
@@ -35,7 +33,9 @@ set "NFG_START_PIXEL_JUMP=1"
 set "NFG_PLATFORM_URL=http://127.0.0.1:3847"
 set "NFG_INTERNAL_SECRET=nfg-dev-internal"
 set "NFG_CHAT_ADMIN_USERS=y666.suf"
-set "NFG_START_HANGMAN=1"
+set "NFG_START_HANGMAN=0"
+set "NFG_OPEN_HANGMAN_WINDOW=0"
+set "NFG_OPEN_PLAYER_LOOKUP=0"
 set "NFG_HANGMAN_GUESS_TIMEOUT_MS=12000"
 set "LIVE_SONG_COMMAND=1"
 if "%HANGMAN_PYTHON%"=="" set "HANGMAN_PYTHON=py"
@@ -51,8 +51,8 @@ if not defined TIKTOK_SEND_BALANCE_REPLY set "TIKTOK_SEND_BALANCE_REPLY=0"
 rem --- Stop leftover Electron / Node / Hangman / cloudflared from prior runs ---
 if "%NFG_KILL_OLD_SESSIONS%"=="1" (
   echo.
-  echo Stopping old NFG sessions ^(ports %PORT% / %HANGMAN_PORT%, Electron, cloudflared^)...
-  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports "%PORT%,%HANGMAN_PORT%,8001" -KillElectron -KillCloudflared -KillNodeNfg -RepoRoot "%~dp0" -Quiet
+  echo Stopping old NFG sessions ^(ports %PORT% / %WORD_GAMES_PORT%, Electron, cloudflared^)...
+  powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports "%PORT%,19876,%WORD_GAMES_PORT%,8001" -KillElectron -KillCloudflared -KillNodeNfg -RepoRoot "%~dp0" -Quiet
   timeout /t 2 /nobreak >nul
   echo Ready for fresh launch.
   echo.
@@ -131,11 +131,12 @@ if not "%NFG_CLOUDFLARED_EXE%"=="" (
 
 echo.
 echo ============================================================
-echo  NFG Platform - Crash + Hangman + Cloudflare
+echo  NFG Platform - Crash + Cloudflare
 echo ============================================================
 echo   Kill old sessions on start: %NFG_KILL_OLD_SESSIONS%
 echo   Auto-restart: %NFG_AUTO_RESTART% ^(delay %NFG_AUTO_RESTART_DELAY_SECONDS%s, max retries %NFG_AUTO_RESTART_MAX_RETRIES%^)
-echo   Electron: NFG Crash, Player Lookup, App Chat, NFG Hangman
+echo   Electron windows: NFG Crash + App Chat only
+echo   Hangman: OFF ^(NFG_START_HANGMAN=0^)
 echo   Tunnel: "%NFG_CF_TUNNEL_NAME%"
 if not "%NFG_CF_TUNNEL_TOKEN%"=="" (
   echo   Tunnel auth: token
@@ -150,31 +151,13 @@ if not "%NFG_CF_TUNNEL_TOKEN%"=="" (
 echo.
 echo --- Ports ---
 echo   Platform Node:     %PORT%  ^(0.0.0.0^)
-echo   Hangman Python:    %HANGMAN_PORT%  ^(auto-start unless NFG_START_HANGMAN=0^)
-echo   Hangman backend:   %HANGMAN_BACKEND_URL%
+echo   Word Games:        %WORD_GAMES_PORT%  ^(NFG Words ??? auto-start^)
 echo.
 echo --- Public ^(https://y666suf.com^) ---
 echo   Website / sideload:  https://y666suf.com/sideload
 echo   Crash stream:        http://127.0.0.1:%PORT%/
-echo   Hangman desktop UI:  http://127.0.0.1:%HANGMAN_PORT%/
 echo.
-echo --- Hangman mobile companion ^(NFG Hangman iOS^) ---
-echo   WebSocket:   wss://y666suf.com/hangman/ws
-echo   State poll:  GET  https://y666suf.com/api/mobile/hangman/state
-echo   App guess:   POST https://y666suf.com/api/mobile/hangman/guess
-echo   iOS word UI: needs NFG-Hangman.ipa with mask display fix - rebuild on Mac after pull
-echo   Link/chat:   /api/mobile/link/*  /api/mobile/chat
-echo   Python API:  GET  /api/hangman/app/state  ^(proxied on %PORT%^)
-echo.
-echo --- Retro Pixel Jump mobile ^(FastAPI^) ---
-echo   Health:      GET  https://y666suf.com/api/pixel-jump/
-echo   Leaderboard: POST https://y666suf.com/api/pixel-jump/leaderboard
-echo   Multiplayer: POST https://y666suf.com/api/pixel-jump/mp/rooms
-echo   WebSocket:   wss://y666suf.com/api/pixel-jump/ws/mp/{roomId}?playerId=...
-echo   Backend:     %PIXEL_JUMP_BACKEND_URL%  ^(auto-start^)
-echo   iOS env:     EXPO_PUBLIC_BACKEND_URL=https://y666suf.com/api/pixel-jump
-echo.
-echo --- NFG Words mobile ^(NFG Words iOS^) ---
+echo --- NFG Words mobile ---
 echo   Login:       POST https://y666suf.com/api/word-games/players/login
 echo   Leaderboard: GET  https://y666suf.com/api/word-games/leaderboard
 echo   Source repo: %USERPROFILE%\Documents\nfg-word-games
@@ -183,21 +166,13 @@ echo --- Shared APIs ---
 echo   App chat:    https://y666suf.com/api/mobile/chat
 echo   Presence:    https://y666suf.com/api/mobile/platform/status
 echo   Crash IPA:   https://y666suf.com/download/nfg-crash.ipa
-echo   Hangman IPA: https://y666suf.com/download/nfg-hangman.ipa
-echo   Hangman web:  https://y666suf.com/hangman-app/  ^(Safari if IPA word UI broken^)
 echo.
 where %HANGMAN_PYTHON% >nul 2>&1
 if errorlevel 1 (
-  echo WARNING: Python ^(%HANGMAN_PYTHON%^) not found - Hangman will not start.
-  echo   Install Python 3 or set HANGMAN_PYTHON=full\path\to\python.exe
+  echo WARNING: Python ^(%HANGMAN_PYTHON%^) not found - Word Games may not start.
+  echo   Install Python 3 or set WORD_GAMES_PYTHON=full\path\to\python.exe
   echo.
 ) else (
-  if not exist "%~dp0hangman v2\server.py" (
-    echo WARNING: hangman v2\server.py not found - Hangman disabled.
-    set "NFG_START_HANGMAN=0"
-  ) else (
-    echo Hangman source: %~dp0hangman v2
-  )
   if exist "%USERPROFILE%\Documents\nfg-word-games\server.py" (
     echo Word Games source: %USERPROFILE%\Documents\nfg-word-games
   ) else (
@@ -210,11 +185,6 @@ if exist "%NFG_IPA_FILE%" (
   echo Crash IPA:   %NFG_IPA_FILE%
 ) else (
   echo Crash IPA:   not found - run git pull for releases\ipa\NFG-Crash.ipa
-)
-if exist "%NFG_HANGMAN_IPA_FILE%" (
-  echo Hangman IPA: %NFG_HANGMAN_IPA_FILE%
-) else (
-  echo Hangman IPA: not found - run git pull for releases\ipa\NFG-Hangman.ipa
 )
 echo.
 if /I not "%NFG_BUILD_WEBSITE%"=="0" (
@@ -239,7 +209,7 @@ if /I not "%NFG_BUILD_WEBSITE%"=="0" (
     popd
   )
 )
-echo Starting Electron + Node + Hangman + tunnel...
+echo Starting Electron + Node + tunnel...
 echo.
 call "%~dp0run-electron.bat"
 

@@ -40,6 +40,7 @@
           <span class="round-summary-kicker">Round Summary</span>
           <span id="roundCrashAt" class="round-summary-crash">Crash 0.00x</span>
         </div>
+        <div id="roundRecentMult" class="round-recent-mults"></div>
         <div class="round-summary-grid">
           <div class="round-col round-col-win">
             <h3>Won</h3>
@@ -53,7 +54,6 @@
           </div>
         </div>
         <div id="roundTopCards" class="round-top-cards"></div>
-        <div id="roundRecentMult" class="round-recent-mults"></div>
       </div>
     </div>
     <div id="rewardToastStack" class="reward-toast-stack" aria-live="polite" aria-label="Point rewards"></div>
@@ -107,6 +107,11 @@
       </header>
 
       <section id="topProfiles" class="top-profiles" aria-label="Top 5 players"></section>
+      <section id="boardScrollSection" class="board-scroll-section" hidden aria-label="Leaderboard ranks 6 through 20">
+        <div class="board-scroll-viewport">
+          <div id="boardScrollInner" class="board-scroll-inner"></div>
+        </div>
+      </section>
       <div id="taxPotBanner" class="tax-pot-banner" aria-live="polite">Tax Pot: 0 pts</div>
 
       <p class="subline" id="subline">Connecting?</p>
@@ -250,6 +255,6 @@
       </details>
     </div>
     <script src="/badge-icons.js"></script>
-    <script src="/app.js"></script>
+    <script src="/app.js?v=smooth2"></script>
   </body>
 </html>

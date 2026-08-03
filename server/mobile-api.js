@@ -78,7 +78,9 @@ function registerMobileApi(app, ctx) {
   registerMobileCosmeticsRoutes(app, { game, pointStore, validateBearer, broadcast });
   registerMobilePresenceRoutes(app, { validateBearer, pointStore, broadcast });
   registerMobilePlatformRoutes(app, { game, pointStore, validateBearer, broadcast });
-  registerHangmanMobileRoutes(app, { validateBearer });
+  if (String(process.env.NFG_START_HANGMAN || "0").trim() !== "0") {
+    registerHangmanMobileRoutes(app, { validateBearer });
+  }
   registerMobileProfileRoutes(app, { validateBearer, pointStore, game });
   registerMobileArcadeRoutes(app, { validateBearer, pointStore, game });
   registerTikTokAvatarRoutes(app, { validateBearer });

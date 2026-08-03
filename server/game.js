@@ -13,8 +13,8 @@ const DEFAULTS = {
   bettingSeconds: 15,
   tickMs: 50,
   multiplierPerSecond: 0.42,
-  /** Prevent immediate post-lock crashes; keeps early round dramatic. */
-  minRunBeforeCrashMs: 1400,
+  /** Prevent instant crash resolution right after lock (does not slow multiplier climb). */
+  minRunBeforeCrashMs: 0,
   minBet: 1,
   // No hard max by default; users can bet any amount they hold.
   maxBet: null,
@@ -293,13 +293,28 @@ class CrashGame {
     if (Number(this.pinnedMessage.expiresAt) <= Date.now()) this.pinnedMessage = null;
   }
 
+  _peakCashoutTarget() {
+    let top = 1;
+    for (const [, bet] of this.bets) {
+      const c = Math.max(1, Number(bet && bet.cashout) || 1);
+      if (c > top) top = c;
+    }
+    return top;
+  }
+
   getState() {
     this._prunePinnedMessage();
     return {
       phase: this.phase,
       roundId: this.roundId,
-      multiplier: Math.floor(this.multiplier * 100) / 100,
+      multiplier:
+        this.phase === PHASE.RUNNING
+          ? Math.min(this._runningMultAtNow(), Number(this.crashPoint) || Infinity)
+          : Math.floor(this.multiplier * 100) / 100,
       crashPoint: this.phase === PHASE.ENDED ? this.crashPoint : null,
+      runStartedAt:
+        this.phase === PHASE.RUNNING || this.phase === PHASE.ENDED ? this._runStartedAt || null : null,
+      peakCashoutTarget: this.phase === PHASE.RUNNING ? this._peakCashoutTarget() : null,
       bettingEndsAt: this.bettingEndsAt,
       nextRoundStartsAt: this.nextRoundStartsAt,
       opts: { ...this.opts },
@@ -417,15 +432,109 @@ class CrashGame {
 
   _lockAndRun() {
     if (this.phase !== PHASE.BETTING) return;
-    this.phase = PHASE.RUNNING;
-    this.multiplier = 1;
     this._runStartedAt = Date.now();
     this._winsThisRound = [];
+    if (this.bets.size === 0) {
+      const planned = Number(this.crashPoint) || 1;
+      this.phase = PHASE.RUNNING;
+      this.multiplier = 1;
+      this.onUpdate();
+      return this._finishRound(planned, { emptyRound: true });
+    }
+    this.phase = PHASE.RUNNING;
+    this.multiplier = 1;
     this.onUpdate();
     this._tick();
   }
 
-  _finishRound(resultCrash) {
+  /** Credit a win at an explicit multiplier (auto or manual cashout). */
+  _settleBetWin(user, bet, settleMult, opts = {}) {
+    const mult = Math.round(Number(settleMult) * 100) / 100;
+    if (!Number.isFinite(mult) || mult < this.opts.minCashout) return null;
+    const grossPayout = Math.floor(Number(bet.amount || 0) * mult);
+    const profit = Math.max(0, grossPayout - Number(bet.amount || 0));
+    const tax = Math.max(0, Math.floor(profit * 0.05));
+    const payout = Math.max(0, grossPayout - tax);
+    this.store.credit(user, payout);
+    if (tax > 0 && this.store.addTaxToPot) this.store.addTaxToPot(tax);
+    const v = this._userView(user);
+    const row = {
+      user,
+      displayName: v.displayName,
+      nameStyle: v.nameStyle,
+      level: v.level,
+      rank: v.rank,
+      result: "win",
+      grossPayout,
+      payout,
+      profit,
+      tax,
+      cashout: mult,
+      targetCashout: Number(bet.cashout),
+      target: Number(bet.cashout),
+      bet: Number(bet.amount || 0),
+      manual: !!opts.manual,
+    };
+    this.store.awardXP(user, "CASHOUT_SUCCESS", Math.max(1, mult / 2));
+    try {
+      this.onCashoutWin({
+        user,
+        displayName: v.displayName,
+        cashout: mult,
+        payout,
+        grossPayout,
+        roundId: this.roundId,
+        at: Date.now(),
+      });
+    } catch (_) {
+      /* ignore website stats hook errors */
+    }
+    return row;
+  }
+
+  manualCashout(rawUser) {
+    if (this.phase !== PHASE.RUNNING) return { ok: false, reason: "not_running" };
+    const u = this._normUser(rawUser);
+    if (!u) return { ok: false, reason: "invalid_user" };
+    const bet = this.bets.get(u);
+    if (!bet) return { ok: false, reason: "no_active_bet" };
+
+    const settleMult = this._runningMultAtNow();
+    if (settleMult < this.opts.minCashout) return { ok: false, reason: "too_early" };
+
+    const targetCashout = Math.round(Number(bet.cashout) * 100) / 100;
+    const row = this._settleBetWin(u, bet, settleMult, { manual: true });
+    if (!row) return { ok: false, reason: "too_early" };
+
+    this.bets.delete(u);
+    this._winsThisRound.push(row);
+    this.onUpdate();
+    const payload = {
+      ok: true,
+      user: u,
+      displayName: row.displayName,
+      nameStyle: row.nameStyle,
+      level: row.level,
+      rank: row.rank,
+      amount: row.bet,
+      target: targetCashout,
+      targetCashout,
+      cashout: settleMult,
+      payout: row.payout,
+      profit: row.profit,
+      grossPayout: row.grossPayout,
+      tax: row.tax,
+      balance: this.store.getBalance(u),
+      roundEnded: false,
+    };
+    if (this.bets.size === 0) {
+      this._finishRound(this.crashPoint);
+      payload.roundEnded = true;
+    }
+    return payload;
+  }
+
+  _finishRound(resultCrash, meta = {}) {
     const lost = [];
     for (const [user, bet] of this.bets) {
       const v = this._userView(user);
@@ -444,100 +553,50 @@ class CrashGame {
     this.phase = PHASE.ENDED;
     this.crashPoint = resultCrash;
     this.multiplier = resultCrash;
-    this.lastResult = { roundId: this.roundId, crashPoint: resultCrash, wins: [...this._winsThisRound], losses: lost };
+    this.lastResult = {
+      roundId: this.roundId,
+      crashPoint: resultCrash,
+      wins: [...this._winsThisRound],
+      losses: lost,
+      emptyRound: !!meta.emptyRound,
+    };
     this._clearTimers();
     this.onUpdate();
     this._runPostRoundFlow();
+  }
+
+  _runningMultAtNow() {
+    const perSecond = Number(this.opts.multiplierPerSecond) || 0.42;
+    const elapsedMs = this._runStartedAt > 0 ? Math.max(0, Date.now() - this._runStartedAt) : 0;
+    return Math.floor((1 + perSecond * (elapsedMs / 1000)) * 100) / 100;
   }
 
   _tick() {
     if (this.phase !== PHASE.RUNNING) return;
     if (this.bets.size === 0) return this._finishRound(this.crashPoint);
 
-    const dt = this.opts.tickMs / 1000;
-    const elapsedMs = this._runStartedAt > 0 ? Math.max(0, Date.now() - this._runStartedAt) : 0;
-    const minRunBeforeCrashMs = Math.max(0, Math.floor(Number(this.opts.minRunBeforeCrashMs) || 0));
-    const crashGraceActive = elapsedMs < minRunBeforeCrashMs;
-
-    // Adaptive pacing:
-    // - early section intentionally slower for suspense
-    // - high-target rounds speed up progressively after ~5x
-    const highestCashoutTarget = (() => {
-      let top = 1;
-      for (const [, bet] of this.bets) {
-        const c = Math.max(1, Number(bet && bet.cashout) || 1);
-        if (c > top) top = c;
-      }
-      return top;
-    })();
-    const earlyPaceFactor = (() => {
-      if (this.multiplier <= 1) return 0.56;
-      if (this.multiplier >= 5) return 1;
-      const t = (this.multiplier - 1) / 4;
-      return 0.56 + t * 0.44;
-    })();
-    const adaptiveSpeedBoost = Math.max(1, Math.min(8, Math.sqrt(highestCashoutTarget)));
-    const postFiveRamp = Math.max(0, Math.min(1, (this.multiplier - 5) / 8));
-    const adaptiveFactor = 1 + (adaptiveSpeedBoost - 1) * postFiveRamp;
-    const perSecond = this.opts.multiplierPerSecond * earlyPaceFactor * adaptiveFactor;
-
-    const next = this.multiplier + perSecond * dt;
-    const rounded = Math.floor(next * 100) / 100;
+    const rounded = this._runningMultAtNow();
     const crashPoint = Number(this.crashPoint) || rounded;
-    const graceCap = crashGraceActive ? Math.max(1, crashPoint - 0.01) : crashPoint;
-    const settleAt = Math.min(rounded, graceCap);
+    const settleAt = Math.min(rounded, crashPoint);
 
     const resolved = [];
     for (const [user, bet] of this.bets) {
       if (settleAt >= bet.cashout) {
-        const grossPayout = Math.floor(bet.amount * bet.cashout);
-        const profit = Math.max(0, grossPayout - bet.amount);
-        const tax = Math.max(0, Math.floor(profit * 0.05));
-        const payout = Math.max(0, grossPayout - tax);
-        this.store.credit(user, payout);
-        if (tax > 0 && this.store.addTaxToPot) this.store.addTaxToPot(tax);
-        const v = this._userView(user);
-        const row = {
-          user,
-          displayName: v.displayName,
-          nameStyle: v.nameStyle,
-          level: v.level,
-          rank: v.rank,
-          result: "win",
-          grossPayout,
-          payout,
-          profit,
-          tax,
-          cashout: bet.cashout,
-          bet: Number(bet.amount || 0),
-        };
-        this.store.awardXP(user, "CASHOUT_SUCCESS", Math.max(1, bet.cashout / 2));
-        this._winsThisRound.push(row);
-        try {
-          this.onCashoutWin({
-            user,
-            displayName: v.displayName,
-            cashout: bet.cashout,
-            payout,
-            grossPayout,
-            roundId: this.roundId,
-            at: Date.now(),
-          });
-        } catch (_) {
-          /* ignore website stats hook errors */
+        const row = this._settleBetWin(user, bet, bet.cashout);
+        if (row) {
+          this._winsThisRound.push(row);
+          resolved.push(user);
         }
-        resolved.push(user);
       }
     }
     for (const user of resolved) this.bets.delete(user);
-    if (resolved.length) this.onUpdate();
     if (this.bets.size === 0) return this._finishRound(this.crashPoint);
 
     const maxRunMs = Math.max(0, Number(this.opts.maxRunSeconds) || 0) * 1000;
     if (maxRunMs > 0 && this._runStartedAt > 0 && Date.now() - this._runStartedAt >= maxRunMs) {
       return this._finishRound(settleAt);
     }
-    if (!crashGraceActive && rounded >= this.crashPoint) return this._finishRound(this.crashPoint);
+    if (rounded >= this.crashPoint) return this._finishRound(this.crashPoint);
 
     this.multiplier = settleAt;
     this.onUpdate();
@@ -951,6 +1010,10 @@ class CrashGame {
     if (lower === "!backupnow") {
       if (user.toLowerCase() !== BACKUP_COMMAND_HOST) return { type: "backupnow", ok: false, reason: "host_only", user };
       return { type: "backupnow", ...this._runBackupNow(user) };
+    }
+
+    if (lower === "!cashout" || lower === "!cash" || lower === "!out" || lower === "!co" || lower === "cashout") {
+      return { type: "manual_cashout", ...this.manualCashout(user) };
     }
 
     const jetLock = this._getJetLock(user);

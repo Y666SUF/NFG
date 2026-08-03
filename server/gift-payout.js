@@ -46,6 +46,7 @@ function resolveGiftPayout({
   const points = expectedGiftPoints(coins, {
     giftCoinMultiplier,
     superFan: superFan === true,
+    giftName,
   });
 
   const rawCount = Math.max(1, Math.floor(Number(giftCount) || 1));

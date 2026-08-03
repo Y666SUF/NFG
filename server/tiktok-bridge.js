@@ -112,6 +112,64 @@ function loadTikTokConfig() {
   }
 }
 
+function resolveSignApiKey(cfg = loadTikTokConfig()) {
+  const raw =
+    process.env.TIKTOK_SIGN_API_KEY ||
+    process.env.SIGN_API_KEY ||
+    process.env.EULER_API_KEY ||
+    cfg.signApiKey ||
+    cfg.eulerApiKey ||
+    "";
+  const key = String(raw || "").trim();
+  return key || null;
+}
+
+function maskSignApiKey(key) {
+  const s = String(key || "");
+  if (s.length <= 12) return "(set)";
+  return `${s.slice(0, 10)}…${s.slice(-4)}`;
+}
+
+/** Stable TikTok viewer id for rewards (matches chat command keys). */
+function normTikTokUser(raw) {
+  return String(raw || "")
+    .trim()
+    .replace(/^@+/, "")
+    .toLowerCase()
+    .slice(0, 40);
+}
+
+function extractEventUser(data) {
+  const user = data?.user || data?.userInfo || data?.sender || {};
+  const uniqueId =
+    user.uniqueId ||
+    user.unique_id ||
+    user.username ||
+    user.displayId ||
+    user.nickname ||
+    user.nickName ||
+    data?.uniqueId;
+  const displayName =
+    user.nickname ||
+    user.nickName ||
+    user.displayName ||
+    uniqueId ||
+    "viewer";
+  const userId = normTikTokUser(uniqueId || displayName);
+  if (!userId || userId === "viewer") return { userId: null, displayName: null };
+  return { userId, displayName };
+}
+
+function socialDisplayType(data) {
+  const dt =
+    data?.common?.displayText?.displayType ??
+    data?.common?.displayType ??
+    data?.displayType ??
+    data?.actionType ??
+    "";
+  return String(dt || "").toLowerCase();
+}
+
 function postChat(port, payload) {
   const body = JSON.stringify(payload || {});
   return new Promise((resolve, reject) => {
@@ -264,21 +322,21 @@ function postUserMeta(port, payload) {
 
 /** Best-effort: detect live “repost” style events (payloads vary by TikTok version). */
 function looksLikeRepost(data) {
+  const dt = socialDisplayType(data);
+  if (dt.includes("repost") || dt.includes("re-post")) return true;
   try {
     const j = JSON.stringify(data).toLowerCase();
     if (j.includes("repost") || j.includes("re-post")) return true;
   } catch {
     /* ignore */
   }
-  const dt = data.common?.displayType ?? data.displayType ?? data.actionType;
-  if (dt != null && String(dt).toLowerCase().includes("repost")) return true;
   return false;
 }
 
 /** Best-effort: detect live follow events (payloads vary by TikTok version). */
 function looksLikeFollow(data) {
   if (looksLikeRepost(data)) return false;
-  const dt = String(data.common?.displayType ?? data.displayType ?? data.actionType ?? "").toLowerCase();
+  const dt = socialDisplayType(data);
   if (dt.includes("follow") && !dt.includes("unfollow")) return true;
   const label = data.label ?? data.event?.eventDetails?.label ?? data.common?.label;
   if (label != null && String(label).toLowerCase().includes("follow")) return true;
@@ -296,10 +354,14 @@ function looksLikeFollow(data) {
 
 /** One LIKE event = one or a small batch of likes (capped). */
 function likeDeltaCount(data) {
-  const raw = Number(data.count ?? data.comboCount ?? data.likeCount);
+  const raw = Number(
+    data.count ?? data.comboCount ?? data.likeCount ?? data.totalLikeCount ?? data.like_count
+  );
   if (Number.isFinite(raw) && raw >= 1) return Math.min(10, Math.floor(raw));
   return 1;
 }
+
+const BRIDGE_DEBUG = process.env.TIKTOK_BRIDGE_DEBUG === "1";
 
 /**
  * Forwards TikTok LIVE chat + rewards to localhost HTTP.
@@ -330,11 +392,24 @@ function startTikTokBridge(options) {
 
   let TikTokLiveConnection;
   let WebcastEvent;
+  let SignConfig;
   try {
-    ({ TikTokLiveConnection, WebcastEvent } = require("tiktok-live-connector"));
+    const pkg = require("tiktok-live-connector");
+    TikTokLiveConnection = pkg.TikTokLiveConnection;
+    WebcastEvent = pkg.WebcastEvent;
+    SignConfig = pkg.SignConfig;
   } catch (e) {
     console.error("[TikTok] Missing package. Run: npm install", e.message);
     return;
+  }
+
+  const signApiKey = resolveSignApiKey(cfg);
+  if (signApiKey && SignConfig) {
+    SignConfig.apiKey = signApiKey;
+  } else {
+    console.warn(
+      "[TikTok] No Euler sign API key — chat/likes may not connect. Set signApiKey in tiktok.config.json or TIKTOK_SIGN_API_KEY."
+    );
   }
 
   const evChat = WebcastEvent.CHAT || "chat";
@@ -367,6 +442,9 @@ function startTikTokBridge(options) {
 
   (async function loop() {
     console.log(`[TikTok] Bridge on — @${getTikTokBridgeTarget()} → http://127.0.0.1:${port}/`);
+    if (signApiKey) {
+      console.log(`[TikTok] Euler sign key: ${maskSignApiKey(signApiKey)}`);
+    }
 
     while (true) {
       let retryDelayMs = 5000;
@@ -403,6 +481,10 @@ function startTikTokBridge(options) {
         wsClientOptions: { agent: false },
         webClientOptions: { proxy: false },
       };
+      if (signApiKey) {
+        connectionOpts.signApiKey = signApiKey;
+        // Do NOT use connectWithUniqueId — Euler /webcast/fetch returns 404 and breaks WS.
+      }
       if (hasChatSendCreds) {
         connectionOpts.sessionId = sessionId;
         connectionOpts.ttTargetIdc = ttTargetIdc;
@@ -428,8 +510,7 @@ function startTikTokBridge(options) {
       }
 
       const markSuperFan = (data) => {
-        const userId = data?.user && (data.user.uniqueId || data.user.nickname);
-        const displayName = data?.user && (data.user.nickname || data.user.uniqueId || userId);
+        const { userId, displayName } = extractEventUser(data);
         const superFanLevel = extractSuperFanLevel(data);
         if (!userId) return;
         postUserMeta(port, { userId, displayName, superFan: true, superFanLevel }).catch((err) => {
@@ -438,8 +519,9 @@ function startTikTokBridge(options) {
       };
 
       connection.on(evChat, (data) => {
-        const userId = (data.user && (data.user.uniqueId || data.user.nickname)) || "viewer";
-        const displayName = (data.user && (data.user.nickname || data.user.uniqueId)) || userId;
+        const { userId: uid, displayName: dn } = extractEventUser(data);
+        const userId = uid || "viewer";
+        const displayName = dn || userId;
         const message = String(data.comment || "").trim();
         const superFan = detectSuperFan(data);
         const superFanLevel = superFan ? extractSuperFanLevel(data) : 0;
@@ -469,8 +551,7 @@ function startTikTokBridge(options) {
       });
 
       connection.on(evShare, (data) => {
-        const userId = data.user && (data.user.uniqueId || data.user.nickname);
-        const displayName = data.user && (data.user.nickname || data.user.uniqueId || userId);
+        const { userId, displayName } = extractEventUser(data);
         const superFan = detectSuperFan(data);
         const superFanLevel = superFan ? extractSuperFanLevel(data) : 0;
         if (!userId) return;
@@ -488,8 +569,7 @@ function startTikTokBridge(options) {
       });
 
       connection.on(evGift, (data) => {
-        const userId = data.user && (data.user.uniqueId || data.user.nickname);
-        const displayName = data.user && (data.user.nickname || data.user.uniqueId || userId);
+        const { userId, displayName } = extractEventUser(data);
         const superFan = detectSuperFan(data);
         const superFanLevel = superFan ? extractSuperFanLevel(data) : 0;
         if (!userId) return;
@@ -515,12 +595,12 @@ function startTikTokBridge(options) {
       });
 
       connection.on(evLike, (data) => {
-        const userId = data.user && (data.user.uniqueId || data.user.nickname);
-        const displayName = data.user && (data.user.nickname || data.user.uniqueId || userId);
+        const { userId, displayName } = extractEventUser(data);
         const superFan = detectSuperFan(data);
         const superFanLevel = superFan ? extractSuperFanLevel(data) : 0;
         if (!userId) return;
         const count = likeDeltaCount(data);
+        if (BRIDGE_DEBUG) console.log(`[TikTok] like @${userId} x${count}`);
         postReward(port, {
           type: "like",
           userId,
@@ -535,29 +615,30 @@ function startTikTokBridge(options) {
       });
 
       connection.on(evFollow, (data) => {
-        const userId = data.user && (data.user.uniqueId || data.user.nickname);
-        const displayName = data.user && (data.user.nickname || data.user.uniqueId || userId);
+        const { userId, displayName } = extractEventUser(data);
         const superFan = detectSuperFan(data);
         const superFanLevel = superFan ? extractSuperFanLevel(data) : 0;
         if (!userId) return;
+        if (BRIDGE_DEBUG) console.log(`[TikTok] follow @${userId}`);
         payFollowBonus(userId, displayName, superFan, superFanLevel);
       });
 
       connection.on(evSocial, (data) => {
-        const userId = data.user && (data.user.uniqueId || data.user.nickname);
-        const displayName = data.user && (data.user.nickname || data.user.uniqueId || userId);
+        const { userId, displayName } = extractEventUser(data);
         const superFan = detectSuperFan(data);
         const superFanLevel = superFan ? extractSuperFanLevel(data) : 0;
         if (!userId) return;
         if (looksLikeRepost(data)) {
           if (repostPaidThisLive.has(userId)) return;
           repostPaidThisLive.add(userId);
+          if (BRIDGE_DEBUG) console.log(`[TikTok] repost @${userId}`);
           postReward(port, { type: "repost", userId, displayName, superFan, superFanLevel, ...rewardCtx }).catch((err) => {
             console.error("[TikTok] Repost (social) reward:", err.message);
           });
           return;
         }
         if (looksLikeFollow(data)) {
+          if (BRIDGE_DEBUG) console.log(`[TikTok] follow (social) @${userId}`);
           payFollowBonus(userId, displayName, superFan, superFanLevel);
         }
       });
@@ -620,7 +701,13 @@ function startTikTokBridge(options) {
         });
       } catch (err) {
         setBridgeStatus({ uniqueId: activeUniqueId, state: "offline", roomId: null });
-        console.error("[TikTok]", err.message || err);
+        const msg = err && err.message ? String(err.message) : String(err);
+        console.error("[TikTok]", msg);
+        if (msg.includes("Sign Error") || msg.includes("webcast/fetch")) {
+          console.error(
+            "[TikTok] Euler sign failed — keep signApiKey in tiktok.config.json and do NOT use connectWithUniqueId."
+          );
+        }
       } finally {
         if (bridgeRuntime.activeConnection === connection) {
           bridgeRuntime.activeConnection = null;

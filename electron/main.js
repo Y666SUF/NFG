@@ -2,7 +2,20 @@ const path = require("path");
 const { spawn } = require("child_process");
 const http = require("http");
 const https = require("https");
-const { app, BrowserWindow, dialog } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  dialog,
+  Tray,
+  Menu,
+  nativeImage,
+  powerSaveBlocker,
+} = require("electron");
+
+// Keep timers/WS/game logic running when the desktop window is minimized or occluded.
+app.commandLine.appendSwitch("disable-background-timer-throttling");
+app.commandLine.appendSwitch("disable-renderer-backgrounding");
+app.commandLine.appendSwitch("disable-backgrounding-occluded-windows");
 
 const {
   waitForHangman,
@@ -20,8 +33,9 @@ const HANGMAN_HOST_STR = String(process.env.HANGMAN_HOST || HANGMAN_HOST || "127
 const HANGMAN_URL =
   String(process.env.NFG_HANGMAN_UI_URL || "").trim() ||
   `http://${HANGMAN_HOST_STR}:${HANGMAN_PORT_NUM}/`;
-const START_HANGMAN = String(process.env.NFG_START_HANGMAN || "1").trim() !== "0";
-const OPEN_HANGMAN_WINDOW = String(process.env.NFG_OPEN_HANGMAN_WINDOW || "1").trim() !== "0";
+const START_HANGMAN = String(process.env.NFG_START_HANGMAN || "0").trim() !== "0";
+const OPEN_HANGMAN_WINDOW = String(process.env.NFG_OPEN_HANGMAN_WINDOW || "0").trim() !== "0";
+const OPEN_PLAYER_LOOKUP = String(process.env.NFG_OPEN_PLAYER_LOOKUP || "0").trim() !== "0";
 const IS_PORTRAIT_MODE = process.env.NFG_PORTRAIT === "1";
 const USE_WIDE_WINDOW = String(process.env.NFG_WIDE_WINDOW || "0").trim() === "1";
 const GAME_WINDOW_W = Math.max(360, Math.floor(Number(process.env.NFG_GAME_W) || 460));
@@ -47,6 +61,97 @@ let hangmanWindow = null;
 let startupAttempts = 0;
 const MAX_STARTUP_ATTEMPTS = Math.max(1, Math.floor(Number(process.env.NFG_STARTUP_MAX_ATTEMPTS) || 3));
 const ENABLE_AUTO_RESTART = String(process.env.NFG_AUTO_RESTART || "0").trim() === "1";
+/** When true (default), closing/minimizing windows keeps Node + tunnel running. Set NFG_QUIT_ON_CLOSE=1 for old behavior. */
+const PERSIST_WHEN_HIDDEN = String(process.env.NFG_QUIT_ON_CLOSE || "0").trim() !== "1";
+
+const WINDOW_WEB_PREFS = {
+  contextIsolation: true,
+  nodeIntegration: false,
+  backgroundThrottling: false,
+};
+
+let tray = null;
+let powerSaveBlockerId = null;
+
+function allManagedWindows() {
+  return [mainWindow, lookupWindow, chatWindow, hangmanWindow].filter(
+    (w) => w && !w.isDestroyed()
+  );
+}
+
+function showAllWindows() {
+  for (const win of allManagedWindows()) {
+    if (win.isMinimized()) win.restore();
+    win.show();
+    win.focus();
+  }
+}
+
+function hideAllWindows() {
+  for (const win of allManagedWindows()) {
+    win.hide();
+  }
+}
+
+function attachPersistOnClose(win) {
+  if (!win || !PERSIST_WHEN_HIDDEN) return;
+  win.on("close", (event) => {
+    if (app.isQuiting) return;
+    event.preventDefault();
+    hideAllWindows();
+  });
+}
+
+function createTray() {
+  if (!PERSIST_WHEN_HIDDEN || tray) return;
+  let icon = nativeImage.createEmpty();
+  try {
+    icon = nativeImage.createFromPath(process.execPath);
+    if (!icon.isEmpty()) {
+      icon = icon.resize({ width: 16, height: 16 });
+    }
+  } catch (_err) {
+    // Fall back to empty icon if Electron exe icon cannot be loaded.
+  }
+  tray = new Tray(icon);
+  tray.setToolTip("NFG Crash — server running");
+  tray.setContextMenu(
+    Menu.buildFromTemplate([
+      { label: "Show windows", click: () => showAllWindows() },
+      { type: "separator" },
+      {
+        label: "Quit NFG (stop server)",
+        click: () => {
+          app.isQuiting = true;
+          app.quit();
+        },
+      },
+    ])
+  );
+  tray.on("double-click", () => showAllWindows());
+}
+
+function startPowerSaveBlocker() {
+  if (!PERSIST_WHEN_HIDDEN || powerSaveBlockerId != null) return;
+  try {
+    if (powerSaveBlocker.isStarted(powerSaveBlockerId)) return;
+    powerSaveBlockerId = powerSaveBlocker.start("prevent-app-suspension");
+  } catch (err) {
+    console.warn("[Electron] powerSaveBlocker unavailable:", err.message);
+  }
+}
+
+function stopPowerSaveBlocker() {
+  if (powerSaveBlockerId == null) return;
+  try {
+    if (powerSaveBlocker.isStarted(powerSaveBlockerId)) {
+      powerSaveBlocker.stop(powerSaveBlockerId);
+    }
+  } catch (_err) {
+    // ignore
+  }
+  powerSaveBlockerId = null;
+}
 
 function waitForServer(url, timeoutMs = 20000) {
   const start = Date.now();
@@ -169,13 +274,13 @@ function startServer() {
       WORD_GAMES_PYTHON: process.env.WORD_GAMES_PYTHON || process.env.HANGMAN_PYTHON || "py",
       NFG_PLATFORM_URL: process.env.NFG_PLATFORM_URL || `http://127.0.0.1:${PORT}`,
       NFG_INTERNAL_SECRET: process.env.NFG_INTERNAL_SECRET || "nfg-dev-internal",
-      NFG_START_HANGMAN: process.env.NFG_START_HANGMAN || "1",
+      NFG_START_HANGMAN: process.env.NFG_START_HANGMAN || "0",
       NFG_EXIT_ON_FATAL: process.env.NFG_EXIT_ON_FATAL || "1",
-      // Safe fallback if node exe is unavailable and process.execPath is Electron.
       ELECTRON_RUN_AS_NODE: "1",
     },
     stdio: "inherit",
     windowsHide: true,
+    detached: false,
   });
   serverOwnedByElectron = true;
 
@@ -202,7 +307,7 @@ function clearServerRestartTimer() {
 }
 
 async function prepareCleanRestart() {
-  stopHangmanProcess();
+  if (START_HANGMAN) stopHangmanProcess();
   if (serverProcess && !serverProcess.killed) {
     try {
       serverProcess.kill();
@@ -211,8 +316,10 @@ async function prepareCleanRestart() {
     }
     serverProcess = null;
   }
+  const cleanupPorts = [PORT];
+  if (START_HANGMAN) cleanupPorts.push(HANGMAN_PORT_NUM);
   await killNfgProcesses({
-    ports: [PORT, HANGMAN_PORT_NUM],
+    ports: cleanupPorts,
     excludePid: process.pid,
     waitMs: 600,
   });
@@ -229,7 +336,9 @@ async function reloadGameWindows() {
     );
   };
   loadIfAlive(mainWindow, SERVER_URL);
-  loadIfAlive(lookupWindow, `${ROOT_URL}player-lookup.html`);
+  if (OPEN_PLAYER_LOOKUP) {
+    loadIfAlive(lookupWindow, `${ROOT_URL}player-lookup.html`);
+  }
   loadIfAlive(chatWindow, `${ROOT_URL}app-chat.html`);
   if (OPEN_HANGMAN_WINDOW && START_HANGMAN) {
     loadIfAlive(hangmanWindow, HANGMAN_URL);
@@ -393,8 +502,9 @@ async function createWindows() {
   // Ensure mobile companion endpoints are available when launching via Electron.
   await waitForEndpoint("/api/mobile/status");
   await waitForEndpoint("/api/mobile/chat");
-  const hangmanOk = await ensureHangmanReady();
+  let hangmanOk = false;
   if (START_HANGMAN) {
+    hangmanOk = await ensureHangmanReady();
     try {
       await waitForEndpoint("/api/hangman/status", 12000);
     } catch (_err) {
@@ -422,31 +532,29 @@ async function createWindows() {
     transparent: false,
     backgroundColor: "#070b12",
     autoHideMenuBar: true,
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
+    webPreferences: WINDOW_WEB_PREFS,
   });
 
   await mainWindow.loadURL(SERVER_URL);
+  attachPersistOnClose(mainWindow);
 
-  lookupWindow = new BrowserWindow({
-    width: 560,
-    height: 900,
-    minWidth: 460,
-    minHeight: 640,
-    title: "NFG Crash - Player Lookup",
-    autoHideMenuBar: true,
-    backgroundColor: "#100a1e",
-    webPreferences: {
-      contextIsolation: true,
-      nodeIntegration: false,
-    },
-  });
-  await lookupWindow.loadURL(`${ROOT_URL}player-lookup.html`);
-  lookupWindow.on("closed", () => {
-    lookupWindow = null;
-  });
+  if (OPEN_PLAYER_LOOKUP) {
+    lookupWindow = new BrowserWindow({
+      width: 560,
+      height: 900,
+      minWidth: 460,
+      minHeight: 640,
+      title: "NFG Crash - Player Lookup",
+      autoHideMenuBar: true,
+      backgroundColor: "#100a1e",
+      webPreferences: WINDOW_WEB_PREFS,
+    });
+    await lookupWindow.loadURL(`${ROOT_URL}player-lookup.html`);
+    attachPersistOnClose(lookupWindow);
+    lookupWindow.on("closed", () => {
+      lookupWindow = null;
+    });
+  }
 
   chatWindow = new BrowserWindow({
     width: 420,
@@ -456,9 +564,10 @@ async function createWindows() {
     title: "NFG Crash - App Chat",
     autoHideMenuBar: true,
     backgroundColor: "#0b1020",
-    webPreferences: { contextIsolation: true, nodeIntegration: false },
+    webPreferences: WINDOW_WEB_PREFS,
   });
   await chatWindow.loadURL(`${ROOT_URL}app-chat.html`);
+  attachPersistOnClose(chatWindow);
   chatWindow.on("closed", () => {
     chatWindow = null;
   });
@@ -472,10 +581,7 @@ async function createWindows() {
       title: "NFG Hangman",
       autoHideMenuBar: true,
       backgroundColor: "#090d1c",
-      webPreferences: {
-        contextIsolation: true,
-        nodeIntegration: false,
-      },
+      webPreferences: WINDOW_WEB_PREFS,
     });
     if (hangmanOk) {
       await hangmanWindow.loadURL(HANGMAN_URL);
@@ -485,6 +591,7 @@ async function createWindows() {
         `data:text/html,<body style="font-family:system-ui;background:#090d1c;color:#e2e8f0;padding:24px"><h2>NFG Hangman</h2><p>Python backend did not start. Install Python 3 and run <code>py -m pip install uvicorn fastapi</code>, then restart <code>run-electron-cloudflare.bat</code>.</p><p>Expected URL: ${HANGMAN_URL}</p></body>`
       );
     }
+    attachPersistOnClose(hangmanWindow);
     hangmanWindow.on("closed", () => {
       hangmanWindow = null;
     });
@@ -506,30 +613,20 @@ async function createWindows() {
         height: sideH,
       });
     }
-    if (hangmanWindow) {
-      const hangmanY = mainBounds.y + mainBounds.height + 12;
-      hangmanWindow.setBounds({
-        x: mainBounds.x,
-        y: hangmanY,
-        width: Math.max(1080, mainBounds.width),
-        height: Math.min(920, Math.max(640, Math.floor(mainBounds.height * 0.85))),
-      });
-    }
   } catch (_err) {
     // Keep default sizes/positions if bounds placement fails.
   }
 
+  if (PERSIST_WHEN_HIDDEN) {
+    startPowerSaveBlocker();
+    createTray();
+    console.log(
+      "[Electron] Background mode: server keeps running when windows are minimized or closed (tray -> Quit to stop)."
+    );
+  }
+
   mainWindow.on("closed", () => {
     mainWindow = null;
-    if (lookupWindow && !lookupWindow.isDestroyed()) {
-      lookupWindow.close();
-    }
-    if (chatWindow && !chatWindow.isDestroyed()) {
-      chatWindow.close();
-    }
-    if (hangmanWindow && !hangmanWindow.isDestroyed()) {
-      hangmanWindow.close();
-    }
   });
 }
 
@@ -557,7 +654,10 @@ async function bootWithRetry() {
   }
 }
 
-app.whenReady().then(() => bootWithRetry());
+app.whenReady().then(() => {
+  startPowerSaveBlocker();
+  bootWithRetry();
+});
 
 app.on("render-process-gone", (_event, webContents, details) => {
   if (details.reason === "crashed" || details.reason === "oom") {
@@ -571,11 +671,21 @@ app.on("render-process-gone", (_event, webContents, details) => {
 app.on("before-quit", () => {
   app.isQuiting = true;
   clearServerRestartTimer();
+  stopPowerSaveBlocker();
+  if (tray) {
+    tray.destroy();
+    tray = null;
+  }
   stopCloudflareTunnel();
-  stopHangmanProcess();
+  if (START_HANGMAN) stopHangmanProcess();
   stopServer();
 });
 
 app.on("window-all-closed", () => {
+  if (PERSIST_WHEN_HIDDEN) return;
   app.quit();
+});
+
+app.on("activate", () => {
+  if (allManagedWindows().length) showAllWindows();
 });

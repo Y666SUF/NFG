@@ -11,7 +11,18 @@ const GIFT_NAME_COIN_OVERRIDES = [
   /** Fan-club Heart Me only — not Heart Puff, Hand Hearts, or other heart gifts */
   { match: /^heart\s*me$/i, unitCoins: 200 },
   { match: /\brose\b/i, unitCoins: 1 },
+  { match: /^popular\s*vote$/i, unitCoins: 2 },
+  { match: /\bsuper\s*popular\b/i, unitCoins: 18 },
 ];
+
+const GO_POPULAR_POINTS_PER_COIN = Math.max(
+  1,
+  Math.floor(Number(process.env.GO_POPULAR_POINTS_PER_COIN) || 500)
+);
+const SUPER_POPULAR_POINTS_PER_COIN = Math.max(
+  1,
+  Math.floor(Number(process.env.SUPER_POPULAR_POINTS_PER_COIN) || 1000)
+);
 
 function normalizeGiftName(name) {
   return String(name || "")
@@ -29,9 +40,19 @@ function lookupGiftCoinOverride(giftName) {
   return 0;
 }
 
-/** Points for a gift batch (coins × multiplier × optional superfan 2×). */
+function lookupPopularPointsPerCoin(giftName) {
+  const n = normalizeGiftName(giftName);
+  if (!n) return 0;
+  if (/\bsuper\s*popular\b/.test(n)) return SUPER_POPULAR_POINTS_PER_COIN;
+  if (/\bgo\s*popular\b/.test(n) || /^popular\s*vote$/.test(n)) return GO_POPULAR_POINTS_PER_COIN;
+  return 0;
+}
+
+/** Points for a gift batch (coins × multiplier × optional superfan 2×). Popular gifts use a flat coins × bonus rate. */
 function expectedGiftPoints(coinTotal, options = {}) {
   const coins = Math.max(0, Math.floor(Number(coinTotal) || 0));
+  const popularRate = lookupPopularPointsPerCoin(options.giftName);
+  if (popularRate > 0) return coins * popularRate;
   const mult = Math.max(1, Math.floor(Number(options.giftCoinMultiplier) || 100));
   const superfan = options.superFan === true ? 2 : 1;
   return coins * mult * superfan;
@@ -150,7 +171,10 @@ function reconcileGiftCoins(reportedCoins, giftCount, giftName) {
 module.exports = {
   COIN_PER_DIAMOND,
   GIFT_NAME_COIN_OVERRIDES,
+  GO_POPULAR_POINTS_PER_COIN,
+  SUPER_POPULAR_POINTS_PER_COIN,
   lookupGiftCoinOverride,
+  lookupPopularPointsPerCoin,
   giftUnitCoinValue,
   diamondsToCoins,
   pickUnitCoin,

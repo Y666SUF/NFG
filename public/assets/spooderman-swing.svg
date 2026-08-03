@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 300" fill="none">
+  <defs>
+    <linearGradient id="blueMain" x1="30%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%" stop-color="#4f8ff7"/>
+      <stop offset="100%" stop-color="#1e3a8a"/>
+    </linearGradient>
+    <linearGradient id="blueDark" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1d4ed8"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="redMain" x1="50%" y1="0%" x2="50%" y2="100%">
+      <stop offset="0%" stop-color="#fb7185"/>
+      <stop offset="45%" stop-color="#ef4444"/>
+      <stop offset="100%" stop-color="#9f1239"/>
+    </linearGradient>
+    <linearGradient id="redShadow" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#881337"/>
+      <stop offset="100%" stop-color="#e11d48"/>
+    </linearGradient>
+    <linearGradient id="eyeWhite" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#e2e8f0"/>
+    </linearGradient>
+    <radialGradient id="headSpec" cx="32%" cy="28%" r="60%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.55"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="drop" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#020617" flood-opacity="0.65"/>
+    </filter>
+    <clipPath id="bodyClip">
+      <path d="M58 98 C46 98 38 110 36 126 L34 164 C33 176 42 186 54 188 L146 188 C158 186 167 176 166 164 L164 126 C162 110 154 98 142 98 Z"/>
+    </clipPath>
+  </defs>
+
+  <g filter="url(#drop)">
+    <!-- sling arm -->
+    <path d="M108 78 C118 58 126 36 130 18 C131 12 136 8 141 10 C145 12 145 18 141 24 C134 38 124 58 116 74 L110 88 Z" fill="url(#blueMain)"/>
+    <path d="M108 78 C118 58 126 36 130 18" stroke="#dbeafe" stroke-width="2.2" stroke-linecap="round" opacity="0.55"/>
+    <circle cx="141" cy="12" r="9" fill="url(#blueMain)"/>
+    <circle cx="141" cy="12" r="5.5" fill="url(#blueDark)"/>
+
+    <!-- head -->
+    <ellipse cx="98" cy="62" rx="38" ry="42" fill="url(#redMain)"/>
+    <ellipse cx="98" cy="62" rx="38" ry="42" fill="url(#headSpec)"/>
+    <path d="M62 62 C62 44 78 30 98 30 C118 30 134 44 134 62 C134 80 118 94 98 94 C78 94 62 80 62 62 Z" stroke="#9f1239" stroke-width="2" opacity="0.45"/>
+    <path d="M78 58 C78 48 86 42 98 42 C110 42 118 48 118 58 C118 68 110 74 98 74 C86 74 78 68 78 58 Z" fill="url(#eyeWhite)" stroke="#0f172a" stroke-width="2"/>
+    <path d="M114 58 C114 48 122 42 134 42 C146 42 154 48 154 58 C154 68 146 74 134 74 C122 74 114 68 114 58 Z" fill="url(#eyeWhite)" stroke="#0f172a" stroke-width="2"/>
+    <ellipse cx="84" cy="54" rx="4" ry="6" fill="#fff" opacity="0.9"/>
+    <ellipse cx="120" cy="54" rx="4" ry="6" fill="#fff" opacity="0.9"/>
+    <path d="M88 84 C94 88 102 88 108 84" stroke="#881337" stroke-width="2.2" stroke-linecap="round"/>
+
+    <!-- torso -->
+    <path d="M58 98 C46 98 38 110 36 126 L34 164 C33 176 42 186 54 188 L146 188 C158 186 167 176 166 164 L164 126 C162 110 154 98 142 98 Z" fill="url(#redShadow)"/>
+    <g clip-path="url(#bodyClip)">
+      <path d="M98 98 L98 188 M58 118 L138 118 M52 142 L144 142 M56 164 L140 164" stroke="#0f172a" stroke-width="1.1" opacity="0.22"/>
+      <path d="M70 108 C82 116 114 116 126 108" stroke="#0f172a" stroke-width="1" opacity="0.18"/>
+      <path d="M64 132 C80 124 116 124 132 132" stroke="#0f172a" stroke-width="1" opacity="0.18"/>
+      <path d="M58 156 C74 148 122 148 138 156" stroke="#0f172a" stroke-width="1" opacity="0.18"/>
+    </g>
+    <path d="M98 98 L98 188" stroke="#fecdd3" stroke-width="2" opacity="0.35"/>
+    <path d="M76 108 L120 108 L114 136 L82 136 Z" fill="url(#blueMain)" stroke="#1e3a8a" stroke-width="1.4"/>
+    <path d="M98 108 L120 136 L82 136 Z" fill="#1e40af" opacity="0.55"/>
+
+    <!-- back arm -->
+    <path d="M56 108 C44 116 36 128 32 142 C30 148 34 152 40 150 C46 146 50 136 56 124 L62 112 Z" fill="url(#blueDark)"/>
+    <circle cx="34" cy="148" r="9" fill="url(#blueMain)"/>
+
+    <!-- legs -->
+    <path d="M72 186 C64 204 56 228 52 250 C50 258 56 264 64 262 C72 258 76 244 80 226 L84 206 Z" fill="url(#blueMain)"/>
+    <path d="M124 186 C132 204 140 228 144 250 C146 258 140 264 132 262 C124 258 120 244 116 226 L112 206 Z" fill="url(#blueDark)"/>
+    <path d="M46 250 C42 262 48 272 60 274 L76 272 C82 270 84 264 82 256 L78 246 Z" fill="url(#blueMain)"/>
+    <path d="M120 250 C116 262 122 272 134 274 L150 272 C156 270 158 264 156 256 L152 246 Z" fill="url(#blueMain)"/>
+  </g>
+
+  <circle cx="141" cy="10" r="2.8" fill="#f8fafc"/>
+</svg>

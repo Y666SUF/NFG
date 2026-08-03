@@ -4,17 +4,18 @@ cd /d "%~dp0"
 title NFG Crash - Server Watchdog
 
 if not defined PORT set "PORT=3847"
-if not defined HANGMAN_PORT set "HANGMAN_PORT=19876"
+if not defined NFG_START_HANGMAN set "NFG_START_HANGMAN=0"
+if not defined WORD_GAMES_PORT set "WORD_GAMES_PORT=19877"
 if not defined NFG_AUTO_RESTART_DELAY_SECONDS set "NFG_AUTO_RESTART_DELAY_SECONDS=5"
 if not defined NFG_AUTO_RESTART_MAX_RETRIES set "NFG_AUTO_RESTART_MAX_RETRIES=0"
 set /a NFG_RESTART_COUNT=0
 
 echo NFG Crash server watchdog — auto-restart on crash
-echo Platform port %PORT% ^| Hangman %HANGMAN_PORT%
+echo Platform port %PORT% ^| Word Games %WORD_GAMES_PORT%
 echo.
 
 :restart_server
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports "%PORT%,%HANGMAN_PORT%" -Quiet
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0scripts\kill-nfg-processes.ps1" -Ports "%PORT%,19876,%WORD_GAMES_PORT%" -Quiet
 cls
 echo [%date% %time%] Starting node server\index.js ...
 node server\index.js

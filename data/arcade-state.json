@@ -1,350 +1,14 @@
 {
   "users": {
-    "sk.07020": {
-      "dayKey": "2026-06-22",
-      "stats": {
-        "rounds": 5,
-        "wins": 3,
-        "lost": 4464,
-        "liveWin": 1
-      },
-      "games": {
-        "nfg_blocks": {
-          "session": {
-            "active": true,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          },
-          "bestLevel": 5
-        },
-        "nfg_mines": {
-          "session": null,
-          "skillLevel": 3
-        },
-        "nfg_tower": {
-          "hero": {
-            "level": 16,
-            "xp": 269,
-            "gold": 1241,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 2,
-            "bestFloor": 16,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "female",
-              "skinTone": 2,
-              "hairStyle": 1,
-              "hairColor": 3,
-              "beard": false,
-              "heroName": "SK"
-            }
-          },
-          "session": null,
-          "skillLevel": 10
-        },
-        "nfg_plinko": {
-          "skillLevel": 7
-        },
-        "nfg_snake_jump": {
-          "bestHeight": 35010,
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
-            "vsMatchId": null,
-            "vsDeferred": false
-          },
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic",
-          "totalEarned": 280327
-        },
-        "nfg_hilo": {
-          "session": null,
-          "skillLevel": 3
-        },
-        "nfg_vault_run": {
-          "session": {
-            "active": true,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneDistance": 0,
-            "lastMilestoneAt": 0,
-            "peakDistance": 0
-          },
-          "ownedShips": [
-            "classic"
-          ],
-          "equippedShip": "classic",
-          "bestDistance": 1872
-        }
-      },
-      "claimedMissions": [],
-      "lastArcadeStakeAt": 1782158180768
-    },
     "y666.suf": {
-      "dayKey": "2026-06-22",
-      "stats": {
-        "rounds": 9,
-        "wins": 7,
-        "lost": 14256,
-        "liveWin": 1
-      },
-      "games": {
-        "nfg_snake_jump": {
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
-            "vsMatchId": null,
-            "vsDeferred": false
-          },
-          "ownedSkins": [
-            "classic",
-            "nfg_fire",
-            "crimson",
-            "ghost",
-            "emerald",
-            "violet_void",
-            "solar_gold",
-            "neon_cyan"
-          ],
-          "equippedSkin": "emerald",
-          "bestHeight": 26971,
-          "totalEarned": 63000
-        },
-        "nfg_blocks": {
-          "session": {
-            "active": true,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          },
-          "bestLevel": 8
-        },
-        "nfg_tower": {
-          "session": {
-            "floor": 59,
-            "monster": {
-              "id": "ace_shade",
-              "name": "Ace of Spades Shade",
-              "emoji": "♠️",
-              "theme": "cards",
-              "hp": 686.85,
-              "maxHp": 1021,
-              "atk": 104,
-              "def": 33,
-              "floor": 59,
-              "isBoss": false,
-              "tier": 1
-            },
-            "playerHp": 1315.6,
-            "turn": "player",
-            "defending": false,
-            "log": [
-              "Victory! +236 gold, +300 bonus XP.",
-              "LEVEL UP! Now level 80!",
-              "— Floor 58: 🪙 Copper Chip Slime —",
-              "You hit 🪙 Copper Chip Slime for 334.6! (+121 XP)",
-              "🪙 Copper Chip Slime hits you for 1!",
-              "You hit 🪙 Copper Chip Slime for 333.6! (+121 XP)",
-              "🪙 Copper Chip Slime hits you for 1!",
-              "You hit 🪙 Copper Chip Slime for 333.6! (+121 XP)",
-              "Victory! +240 gold, +305 bonus XP.",
-              "— Floor 59: ♠️ Ace of Spades Shade —",
-              "You hit ♠️ Ace of Spades Shade for 334.15! (+123 XP)",
-              "♠️ Ace of Spades Shade hits you for 2.3999999999999915!"
-            ],
-            "lastEvent": {
-              "kind": "attack",
-              "playerDamage": 334.15,
-              "monsterDamage": 2.3999999999999915,
-              "xpGained": 123,
-              "levelUp": false
-            }
-          },
-          "hero": {
-            "level": 80,
-            "xp": 943,
-            "gold": 9419,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "shield_gen_14",
-              "weapon": "weapon_gen_12",
-              "cape": "velvet_cape"
-            },
-            "weaponId": "weapon_gen_12",
-            "armorId": "gambler_tunic",
-            "potions": 0,
-            "bestFloor": 80,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak",
-              "velvet_cape",
-              "chip_blade",
-              "weapon_gen_12",
-              "shield_gen_14"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger",
-              "chip_blade",
-              "weapon_gen_12"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "male",
-              "skinTone": 5,
-              "hairStyle": 3,
-              "hairColor": 4,
-              "beard": true,
-              "heroName": "Yusuf"
-            }
-          },
-          "skillLevel": 10
-        },
-        "nfg_hilo": {
-          "session": null,
-          "skillLevel": 3
-        },
-        "nfg_wheel": {
-          "skillLevel": 4
-        },
-        "nfg_mines": {
-          "session": null,
-          "skillLevel": 2
-        },
-        "nfg_dice": {
-          "skillLevel": 2
-        },
-        "nfg_plinko": {
-          "skillLevel": 9
-        },
-        "nfg_vault_run": {
-          "bestDistance": 2667,
-          "ownedShips": [
-            "classic",
-            "solar_flare"
-          ],
-          "equippedShip": "solar_flare",
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneDistance": 0,
-            "lastMilestoneAt": 0,
-            "peakDistance": 0
-          }
-        }
-      },
-      "claimedMissions": [],
-      "lastArcadeStakeAt": 1782134833223
-    },
-    "fatimahxm": {
-      "dayKey": "2026-06-12",
+      "dayKey": "2026-07-22",
       "stats": {
         "rounds": 0,
         "wins": 0,
         "lost": 0
       },
       "games": {
-        "nfg_blocks": {
-          "session": {
-            "active": false,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          },
-          "bestLevel": 12
-        },
-        "nfg_tower": {
-          "hero": {
-            "level": 1,
-            "xp": 0,
-            "gold": 25,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 2,
-            "bestFloor": 0,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "female",
-              "skinTone": 3,
-              "hairStyle": 4,
-              "hairColor": 3,
-              "beard": false,
-              "heroName": "Fatimah"
-            }
-          },
-          "session": null
-        },
         "nfg_snake_jump": {
-          "bestHeight": 14016,
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic",
           "session": {
             "active": false,
             "milestones": 0,
@@ -353,1312 +17,73 @@
             "lastMilestoneAt": 0,
             "peakHeight": 0,
             "vsMatchId": null,
-            "vsDeferred": false
-          }
-        }
-      },
-      "claimedMissions": []
-    },
-    "sameya.bx": {
-      "dayKey": "2026-06-23",
-      "stats": {
-        "rounds": 13,
-        "wins": 10,
-        "lost": 27864,
-        "liveWin": 1
-      },
-      "games": {
-        "nfg_snake_jump": {
-          "session": {
-            "active": true,
-            "milestones": 6,
-            "sessionPoints": 20694,
-            "lastMilestoneHeight": 15000,
-            "lastMilestoneAt": 1782172218050,
-            "peakHeight": 15006,
-            "vsMatchId": null,
+            "vsMatchSeed": null,
             "vsDeferred": false
           },
           "ownedSkins": [
             "classic"
           ],
           "equippedSkin": "classic",
-          "bestHeight": 50126,
-          "totalEarned": 1676214,
+          "bestHeight": 41075,
+          "totalEarned": 66000,
           "syncedOfflineQueueIds": [
-            "E6656E87-E31D-418E-87B8-95CB4E8EE773",
-            "D130F178-580E-42FF-8568-123B128064C0",
-            "7B7383DD-0E9A-4F57-9CD9-FE88CFADE2A5",
-            "2477DE3A-CDD1-4B92-AE38-35D5AC4E4324",
-            "330F4E4E-CA6A-41F3-9F31-D16D297130FB",
-            "CFD8E9E0-28A4-443F-9D41-FC49421C467F",
-            "CB4A4203-BE39-4E20-9424-A795C699441D",
-            "B3C3CE10-C720-437D-98A3-5F24F44F6E8C",
-            "887B22FF-8596-4299-AACF-0A131EF055EC",
-            "ACF2E47D-3F29-4B60-820E-E74D3361B15F",
-            "BD8743D0-989A-4EE8-85A7-A72D9BCDA060",
-            "A0EF9F2B-8434-4DC0-8CE1-89EACB36A5F6",
-            "212BAA5D-9E6A-4089-B2DB-48DFC3C6545C",
-            "B26B1EA5-8EC2-445C-BA09-C4DA36E39B54",
-            "6F113A13-51AA-4633-98DD-4B1520F7AD11",
-            "CCC15FA9-524F-4128-B80D-5AC2F73C3416",
-            "E7E386FB-F9F9-4E2F-94BF-51AB020A84D3",
-            "B9CA0AC4-6CE4-42E8-B27E-FB943D3D4301",
-            "297F69A5-C986-446B-B06D-7CC70F941B03",
-            "2A04E85D-6567-4894-A132-16EC0485834B",
-            "8F19924F-AC70-41DF-9AC8-0C517D864C0D",
-            "5744BB09-EC2A-4CFC-958D-31DDB4070E8A",
-            "B7004CF8-A007-4C5D-BFF2-EFF2B2E6AAD5",
-            "06DD13F1-0EDE-40F5-8D96-74E3F0A97FF4",
-            "4A24C439-6DA2-474F-B137-46597626DD71",
-            "D2B4D0B1-635A-4596-864D-86A3D484FB4F",
-            "78F8A5AE-EDFB-4F82-B48E-E16731024849",
-            "F0EE64AA-532A-47F0-90C7-56D116027D57",
-            "9107C0AD-94B4-4FDB-AB0E-C82C3C7C4128",
-            "7FEF253F-CE72-460F-A4AF-A65DCF4AC53B",
-            "60BF2290-4449-478B-B566-4EBD31BB5711",
-            "76A74003-515C-4129-B1F3-AECEBADB01FC",
-            "E1848A9B-5882-4057-B373-A984AEB7201B",
-            "CCEC42A9-FE52-4ABA-8571-18174722FA0B",
-            "5495BE07-801E-445E-A5AE-108E6EF8C8EF",
-            "D60F235E-5DE7-41AB-B9CF-847B54160956",
-            "DAAA0B7A-A872-440A-B768-4CC81ABF593D",
-            "938D1DA5-CCEA-4235-BE0B-31EDFD07C7BB",
-            "B152EE5D-10B8-4C40-BD71-1C2E44867DAD",
-            "61220961-5473-4C1E-A700-F43DAB094CB2",
-            "C13189CB-6E7E-45F7-A83C-6F1C8A0562C5",
-            "229DE51C-BB34-44BB-A232-3766169470D0",
-            "E0E1795E-5568-4C9C-BCBB-C6AA645AA4DA",
-            "30C20F33-D46F-4E85-8757-3C222EA57CBB",
-            "8C7C9E6E-5322-4363-B2A7-6FBB202A4310",
-            "E4897BF2-4BC7-4395-A68D-02398E12A334",
-            "3F25FBD2-E1AC-4EEA-8D59-E185DFCE342C",
-            "080D51C2-CF6C-435C-B75C-1EEAC9CCC1F8",
-            "0A78885F-8039-4A31-BE7C-872BEBFCDE70",
-            "4C0B3DB5-72F7-451A-878B-588BB7E276A2",
-            "3A0C1D4C-E1BA-4A6A-A1D4-0317D6F7BB22",
-            "3F777482-2D85-4B2C-9150-2985AA877A53",
-            "4B5140B8-1CF3-42B8-A7C1-6CABB1127774",
-            "90A12D95-F04C-4D40-A0D7-6F4A8BDAD975",
-            "AD951C2D-A3EA-48DE-A0CA-8B2A85EBB1A5",
-            "BB264B7C-B5F1-40AD-B095-8A6245BDD63F",
-            "50D8595D-2A22-44EA-B09E-D3A28C2E29B5",
-            "DDBBE10F-4DB0-4C48-B1E8-CDD58AADF2DE",
-            "067EE0CD-C949-4393-BB3A-80A1BBA12CED",
-            "3EBA986B-E3CB-4B3D-9D56-7A12039DE50C",
-            "BB96FC50-A7A6-48A3-B822-2321CB9A6B86",
-            "963B9227-3B3D-4E1B-81EF-6043952F5CD2",
-            "09FF4DC6-7C79-4CCA-AD09-C4EBB63D25A6",
-            "F27BAFBC-CBF8-4C5D-AF93-37D88293C994",
-            "6FE64025-CBC7-451C-86C8-0F6AAA4CA1BC",
-            "ADF04A91-4CF8-4D00-B18D-9BFCB543456B",
-            "904FE705-B241-4C59-8737-B91456558509",
-            "4CEBA503-328A-46FA-9EAF-5DF04F1F1750",
-            "8DD9E7E8-0907-4FD8-906C-E9A214A16562",
-            "73F05721-6892-4CDB-9CF5-1AC555F84A33",
-            "339ED554-9BD2-42E1-996C-059B2D8A31CD",
-            "85C3F742-1ED1-4D72-A281-BB8C3302745D",
-            "54CADAE8-737D-4F7F-8C49-4F90725D5E5D",
-            "51776FF5-D23B-4F9E-996B-D5118901D9A1",
-            "FB093CCC-BF65-4EBD-89F1-B9B6E1465323",
-            "D751CF50-3190-4FA2-BA3C-A21C68E3E216",
-            "823F70EA-0BD8-4EF8-910F-B70E085A82EE",
-            "1658EE6D-9DF8-4302-B21E-1824B55F128C",
-            "198BFCF2-69FD-45D8-A4D9-895E55033E7C",
-            "A19C5DDB-95F0-4234-91B2-B6AA96374A23",
-            "A490BE52-3857-4FE7-8F8D-4AB99D277B9E"
+            "7753D43E-73D1-48D3-B282-BCC641985D33",
+            "73625BB4-12EC-4DDD-9C68-63B00B958B9A",
+            "4BFB82B1-F026-4628-A32E-1E782DF9F149",
+            "B3DD9348-2A3F-4590-BF91-344F0F8A4743",
+            "0E4CF47D-140D-4950-8D10-D259455CAFEA"
           ]
         },
-        "nfg_blocks": {
-          "bestLevel": 6,
-          "session": {
-            "active": false,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          }
-        },
-        "nfg_wheel": {
-          "skillLevel": 5
-        },
-        "nfg_plinko": {
-          "skillLevel": 10
-        },
-        "nfg_dice": {
-          "skillLevel": 10
-        },
-        "nfg_mines": {
+        "nfg_hilo": {
           "session": null,
-          "skillLevel": 1
-        },
-        "nfg_tower": {
-          "session": null,
-          "hero": {
-            "level": 18,
-            "xp": 330,
-            "gold": 1493,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 0,
-            "bestFloor": 19,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "female",
-              "skinTone": 2,
-              "hairStyle": 1,
-              "hairColor": 1,
-              "beard": false,
-              "heroName": "🐨"
-            }
-          },
-          "skillLevel": 10
-        },
-        "nfg_vault_run": {
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneDistance": 0,
-            "lastMilestoneAt": 0,
-            "peakDistance": 0
-          },
-          "ownedShips": [
-            "classic"
-          ],
-          "equippedShip": "classic",
-          "bestDistance": 7218
+          "skillLevel": 2
         }
       },
       "claimedMissions": [],
-      "lastArcadeStakeAt": 1782172022785
+      "lastArcadeStakeAt": 1782863297493
     },
-    "meowcloud__": {
-      "dayKey": "2026-06-03",
+    "appuser_07972e30d660be3f": {
+      "dayKey": "2026-06-27",
       "stats": {
-        "rounds": 2,
-        "wins": 2,
+        "rounds": 0,
+        "wins": 0,
         "lost": 0
       },
       "games": {
-        "nfg_tower": {
-          "hero": {
-            "level": 1,
-            "xp": 0,
-            "gold": 25,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 2,
-            "bestFloor": 0,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": false,
-              "bodyStyle": "male",
-              "skinTone": 2,
-              "hairStyle": 1,
-              "hairColor": 3,
-              "beard": false,
-              "heroName": ""
-            }
-          }
-        },
         "nfg_snake_jump": {
-          "bestHeight": 6421,
           "session": {
             "active": false,
-            "height": 0,
+            "milestones": 0,
             "sessionPoints": 0,
-            "sessionLevels": 0,
-            "lastMilestoneHeight": 0
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsMatchSeed": null,
+            "vsDeferred": false
           },
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic"
-        },
-        "nfg_blocks": {
-          "bestLevel": 2,
-          "session": {
-            "active": false,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          }
-        },
-        "nfg_dice": {
-          "skillLevel": 2
-        },
-        "nfg_plinko": {
-          "skillLevel": 2
-        }
-      },
-      "claimedMissions": []
-    },
-    "huma2882": {
-      "dayKey": "2026-06-14",
-      "stats": {
-        "rounds": 15,
-        "wins": 5,
-        "lost": 27451
-      },
-      "games": {
-        "nfg_hilo": {
-          "session": null,
-          "skillLevel": 9
-        },
-        "nfg_dice": {
-          "skillLevel": 10
-        },
-        "nfg_wheel": {
-          "skillLevel": 3
-        },
-        "nfg_tower": {
-          "hero": {
-            "level": 95,
-            "xp": 2324,
-            "gold": 48841,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 0,
-            "bestFloor": 80,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "female",
-              "skinTone": 2,
-              "hairStyle": 2,
-              "hairColor": 2,
-              "beard": false,
-              "heroName": "Bulldog"
-            }
-          },
-          "session": null,
-          "skillLevel": 10
-        },
-        "nfg_blocks": {
-          "bestLevel": 6,
-          "session": {
-            "active": false,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          }
-        },
-        "nfg_plinko": {
-          "skillLevel": 10
-        },
-        "nfg_mines": {
-          "session": null,
-          "skillLevel": 10
-        },
-        "nfg_snake_jump": {
-          "bestHeight": 19737,
           "ownedSkins": [
             "classic"
           ],
           "equippedSkin": "classic",
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
-            "vsMatchId": null,
-            "vsDeferred": false
-          }
-        }
-      },
-      "claimedMissions": [
-        "win_5",
-        "play_10"
-      ],
-      "lastArcadeStakeAt": 1781443942536
-    },
-    "moinazarin": {
-      "dayKey": "2026-06-03",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
-        "nfg_tower": {
-          "hero": {
-            "level": 5,
-            "xp": 136,
-            "gold": 125,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 0,
-            "bestFloor": 5,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "male",
-              "skinTone": 5,
-              "hairStyle": 3,
-              "hairColor": 5,
-              "beard": true,
-              "heroName": "Moinaa"
-            }
-          },
-          "session": null,
-          "skillLevel": 6
-        },
-        "nfg_blocks": {
-          "bestLevel": 2,
-          "session": {
-            "active": true,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          }
-        },
-        "nfg_snake_jump": {
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic"
-        }
-      },
-      "claimedMissions": []
-    },
-    "sk_x120": {
-      "dayKey": "2026-06-23",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
-        "nfg_blocks": {
-          "bestLevel": 5,
-          "session": {
-            "active": true,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          }
-        },
-        "nfg_tower": {
-          "hero": {
-            "level": 1,
-            "xp": 17,
-            "gold": 25,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 1,
-            "bestFloor": 0,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "female",
-              "skinTone": 2,
-              "hairStyle": 2,
-              "hairColor": 1,
-              "beard": false,
-              "heroName": "Sheely"
-            }
-          },
-          "session": null
-        },
-        "nfg_snake_jump": {
-          "bestHeight": 33387,
-          "ownedSkins": [
-            "classic",
-            "violet_void",
-            "nfg_fire"
-          ],
-          "equippedSkin": "nfg_fire",
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
-            "vsMatchId": null,
-            "vsDeferred": false
-          },
-          "totalEarned": 292287
-        },
-        "nfg_mines": {},
-        "nfg_vault_run": {
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneDistance": 0,
-            "lastMilestoneAt": 0,
-            "peakDistance": 0
-          },
-          "ownedShips": [
-            "classic"
-          ],
-          "equippedShip": "classic",
-          "bestDistance": 4405
-        }
-      },
-      "claimedMissions": []
-    },
-    "f0rty3": {
-      "dayKey": "2026-06-02",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
-        "nfg_tower": {
-          "hero": {
-            "level": 8,
-            "xp": 291,
-            "gold": 277,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 0,
-            "bestFloor": 9,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "male",
-              "skinTone": 2,
-              "hairStyle": 1,
-              "hairColor": 3,
-              "beard": true,
-              "heroName": "43"
-            }
-          },
-          "session": null,
-          "skillLevel": 10
-        },
-        "nfg_snake_jump": {
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic"
-        }
-      },
-      "claimedMissions": []
-    },
-    "madebymanah": {
-      "dayKey": "2026-06-22",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
-        "nfg_blocks": {
-          "bestLevel": 4,
-          "session": {
-            "active": false,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          }
-        },
-        "nfg_snake_jump": {
-          "bestHeight": 4330,
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic",
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
-            "vsMatchId": null,
-            "vsDeferred": false
-          },
-          "totalEarned": 3449
+          "totalEarned": 3000,
+          "bestHeight": 3001
         }
       },
       "claimedMissions": []
     },
     "cj_hern": {
-      "dayKey": "2026-06-23",
+      "dayKey": "2026-07-01",
       "stats": {
-        "rounds": 2,
-        "wins": 2,
-        "lost": 0,
-        "liveWin": 1
+        "rounds": 3,
+        "wins": 1,
+        "lost": 200000
       },
       "games": {
-        "nfg_hilo": {
-          "session": null
-        },
-        "nfg_tower": {
-          "hero": {
-            "level": 1,
-            "xp": 0,
-            "gold": 25,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 2,
-            "bestFloor": 0,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": false,
-              "bodyStyle": "male",
-              "skinTone": 2,
-              "hairStyle": 1,
-              "hairColor": 3,
-              "beard": false,
-              "heroName": ""
-            }
-          }
-        },
-        "nfg_blocks": {
-          "bestLevel": 3,
-          "session": {
-            "active": true,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          }
-        },
-        "nfg_wheel": {
-          "skillLevel": 2
-        },
-        "nfg_dice": {
-          "skillLevel": 3
-        },
         "nfg_plinko": {
           "skillLevel": 10
-        },
-        "nfg_mines": {
-          "session": null,
-          "skillLevel": 1
-        },
-        "nfg_snake_jump": {
-          "bestHeight": 25486,
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic",
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
-            "vsMatchId": null,
-            "vsDeferred": false
-          },
-          "totalEarned": 72429,
-          "syncedOfflineQueueIds": [
-            "7E53CAA0-4001-4842-A095-7B2756525153",
-            "B0262923-8552-40A8-9634-9ACE4C037557",
-            "20E1B6FB-2A33-441D-B0C8-EFA4D678F0F7",
-            "D6806186-69A8-4A6B-A0D4-43AC2FE0E6FC",
-            "05E218CD-631A-4B67-836E-9C0AC7434815",
-            "667A6715-95B0-49D7-98BB-260E9C53FE5D",
-            "A5ADA24A-13EA-47FA-B7F7-26FA033CDB3B",
-            "2BF73C39-1E03-4391-A199-7B6BA45C0982",
-            "FE0548D4-73E9-459D-BAE4-ED2C9749FA74",
-            "AFB1D76C-1747-45D4-B8BD-C5443021D6F7",
-            "AB4E9DD5-9E73-4AC3-92BA-0C7C3CE137C4",
-            "01AA55F1-8BE8-467A-A7E4-7AA9C8625E11",
-            "3487775D-FE66-45C9-B1A8-609EE3387972",
-            "E2860228-91D1-45A7-A218-185ED8CC9EE7",
-            "1B9B4249-1CC6-41B7-B29B-D0EDBFB3B546",
-            "AD99BC59-760E-41CE-B1FA-5373339914D1",
-            "4BD0F365-199A-4980-B333-F21D83C08CBB"
-          ]
-        },
-        "nfg_vault_run": {
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneDistance": 0,
-            "lastMilestoneAt": 0,
-            "peakDistance": 0
-          },
-          "ownedShips": [
-            "classic"
-          ],
-          "equippedShip": "classic",
-          "bestDistance": 334
-        }
-      },
-      "claimedMissions": [],
-      "lastArcadeStakeAt": 1782171745242
-    },
-    "akerzk": {
-      "dayKey": "2026-06-06",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
-        "nfg_tower": {
-          "hero": {
-            "level": 336,
-            "xp": 9366,
-            "gold": 253691,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "body_gen_18",
-              "legs": "worn_trousers",
-              "shield": "shield_gen_12",
-              "weapon": "weapon_gen_30",
-              "cape": "cape_gen_15"
-            },
-            "weaponId": "weapon_gen_30",
-            "armorId": "body_gen_18",
-            "potions": 85,
-            "bestFloor": 263,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak",
-              "bronze_guard",
-              "felt_vest",
-              "ace_cutlass",
-              "chip_mail",
-              "weapon_gen_12",
-              "shield_gen_12",
-              "body_gen_12",
-              "cape_gen_11",
-              "weapon_gen_16",
-              "weapon_gen_21",
-              "body_gen_22",
-              "body_gen_18",
-              "cape_gen_15",
-              "weapon_gen_30"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger",
-              "ace_cutlass",
-              "weapon_gen_12",
-              "weapon_gen_16",
-              "weapon_gen_21",
-              "weapon_gen_30"
-            ],
-            "ownedArmors": [
-              "gambler_tunic",
-              "felt_vest",
-              "chip_mail",
-              "body_gen_12",
-              "body_gen_22",
-              "body_gen_18"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "male",
-              "skinTone": 5,
-              "hairStyle": 1,
-              "hairColor": 1,
-              "beard": true,
-              "heroName": "Zk"
-            }
-          },
-          "session": null,
-          "skillLevel": 10
-        },
-        "nfg_wheel": {},
-        "nfg_snake_jump": {
-          "bestHeight": 9198,
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0
-          },
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic"
-        }
-      },
-      "claimedMissions": []
-    },
-    "apple_app_review": {
-      "dayKey": "2026-06-05",
-      "stats": {
-        "rounds": 14,
-        "wins": 4,
-        "lost": 16100
-      },
-      "games": {
-        "nfg_snake_jump": {
-          "bestHeight": 0,
-          "session": {
-            "active": true,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0
-          },
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic"
-        },
-        "nfg_hilo": {
-          "session": null
-        },
-        "nfg_plinko": {
-          "skillLevel": 3
-        },
-        "nfg_wheel": {},
-        "nfg_tower": {
-          "session": {
-            "floor": 35,
-            "monster": {
-              "id": "ace_shade",
-              "name": "Ace of Spades Shade",
-              "emoji": "♠️",
-              "theme": "cards",
-              "hp": 553,
-              "maxHp": 553,
-              "atk": 63,
-              "def": 20,
-              "floor": 35,
-              "isBoss": false,
-              "tier": 1
-            },
-            "playerHp": 692,
-            "turn": "player",
-            "defending": false,
-            "log": [
-              "— Floor 34: 🪙 Copper Chip Slime —",
-              "You hit 🪙 Copper Chip Slime for 127.44999999999999! (+73 XP)",
-              "🪙 Copper Chip Slime hits you for 20.699999999999996!",
-              "You hit 🪙 Copper Chip Slime for 132.45! (+73 XP)",
-              "🪙 Copper Chip Slime hits you for 17.699999999999996!",
-              "You hit 🪙 Copper Chip Slime for 128.45! (+73 XP)",
-              "🪙 Copper Chip Slime hits you for 18.699999999999996!",
-              "You hit 🪙 Copper Chip Slime for 129.45! (+73 XP)",
-              "🪙 Copper Chip Slime hits you for 17.699999999999996!",
-              "You hit 🪙 Copper Chip Slime for 130.45! (+73 XP)",
-              "Victory! +144 gold, +185 bonus XP.",
-              "— Floor 35: ♠️ Ace of Spades Shade —"
-            ],
-            "lastEvent": {
-              "kind": "kill",
-              "playerDamage": 130.45,
-              "xpGained": 258,
-              "killed": true,
-              "levelUp": false
-            }
-          },
-          "hero": {
-            "level": 44,
-            "xp": 1690,
-            "gold": 10557,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 0,
-            "bestFloor": 40,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "male",
-              "skinTone": 2,
-              "hairStyle": 1,
-              "hairColor": 3,
-              "beard": false,
-              "heroName": "Adventurer"
-            }
-          },
-          "skillLevel": 10
-        },
-        "nfg_blocks": {
-          "bestLevel": 1,
-          "session": {
-            "active": true,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          }
-        },
-        "nfg_dice": {
-          "skillLevel": 3
-        }
-      },
-      "claimedMissions": []
-    },
-    "ghi4462": {
-      "dayKey": "2026-06-23",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
-        "nfg_blocks": {
-          "bestLevel": 7,
-          "session": {
-            "active": false,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          }
-        },
-        "nfg_snake_jump": {
-          "bestHeight": 53790,
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic",
-          "session": {
-            "active": true,
-            "milestones": 8,
-            "sessionPoints": 27592,
-            "lastMilestoneHeight": 20000,
-            "lastMilestoneAt": 1782169835572,
-            "peakHeight": 51212,
-            "vsMatchId": null,
-            "vsDeferred": false
-          },
-          "totalEarned": 1035126
-        },
-        "nfg_mines": {
-          "session": {
-            "stake": 5000,
-            "minesCount": 3,
-            "mines": [
-              13,
-              8,
-              0
-            ],
-            "revealed": [
-              12,
-              18,
-              24,
-              21
-            ],
-            "mult": 2.1
-          },
-          "skillLevel": 10
-        },
-        "nfg_tower": {
-          "hero": {
-            "level": 8,
-            "xp": 63,
-            "gold": 277,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 0,
-            "bestFloor": 9,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "male",
-              "skinTone": 2,
-              "hairStyle": 1,
-              "hairColor": 3,
-              "beard": false,
-              "heroName": ""
-            }
-          },
-          "session": {
-            "floor": 1,
-            "monster": {
-              "id": "dice_goblin",
-              "name": "Pip the Dice Goblin",
-              "emoji": "🎲",
-              "theme": "dice",
-              "hp": 47,
-              "maxHp": 47,
-              "atk": 5,
-              "def": 1,
-              "floor": 1,
-              "isBoss": false,
-              "tier": 0
-            },
-            "playerHp": 188,
-            "turn": "player",
-            "defending": false,
-            "log": [
-              "You enter the Dragon Tower…",
-              "Floor 1 — 🎲 Pip the Dice Goblin awaits!"
-            ]
-          },
-          "skillLevel": 10
-        },
-        "nfg_hilo": {
-          "session": null
-        },
-        "nfg_wheel": {},
-        "nfg_vault_run": {
-          "ownedShips": [
-            "classic"
-          ],
-          "equippedShip": "classic",
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneDistance": 0,
-            "lastMilestoneAt": 0,
-            "peakDistance": 0
-          },
-          "bestDistance": 421
-        },
-        "nfg_plinko": {
-          "skillLevel": 3
-        },
-        "nfg_dice": {
-          "skillLevel": 2
-        }
-      },
-      "claimedMissions": [],
-      "lastArcadeStakeAt": 1782164074396
-    },
-    "testuser": {
-      "dayKey": "2026-06-08",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
-        "nfg_snake_jump": {
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic",
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0
-          }
-        }
-      },
-      "claimedMissions": []
-    },
-    "_35114_": {
-      "dayKey": "2026-06-19",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
-        "nfg_snake_jump": {
-          "bestHeight": 19416,
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic",
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
-            "vsMatchId": null,
-            "vsDeferred": false
-          }
-        },
-        "nfg_tower": {
-          "session": {
-            "floor": 1,
-            "monster": {
-              "id": "dice_goblin",
-              "name": "Pip the Dice Goblin",
-              "emoji": "🎲",
-              "theme": "dice",
-              "hp": 47,
-              "maxHp": 47,
-              "atk": 5,
-              "def": 1,
-              "floor": 1,
-              "isBoss": false,
-              "tier": 0
-            },
-            "playerHp": 90,
-            "turn": "player",
-            "defending": false,
-            "log": [
-              "You enter the Dragon Tower…",
-              "Floor 1 — 🎲 Pip the Dice Goblin awaits!"
-            ]
-          },
-          "hero": {
-            "level": 1,
-            "xp": 0,
-            "gold": 25,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 2,
-            "bestFloor": 0,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "female",
-              "skinTone": 2,
-              "hairStyle": 4,
-              "hairColor": 2,
-              "beard": false,
-              "heroName": "dobby"
-            }
-          }
-        },
-        "nfg_blocks": {
-          "bestLevel": 5,
-          "session": {
-            "active": false,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          }
         },
         "nfg_dice": {},
-        "nfg_hilo": {
-          "session": null,
-          "skillLevel": 2
-        }
-      },
-      "claimedMissions": []
-    },
-    "nina.k825": {
-      "dayKey": "2026-06-22",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
-        "nfg_blocks": {
-          "session": {
-            "active": false,
-            "level": 1,
-            "sessionLevels": 0,
-            "sessionPoints": 0
-          },
-          "bestLevel": 8
-        },
         "nfg_snake_jump": {
           "session": {
             "active": false,
@@ -1668,70 +93,626 @@
             "lastMilestoneAt": 0,
             "peakHeight": 0,
             "vsMatchId": null,
+            "vsMatchSeed": null,
             "vsDeferred": false
           },
           "ownedSkins": [
             "classic"
           ],
           "equippedSkin": "classic",
-          "bestHeight": 21727,
-          "totalEarned": 36000
+          "bestHeight": 29138,
+          "totalEarned": 104980,
+          "syncedOfflineQueueIds": [
+            "51DFF928-A779-4177-A72F-85BCEBB467B6",
+            "8C46D862-BC41-4CA3-8EA0-7EC7701045E7"
+          ]
+        }
+      },
+      "claimedMissions": [],
+      "lastArcadeStakeAt": 1782916092685
+    },
+    "nina.k825": {
+      "dayKey": "2026-07-25",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsMatchSeed": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "bestHeight": 74396,
+          "totalEarned": 2870308,
+          "syncedOfflineQueueIds": [
+            "3607A0F0-EFCD-49DD-911B-D8D79D9C04D1",
+            "97956866-4FF8-455D-A16F-81270F1EF1EA",
+            "EAB58412-226C-43D0-9F1E-72CE193AB65F",
+            "B8F02CB5-3904-494B-8204-6036822E0727",
+            "EEA1F95B-D2AC-4313-BA94-DAA98B10BD7A",
+            "11CDEF66-46AA-4193-87AE-32EE49F20040",
+            "A8F9B251-034C-42E6-AF3E-C65446375F0C",
+            "0FDC7A20-E475-45D6-809B-6BDB98A39EDB",
+            "FCE5FCA4-3305-4F9C-9FB5-2CB498E7F3E1",
+            "692F0AAF-F4BA-4472-920F-38AA4A85369B",
+            "410034D3-704C-4E96-9845-9C876D04851C",
+            "2B06D0AC-DF93-487C-85A2-2019A5D07866",
+            "35C23BD8-E9CB-40A2-8B29-41EAB5948E70",
+            "D006FCCB-868F-421E-84F3-55657F0CD849",
+            "D5235ACC-2A27-4D1B-8E14-BE7FF9064BD1",
+            "DEA9D6DE-C20F-49FB-B4FB-C6B2F5F2F422",
+            "B8AA976E-2A74-4089-80ED-078A87317A01",
+            "C8EB1433-B55A-43A4-B94A-9A9B46FB4836",
+            "ADBF038C-61AD-4FAD-A896-5A4CF1A0B961",
+            "A77163B5-5B71-4EF4-8D92-4D0AFA31607D",
+            "E45E1836-4E1D-4E07-91A8-6E743A06B52C",
+            "D4DFC365-7000-45F5-9489-821022329159",
+            "10366512-B8CB-4997-8239-6BA941D0B16E",
+            "DA78C10E-9A29-4B23-90B8-D72D72BE0445",
+            "9D344DA4-6D53-45CE-A3B2-BF71098FE299",
+            "6015CAF8-D9AB-4AA4-9DCA-AAE073B364CE",
+            "FC68D881-5FCE-4D05-8927-A3A6FEA8E1B4",
+            "796246AB-DA86-4F57-A675-A90F1E9F0B44",
+            "F17CBE3A-5AB9-441B-B020-F3FFD7663A2C",
+            "3C4B8193-7322-438D-B0DA-478A718A91F7",
+            "A477ED7A-375D-444A-A82B-3D5E520BC89A",
+            "2217AA37-DFE0-4FA2-84D7-AB1887CEB1D3",
+            "0EC92FEC-6AFB-4A27-8D72-1346F07AC382",
+            "F7E3C916-F210-4FD5-B289-91D372325F7A",
+            "AE13E976-C6F2-42F8-A1F8-68444E24D00F",
+            "196967AA-94A6-4018-BB3E-9F3AF5A232D4",
+            "B17B9505-A587-4283-8DCB-829A195C3DB8",
+            "7EBADDD8-4D4D-4DA5-88CF-7FF5FC3BD2C4",
+            "B0D953EE-2395-41CC-AA10-15B12E74E631",
+            "49A446C0-EAB7-46A2-8AAB-77454D4DCE4F",
+            "8836B270-6B8D-41EF-9D61-2AD20327B099",
+            "D94CFAC3-FA61-4ABA-9D9A-58BB71945AD6",
+            "56F806DA-1A75-4350-9647-5824E484939C",
+            "8A31AAF2-12FD-4994-8367-36915FB8CA04",
+            "9513907A-3B55-4505-B287-018E58E2609E",
+            "19ECC21E-786E-45A3-9173-72D41E38CBA6",
+            "79506A89-8C94-470F-896F-2EB41D86FF3C",
+            "A85A36A2-7EAB-4F4B-8860-225A66A60E4C",
+            "E8250AF6-D778-4068-9626-A086B279221B",
+            "886201B9-E889-434F-984B-0A029A088D1C",
+            "F6BCA853-8803-4E8C-B795-0C59A00C5297",
+            "3579305D-AC6D-4DA1-8F58-6D22811B127C",
+            "07564A3E-5FC4-47BA-881D-F234A807E914",
+            "FDE62256-37AF-485F-AAD2-E3EE9F323F7E",
+            "9128534B-02C4-4F62-93E9-445FF6E5FCB9",
+            "B4E39814-8CEE-4B1C-BDE0-C373DE39AE30",
+            "DB9EBD1E-5DFD-4561-9A2C-9F986D65984D",
+            "581FDB2E-8BB7-4712-AD15-C8A64B9A9970",
+            "3A89E5E9-F984-430D-B522-BC867E1A54E0",
+            "48D93041-648E-40F1-B8C0-A5D1E3E83A01",
+            "C1A6C9A2-1B86-45E1-85D4-1562502150BB",
+            "A7ACB9E4-FFA0-4922-A474-50414C726F99",
+            "ED19A46A-DDAD-49A5-8EB9-BABAC1F75DAC",
+            "8CBB7629-51BB-47FF-AB73-F6AC0C7FFE20",
+            "4B0180FD-D2A2-4D8B-9C07-5B2947AA08D6",
+            "753E2243-DC49-41EF-92A6-B5F4D35536D2",
+            "07348239-3ADD-4555-92E5-63A1A29B4555",
+            "DE7A7AC1-4A3B-4D73-B6EB-2C5F87EB2287",
+            "A9F11C35-46E2-46B8-A2CC-B9DBE768D9C2",
+            "2936D3F0-0531-4A24-BD8A-FBF5AF9563D4",
+            "C8303EE0-BD73-4C32-8105-ED2B6474230F",
+            "5643EE0C-ED40-40CD-B299-AB8ED9FC00F3",
+            "A2A6246C-B465-4A2F-AEA5-0169F013B1ED",
+            "499B34A1-7FBA-4991-B2C0-CBEAF13034BD",
+            "48671444-DD2E-4623-B99A-631DFB4EE787",
+            "53BE9567-19CB-4440-B2F0-F2B379C5D6F7",
+            "37573620-50F0-4448-AB19-593964F5B37B",
+            "076E97C4-F204-4072-94D6-CE0FFD9F422F",
+            "2331AA23-F70F-43A8-A94D-FE6810395F8E",
+            "F8988D7F-26DA-4AA2-B0DE-7B5708CE25FC",
+            "58F3FF19-69FC-41F6-8D98-F6BECBF7E1CF",
+            "28AFF4FA-319F-4312-8098-EEA08BDC79B1",
+            "1B3BB429-3509-40EA-B416-3772CC480AA2",
+            "F6C28D7D-13A3-4F3F-8CA0-A3C3303632D9",
+            "88C9AD79-6C4A-4DD8-AD5E-67A39160E3B2",
+            "AD79384C-33CF-44BD-BE64-4EE4E2CD3EAA",
+            "8473B4BA-E504-46AA-9D0B-954647B2BAA1",
+            "A042135E-F2EF-483A-8367-4A96C5064360",
+            "0694DC30-697E-4345-84C9-3ABF84955465",
+            "BDD04A2C-1C49-41BA-B42C-0C6A8FC30FC6",
+            "875DFC25-B0A6-4C4F-A807-39E2E235BEDC",
+            "FFA83CD4-580B-4104-A1C8-0B68FFA345EE",
+            "F726ABBB-0A12-44FE-83F8-9250DBBEEB16",
+            "9B424DB0-694A-4E62-A8DC-3041778D2CC0",
+            "613224D5-31D1-469B-A2B6-611B69E307BD",
+            "BF6D5331-D3A2-4404-B283-B01932A3D627",
+            "5E6A40CB-8DC0-42F4-8B01-B811CB6B9352",
+            "2FF2959C-E972-4E0D-B42E-E58B9EBB6022",
+            "AD1ED0E0-AC91-406D-BE61-A5B78CB94D3E",
+            "432C9975-1E09-4479-A860-2DBAB6F9E1DB",
+            "50A61210-12C7-4CB3-B382-B92CB4B93267",
+            "FC0E67DD-3710-4A93-9A43-D9D8BA3AD13F",
+            "BCC1DC39-EDF1-438E-A203-A97F65D6F1F1",
+            "602A57FB-A79C-41A5-BF7B-9800B163B7E4",
+            "551BCF41-77AF-41C9-BF80-D4956A02C014",
+            "274E6B02-7750-4F34-B4B9-A687E39A2F8F",
+            "3ADB3D27-2655-41A3-85CE-AA3D4C1F5F9F",
+            "69A0536F-9A4C-4E0E-AE75-D587B49A99C8",
+            "3C2FA56D-605B-43D3-8048-4BBEC221C8A6",
+            "0F7BF0D7-B87C-4C6C-9558-523CF3CC5C82",
+            "13EA4231-588D-47E9-B107-CAB465BA4167",
+            "19A3A3AC-A84B-4E5C-A4D1-652A8B633738",
+            "A4110598-1E90-41D4-BFAD-166C6528D9AB",
+            "CA6E6032-CAFE-43CC-AD2D-85A572EE2917",
+            "C0F1C1F1-D949-44FB-95E2-911372D3366E",
+            "96AD8D2A-4893-4ACD-9A45-26CFD1629617",
+            "9ED71546-76FD-4AAF-8441-A65F73BD4634",
+            "35873B7F-CF5E-476C-A26B-3DF7330EA144",
+            "F8E8DFAB-A070-4C44-8796-EF1D7262EE33",
+            "C65AA333-2D8A-4159-9892-75C76A7CFB2A",
+            "D5FCE25B-1B38-40A8-A6C2-2B9585F9CD8F",
+            "206C4CA7-F4EF-46D9-BF0B-31DCA083E142",
+            "4B3393F9-E11B-48F9-ABF2-DECDE8E4D599",
+            "316E2509-758D-4DCA-B444-4726FDB78BD6",
+            "9482D639-D909-475E-B62F-AE2EC7DB3080",
+            "04F27C12-F7C6-4689-A3FA-521F6625F7FF",
+            "7F57DC29-B296-497A-8173-A44BC24BEF79",
+            "039C21EC-64C3-4530-9893-52686BE4CB4A",
+            "C2B4E509-FD3E-4117-874A-28149A229A5F",
+            "1E434A1C-9840-4E84-9524-9C5E194D1B7E",
+            "40469EDD-999E-4CC8-9880-3F90725E14A3",
+            "5CD3B54D-7C59-42A8-8354-B7984185F0F8",
+            "B038073F-471A-4FC1-A157-E4FE3C47C210",
+            "BAA67C6B-A719-49B1-8B7D-A3C9B75C7DF0",
+            "03C84F2E-EDFA-41B8-8AA7-8B7F531EA87C",
+            "C404AF4F-520D-4B05-B3D9-6EB2B5F0F8C0",
+            "76A672DB-1AF9-452A-B07F-3EBC55D20289",
+            "41191CC1-C2B1-4B8D-B0ED-CE6FD3BED683",
+            "6117F79B-F5A6-4C3D-B2D3-DB71FD204ABE",
+            "4667B9EC-989D-4BAE-8321-860446696560",
+            "5A333C1B-52AB-4954-92D6-162572EE6522",
+            "71E994B3-CCA2-4BB6-A47A-57CD3F20F767",
+            "CB237713-0DE2-4FF0-8B88-DA1C49E5BCFB",
+            "3788AD6A-1341-4671-949D-B29DAC0EA639",
+            "3841F475-4DD5-4E2F-BED7-1ABEEBEB4109",
+            "2EC61768-574F-48A2-ACFB-CA1B8E40125D",
+            "71A96F8C-DA1D-4CEB-A4AE-62712427B85D",
+            "1F7FB8E3-4DE1-431F-BAB0-54F9491E67BD",
+            "60285725-CCC0-4701-9536-1BA7722570DC",
+            "9B32E5A4-21AA-442A-8E48-9901B0809F75",
+            "240BBA7A-8B19-4E20-B400-4064B3533AB2",
+            "875A2391-6FD8-42D2-AD62-147654CE68DC",
+            "8E3BFE4F-BCD4-47A9-9DC8-8124165CE1B2",
+            "C315EA05-35CC-4124-875F-01C90D7B20DF",
+            "1C3D5A84-85AF-4A32-BE19-BBEEB46B2BCE",
+            "246E1433-F8B8-4DC7-8B41-F56739E4C93F",
+            "98AD2729-A5DF-4E83-A70B-0ADE98B4AD4E",
+            "CFEDBE7C-04FD-4D3A-BD5B-686C8457F7F1",
+            "DC6FAC64-B89B-4E83-A8AA-D3B03C97EBA6",
+            "37851ABC-FFFB-4AE2-84D5-5E56940C6EC6",
+            "06074CA9-8DF5-4FFD-875B-11A16F173165"
+          ]
         },
         "nfg_plinko": {
-          "skillLevel": 6
+          "skillLevel": 10
         },
-        "nfg_tower": {
-          "hero": {
-            "level": 1,
-            "xp": 0,
-            "gold": 25,
-            "equipment": {
-              "head": "cloth_hood",
-              "body": "gambler_tunic",
-              "legs": "worn_trousers",
-              "shield": "chip_buckler",
-              "weapon": "rusty_dagger",
-              "cape": "novice_cloak"
-            },
-            "weaponId": "rusty_dagger",
-            "armorId": "gambler_tunic",
-            "potions": 2,
-            "bestFloor": 0,
-            "ownedGear": [
-              "cloth_hood",
-              "gambler_tunic",
-              "worn_trousers",
-              "chip_buckler",
-              "rusty_dagger",
-              "novice_cloak"
-            ],
-            "ownedWeapons": [
-              "rusty_dagger"
-            ],
-            "ownedArmors": [
-              "gambler_tunic"
-            ],
-            "appearance": {
-              "created": true,
-              "bodyStyle": "female",
-              "skinTone": 2,
-              "hairStyle": 1,
-              "hairColor": 1,
-              "beard": false,
-              "heroName": "Nina"
-            }
-          }
+        "nfg_mines": {
+          "session": null
         },
         "nfg_wheel": {},
-        "nfg_mines": {
-          "session": null,
-          "skillLevel": 2
+        "nfg_blocks": {
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          },
+          "bestLevel": 7
         },
-        "nfg_dice": {
-          "skillLevel": 3
-        },
-        "nfg_hilo": {
-          "session": null
+        "nfg_dice": {},
+        "nfg_hilo": {},
+        "nfg_vault_run": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneDistance": 0,
+            "lastMilestoneAt": 0,
+            "peakDistance": 0
+          },
+          "ownedShips": [
+            "classic"
+          ],
+          "equippedShip": "classic",
+          "bestDistance": 298
+        }
+      },
+      "claimedMissions": [],
+      "lastArcadeStakeAt": 1784133505371
+    },
+    "huma2882": {
+      "dayKey": "2026-07-19",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsMatchSeed": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "bestHeight": 87537,
+          "syncedOfflineQueueIds": [
+            "A6A1C09E-5179-408A-B678-0284F202EB7B",
+            "42F3092F-F1FA-4E97-BDA9-CDA55A79E365",
+            "1DBCF4F4-49EB-4717-8817-0BE24855DEB9",
+            "D2D28A23-49D8-4AC1-A5C0-1AFCF838F69F",
+            "108EC96F-7D17-4543-B7BF-3E1A8F7C3164",
+            "6A8E21E8-FDEA-48C4-B40E-879C2F1CF475",
+            "97F8B672-1A28-489D-B532-874A8C246D1F",
+            "CE7A3923-161B-44D3-8CE9-55F4161A1D97",
+            "9E5773E1-CA23-4418-ACB7-30B6C8E011C6",
+            "662E48A9-B7D3-4184-A6C7-E500C8A59B04",
+            "057C7157-3018-4D16-B1AE-8D09F2256B70",
+            "53A7828B-3090-46CC-95A7-94DA4F7FB14A",
+            "E44B09F5-1DDA-4CA7-AD95-751DCE5C9844",
+            "AAAF13D2-8FAC-4F72-AB1A-B9056BEFB687",
+            "54F0E086-CA27-45CA-9675-C6C3A414A526",
+            "1A236E51-AFD8-4FFE-A5B1-5F0706EFA762",
+            "E3E22D45-87F2-4996-AF70-B0DDE3CB8149",
+            "931AADA6-4A95-4A0D-9ECC-1AB0BC104E5A",
+            "495AEA05-6C7E-45D4-8977-8B9168A99C72",
+            "8FEC9758-D992-438B-9B3A-1086B80BEC2F",
+            "110F5A05-CFA1-409F-AF0B-213932187F94",
+            "EDBE9331-D9FF-449B-9E4C-81F7DE12A227",
+            "3D207E90-6867-4101-B08C-A53532795FAD",
+            "1D3D3C0F-FE62-44D7-A1C0-5A4FC03E79BD",
+            "5C2114FF-5C1A-4905-9AD1-F33A7E616C38",
+            "008705DA-E5BD-4F6E-A68F-96BF0E76F331",
+            "A9911F89-CBAD-4D6A-A9CC-B7BD908A3934",
+            "83EC18B5-034E-4E6E-87C4-41479C70A589",
+            "7D2964E6-F20F-42C9-8EA3-04FADF26C454",
+            "1E66A4C4-F724-4D5C-8389-747B62C616AF",
+            "39440731-49FE-4E36-93B5-20894A0DD91A",
+            "E6DED3E2-7678-43B7-A702-E3F66AB86E64",
+            "938F7099-31BD-4017-868A-C60764C8280C",
+            "F4BB85AC-409A-4C37-BF95-4E87BCAD1562",
+            "6DCEF09A-A141-4698-A976-5819A8EE8F3D",
+            "2783EBD2-CA05-4550-830D-354661301CE4",
+            "FEC1CD4D-1550-4E03-80E2-BD6ABC1FBA9E",
+            "846FEFA6-B1A9-4CE5-B7C0-A04AD36F3DBC",
+            "1E4ABD3C-C60E-4C08-8050-4767BBA265C4",
+            "FBAB4C64-9809-4F8D-AB69-849C5F09DFFC",
+            "0788ABF8-857B-4C73-A54D-8D131BE282FA",
+            "F9B5E41C-ABBF-4582-8109-9E388D62AFE1",
+            "698451BF-85C1-4060-8621-572E835164EB",
+            "97C8931D-8B3F-406E-A663-9723A4544AB4",
+            "EEF19107-4CBA-47CB-8770-93CBD9DE4C15",
+            "95126ABF-DC1C-4C7F-9CBD-90D16E5FC208",
+            "35D6BBA1-A32A-406C-92AB-89FCC4DCA351",
+            "9D9CF1DF-C744-4E86-A99A-74207DF3DAAE",
+            "178B1D4D-A449-40BE-A644-0D09C9554163",
+            "77E7AC5A-ACBA-4939-BDF5-B7107002048D",
+            "DA1642D6-D617-4246-B8FB-360FD4D011FF",
+            "64A156AE-2346-47D1-89CB-41AD33E61652",
+            "AF8534A9-CB01-42BA-9D7A-3F949CA5F747",
+            "5C4AF6C5-0CEE-4D63-8817-3F080607F883",
+            "F39F35E6-EA29-4259-AAC4-89F24FF55D7B",
+            "93783910-EA1B-4CF3-8AFB-FDCE13E03E9B",
+            "AD0A2F59-A19D-4B19-AC1E-457CB0492BA5",
+            "97507762-7453-4247-A4BD-0ED56A200DFB",
+            "F029128A-2F87-4F6F-A4A2-C6D27F3EFC59",
+            "D0A59A75-21E9-4D1A-85B7-E8CD2036F3B9",
+            "9AEE506A-32FA-4BED-90CC-0E4AECEB25ED",
+            "95C94B92-F260-444B-B77B-D351608C9CB0",
+            "84CE4839-4115-4DBE-B507-63183DD56BDB",
+            "19BCBC1B-B287-48F1-AADD-B8428ECB4AA6",
+            "A4AED3D0-D350-44B4-8AA9-11A55FA67126",
+            "B4461773-03E6-4B3B-BAD3-D20A7151A2E1",
+            "7DDCA237-80CB-405C-BF28-CF962EDB78FF",
+            "349FD0E1-29C9-42FF-8519-4E3DD6C5F8D8",
+            "ECA80BA5-F951-434F-8B6B-4BE21489BCEF",
+            "7E0D33B6-0918-43C2-B158-D65C688878E8",
+            "A333CEDE-23E7-4EE2-BA83-82B645796696",
+            "689AFE1E-5AA0-4791-86A8-FF9A2DA1F06A",
+            "74FB9113-B04A-4A83-BDDA-F9531A3F032C",
+            "75402E74-90D7-4EEE-960A-3C612A54D059",
+            "13541545-3081-4CE1-8E5D-EE95D1D60F3D",
+            "C5D0CB19-279D-4870-9E00-0AE00D598557",
+            "C8BE4097-BDE7-4C87-AAE0-7A824702C025",
+            "2639178B-83B5-4481-94EB-1DB69304C60C",
+            "B217BB38-439F-4940-82CE-17F8001EC75C",
+            "65D8D166-0113-42CE-8A99-52048ADADA24",
+            "7DAFC068-18D5-4C89-981D-0E1DF75FCC65",
+            "66006DCD-88F8-4B20-9DC8-529126BFD848",
+            "EA723E1C-7B82-48AA-BEE7-91DA16D9EFE9",
+            "2917EC23-BB62-424C-8536-4129C4892DAD",
+            "904EEA74-AC96-4760-B611-31A823F5E30C",
+            "BEDB1D43-88B7-460C-8A4C-8E313C99232C",
+            "0E21AAAC-81F0-4084-8430-A73337B20836",
+            "817CBC83-D09F-4D73-9DC9-17AFA6BD365C",
+            "69389D23-2F16-4F38-8E29-D0043B51C506",
+            "851D0F1D-6B29-4980-B1B0-C842B0644B89",
+            "C6CEB25E-10AE-452B-8BFB-7E59837E050D",
+            "E6A3C30D-C404-45C8-8D9C-DE2C05453C02",
+            "31E9A8FC-94F7-4AD3-B254-1E6E0CD4C88C",
+            "0BC7DB2C-3ED8-43D4-84F3-8B81F798858A",
+            "CA8A2C95-8123-4D18-88F3-91050D17E6C4",
+            "FAB69B1B-6EBB-4EA8-A4C0-E23E1F9C6C9A",
+            "88D09DD3-DBB0-4A71-98C4-010617F9FD35",
+            "FD353296-27A3-442C-AF11-A9F2AA1832EB",
+            "60DF24CD-DE85-41A8-98F7-2C922EB549B0",
+            "664E8A1A-219F-4F0A-B4E7-ECA1702AF79D",
+            "929B2F0E-3C93-4366-A93E-2276D6D8580B",
+            "288E0F60-C3DB-4679-8223-F4A6E2A95CE9",
+            "F4A8ACF5-D6E7-4883-99A8-D7ECD855663E",
+            "20FC8470-42B2-49D8-85F4-DC26478D780D",
+            "56B3C216-452E-4449-98A6-8060A60333FF",
+            "4722BCB0-41FD-4E05-A198-2D9745AA393A",
+            "FFD70512-4C78-4C44-81AB-36CAE247A399",
+            "CFA13867-E47B-40DE-B6AA-603747FEA364",
+            "BDB8468D-7010-4091-81F9-0C55BD3A002C",
+            "E4F310F8-901F-46DC-AAC7-9D276C104D35",
+            "7A04CD07-FF07-4788-9BD6-09A173D60439",
+            "36C37553-7BD1-4F5E-BCF8-5F744B5396AD",
+            "6C3E5031-4F1C-443C-999F-414447166BA2",
+            "CE9B465A-2B64-4119-80B6-431F57BEA110",
+            "7089680A-E6A5-4413-8141-3EFDA3279D12",
+            "15001FEC-4AA5-4270-94B6-EC3586697D30",
+            "3AF816D4-2A76-49C3-B9C8-70B1CC835A24",
+            "C5A6D158-0B9C-4272-80F4-2B7B28369766",
+            "CB9516AF-64C6-4EA3-B83A-4EF59E5764CA",
+            "409B1A1E-BA75-49E4-92F9-51382A8C7BF9",
+            "3C83B7D5-E592-4739-AE5B-4136880B9E9F",
+            "CEBF60DC-EF16-4BE6-B91F-D6D1D966217A",
+            "0E62B92B-893B-4C8A-8F50-1C6C8CCB4776",
+            "5D0E09C9-ABE1-41C8-AE41-B7E61583A915",
+            "9C62D33E-7A5C-4655-91A3-56648901F4EB",
+            "EED7450E-6492-4FF4-A527-481532C00BAB",
+            "75065726-74AD-40CA-9E33-6B321F3CA011",
+            "E9AC1E6C-7112-4A20-83DF-24C781784DA7",
+            "F21BF646-BE83-4349-BC06-0EC5AF5996E2",
+            "84AE303B-1561-44A9-B44B-DCCB43FB5231",
+            "A8DDE889-8323-4A86-9853-6D1F5C9FA6C7",
+            "8B494F27-DEFF-4FB7-A62D-EBCD5F79AAF5",
+            "4B52D5CB-C9B3-4E5C-A61C-7B49D7A8D238",
+            "80B2A7BC-10AC-4A12-A18D-B48AD9AA6224",
+            "3BF34279-3745-43F5-AD93-65C50C4B8ADE",
+            "1E4FE28F-858B-458F-BBB7-1B2D6BDE4B1A",
+            "8AA9B6EC-D3FD-4508-8597-04348DD99EEF",
+            "B09B0C91-7A64-4DF7-B364-3A9898426216",
+            "BF5D12AA-35E9-418C-9068-A95D054A8565",
+            "E2C1B742-6D82-4C4C-956D-67F268ACBAD0",
+            "DF5355D5-2493-431C-A814-E4C688369120",
+            "7BEF7EA5-9EA4-4B40-B8F3-CB13D723069D",
+            "ABB96469-157E-4858-82A5-66C0AD651602",
+            "19A24E76-B1B0-4179-97C0-B6AA47DC4A02",
+            "78B3972C-D32B-4013-912A-8754FCEE78FD",
+            "1A155A81-92F7-4FB7-97E5-63426D9424DC",
+            "F8CE933C-BDEB-4353-ABF8-9205516B2980",
+            "F1064E5F-E8E5-4CB3-BF47-AB27216C4294",
+            "0F8507B7-F2E0-455E-9F02-331514E1341F",
+            "DE75484C-9FBA-40D1-8ED6-2306FEBFFE08",
+            "2FC06652-4A89-4C5C-BF6B-936748A4F2F4",
+            "0ED2BC96-F875-4AC2-BBCF-4DB7B74405EF",
+            "51E56BFE-B1A4-43D3-AF84-C1165B982335",
+            "F2DC332F-2D67-40C9-B551-A62BE6CECD98",
+            "E2366DCF-4D73-4C2B-B56F-B66D338D348C",
+            "C892431D-ABBF-4FF4-B9C7-166F7E5EE1C8",
+            "28522ACC-0CE3-444A-88D3-5FAF63D7D65D",
+            "E3227B01-D70E-4213-9744-A2709F0336DF",
+            "D478CE0B-5DF6-4C16-B1E7-B6D1E77DD0F5",
+            "83564862-4D65-4969-8D4D-D905546B44F0",
+            "610E8BA8-6A61-419B-9360-2C44D02AE877",
+            "71EB2369-73BF-440E-99B7-20235178F2F7",
+            "72CB3DCA-6FC8-442F-B2E9-42417DF48DE8",
+            "1A4F090C-0DFC-4368-A735-1A39802EB6CA",
+            "5F9DD910-EFAE-43DC-9796-1480205339D4",
+            "BA9294DB-F67C-4DD2-BCF3-65DABA98E638",
+            "C0FABE88-A9ED-4EEB-A1D6-250C78FAF75F",
+            "C4770D9A-EBF2-4FBE-915C-41E561C25A01",
+            "2F3EB845-CB67-44AB-871E-88649F48465B",
+            "C89F5CAC-9A2C-48E4-8DA1-D1C216F8D4C2",
+            "33BC88DE-A072-4B66-80E9-429FAEB835D9",
+            "BCFFB0D1-3ADD-4881-8149-743C2D11745D",
+            "AAB0D3A8-621F-4873-855A-B9778BE22A72",
+            "32BEEDE6-AC01-445E-92E6-25CBE68C0F01",
+            "15B049D7-C42D-4AE9-9278-F320CF2025A3",
+            "ACC45E4A-AB8D-40C7-91E4-48DF18980A88",
+            "1836D673-D9A0-418F-BDA5-36A9F5BDB77E",
+            "3BD464FE-C344-4351-AEDC-131942243486",
+            "D02CAACC-6A37-40B7-A766-904BE6D0685D",
+            "3C6D4923-4242-4C88-89BF-C1E61609A693",
+            "11125B4D-543D-42AB-9B91-1B202F883937",
+            "4A81B9A1-D0C3-4EB4-9013-A806DECFE168",
+            "BD927374-F685-4EF8-83D6-D37D73EBE331",
+            "C238B12B-E69E-4AF9-BED5-E8231DA6B6A3",
+            "A3AA5941-1E7C-42F6-ABC6-C6B141788F8D",
+            "D44330B0-F32D-46AD-9440-B95F43F20250",
+            "AC2DFDB4-50EF-444F-BBA9-67228AD2FFF7",
+            "C52A18BB-FE11-40AD-8A77-88F5F9D94331",
+            "562B053D-E2FF-41AA-871A-6A49B19A266E",
+            "A61D12EE-66D6-4509-AC16-D692093B0B3D",
+            "FB302AED-B672-448F-B6DC-1BE5C328FCFF",
+            "A3BF1475-6A7E-414B-849C-C742665CE603",
+            "6064AF1C-197B-46C3-BC79-522945D70176",
+            "24DD8A67-CE50-482B-85E6-6DD7C2A671D5",
+            "F234D1D6-626F-405F-874A-59355EB39609",
+            "D0890124-ED34-4241-BA67-DB62C478B3BE",
+            "130823A2-0E71-4192-B5FD-20DF30B8D27F",
+            "8562DB35-FAB6-49B5-8342-CB616E4B10DC",
+            "466901AE-42F7-4D4C-A2AC-3769E300E731",
+            "C9B19BDC-E6E4-4D73-9AFA-ADA3CCD8325B",
+            "7F639D98-E345-4E4A-A657-DFE3B1F4E760",
+            "86FB315A-E340-4037-84F7-450804AE4813",
+            "34EBE980-D813-4A43-AAF6-53C57DAFEFAF",
+            "1FA35C13-D248-44E0-8942-8F8EF8FFBF45",
+            "DAB6FA0B-BD8E-44E2-B6F1-534E2F83C0E9",
+            "DBF9FFC1-1D31-433C-94D4-4107567C9C81",
+            "FAD246F4-5155-498B-926B-B7A665F9FA58",
+            "55364077-7FFC-430D-9EAA-CA2A9277D769",
+            "38AD5A15-2A73-4C2E-8EF0-D3D3063EFE0F",
+            "581B662C-CE47-4EE2-9C83-5EC1664D3843",
+            "B1F972EE-68E9-4B69-8E96-C401947E5338",
+            "F2EE7BE5-A15B-4420-904E-0C2BE7463567",
+            "32169436-84D0-460F-ABB3-0E7C37B33522",
+            "EB02A0CE-8E8E-4878-954A-4483572C4AF2",
+            "AA2F9AA1-35D5-4742-B62B-0277150E3813",
+            "F6EFE405-7A13-40FA-9B51-B2A4E8B69C62",
+            "61AB5F07-172F-4CE9-9B6E-D9A83B4023AA",
+            "F9F6EED2-331C-40C0-908A-662AF0BC1600",
+            "F66ECD25-00F7-49B7-964D-72C5BB46A853",
+            "B34EFD67-D65A-45A7-8056-1A2C9D638635",
+            "3189F611-1AB4-4EB6-9AA5-B62E955F08B3",
+            "56510D37-6473-46CF-8D68-EE9786D6F252",
+            "D9C1DC73-AAE7-4B27-8E28-A95E0E151E28",
+            "6838C226-D99C-4622-B464-634527B29562",
+            "63FA8775-33C4-47EA-BED2-A13FFFD8CFD2",
+            "03993D44-4891-4BCC-B13A-764B076E873A",
+            "B071391A-C587-41C0-A5CE-E190FB6E6406",
+            "BA9C0468-98F3-4BE4-B01B-54F85A32E272",
+            "DA9F3B14-6425-462B-B76F-87BA1F123321",
+            "1614E8F8-35A4-4973-8D1A-72D93B447C52",
+            "4D958A17-A591-42FA-A661-250192A1AAEE",
+            "1D701B25-155E-4A5E-9506-321C08308CBE",
+            "A1B69918-4E27-4015-AB50-485C30AC0586",
+            "259FAA76-265D-4763-8EF1-5A0A07489D3A",
+            "134F67EA-2E3D-469C-B0B2-83D8DABE6847",
+            "B44F5964-0F39-4E68-B895-EA73FFD6D937",
+            "B98F483C-B62D-4525-87A4-0BB5B2E0B201",
+            "3C4B5050-7897-4049-A5EC-104546306547",
+            "0ED2C579-B104-4736-BEEE-AA978FCF51C4",
+            "A6D18960-AB60-4C2A-B2E0-D9602C56BA32",
+            "13FF71F2-F803-4150-8CD3-37DB0AC1146C",
+            "E1992CE7-24E5-4065-BD0D-DFF919897E67",
+            "DC1DEA8E-9492-4BF8-9CF7-864AA782E87E",
+            "9990C5E4-000B-47B2-884E-88BF3B2984F1",
+            "B2D06896-2B6F-431E-B180-629FEA6C413E",
+            "F987124E-3AB3-47FF-89C5-7BCD18742F68",
+            "6B49B513-7AFD-4D3D-A146-E6E28FC31887",
+            "C0EB799C-4846-4A95-A077-12C97D1A79BF",
+            "A2EA69B3-B874-4000-A72E-6D6A5EF95DD7",
+            "C02A0421-8339-4CF7-BF94-11E42F9D354C",
+            "1CA68B43-AC27-4B0E-88D5-A35BCBCCF71D",
+            "68F4D6B7-E548-4ABA-BC6D-EA6DAF4A42E5",
+            "88AAEEAD-4651-4CCB-8716-DA273A699BF8",
+            "3D338D64-47D4-43F7-AF21-78663E08AC47",
+            "E78DBBE1-1ACE-4804-A75F-70F8FD0DC2AD",
+            "5C5A063E-B4B2-462B-95D6-E81A61C53FC9",
+            "941CA9F9-A2CF-407C-8463-6EFF11F281C0",
+            "63380C74-AEBE-4CE3-B1DF-7A33FFA7A05E",
+            "583BF8F5-17A0-441D-A2D7-6EDA6641E2CE",
+            "F6F12FE2-128C-428B-844A-D75B7041F17F",
+            "EE12A653-0D9E-46F8-9359-DC0E6CB08D47",
+            "1DCD8003-330B-486F-8DAA-4D68ABF7C28A",
+            "3969512B-A924-43FE-862D-BE165DD1F873",
+            "40B33EEA-72D6-41D3-A4EF-DD58ACFDC1F0",
+            "61824423-30AE-4FAB-BB46-B6AA1B3EFDA8",
+            "4AEC79C4-A91B-4625-8D03-DFBA4F00942B",
+            "BD91D434-9829-4944-8A2A-81E58361CE95",
+            "A3E0B51D-0FFC-4AFB-AAA1-81F87511F71F",
+            "DDBA921E-9EC2-45DA-98DB-91A579C576AC",
+            "10C4D10C-0DC0-4D5C-9296-40D17A241F57",
+            "74612FE0-9FC1-4DD9-97E0-B544BACCDBB1",
+            "E303C935-6EED-44F1-8E06-0D981AA88AAB",
+            "2CD119F6-A327-41A6-BF73-BCB06F375027",
+            "4C4CAEB7-0245-4866-A074-724D0545CF00",
+            "76C32211-68F2-47A5-825B-16FCE3E9F125",
+            "5FCBDAF2-B9AC-4E39-BA04-C94A5E2C363C",
+            "263E3599-132E-463F-9788-9A987FBAC16C",
+            "8054A787-4ABB-45AA-8C5E-4A818D71A6A9",
+            "2C9BFA13-7C5D-451E-B971-4FDFF21C2AA2",
+            "8668878B-833B-4193-9DE5-752029941155",
+            "85BC5F81-BD29-4CC8-948D-CB9807AD00EA",
+            "0D611DC7-561D-4A22-8CF7-F3734FD1694D",
+            "6132CB28-F429-471F-97DA-FFE6F24C2133",
+            "3A30373A-0C78-41C5-AE5D-A9FA873C636B",
+            "C0D16B4D-C479-422C-8A2E-3A9AAF38A0A2",
+            "A75F56FD-2030-461F-BC74-13F832949FD0",
+            "8A35B51E-3617-46AD-B71E-E12F33F54CB9",
+            "B3E351B2-0659-4072-A8B9-0004DEE93928",
+            "6DD61828-64B2-463E-80CB-7F4104EE2DA6",
+            "0AEFA859-41AE-464E-BF8D-569E8A244B44",
+            "1B4971EE-DB1D-4987-9281-5906B8403663",
+            "29462CE8-0016-4ACD-B0D9-C849821F7B77",
+            "4316D08E-1BA4-4397-B4C6-87D70F74DFA5",
+            "7EA22821-6BE5-4321-88E6-E01FC8BFC630",
+            "D5EA8E9B-D8AE-4CC3-B718-ADF0FF220690",
+            "1AB04C97-5AB0-4653-8C55-23BCF016CC62",
+            "D4725C6D-0DA8-4C0E-A297-417F6E191860",
+            "4E0FFAEA-A038-47E3-9E31-349F79531DAA",
+            "E5A4D782-A350-43BD-8B35-D1EAE2AF11E8",
+            "C9AC1FB9-743B-4C14-AA0B-EA13C3567C9F",
+            "3391313A-3CD9-448D-9639-CA914BD0BB7D",
+            "790322FA-429D-4BDE-81B9-016F0CA125CB",
+            "7355AA2C-5EA9-439F-9AA7-E8DC3051CE20",
+            "A7B3AF0A-7126-4AC4-A9B8-8B9DE934B821",
+            "BD06F941-B1AC-4B8F-A916-BFD135DD240D",
+            "F788CD02-D872-4AE2-9E8C-E208E36D3427",
+            "70303905-6951-4CD4-A125-2E69B592F49B",
+            "FF3E5084-A4D4-4E48-B0C7-09B20F1ACF9F",
+            "0F426CE5-023F-463F-A49D-7136ACE800F2",
+            "8C47E69B-CAD2-4CAC-AFBC-EF02D0E58872",
+            "00B87502-7410-47AC-8416-F9415DC150A9",
+            "7606A351-72B2-44E1-851D-BDAB97389AA8",
+            "B6135015-594B-491F-910C-440A35681ACF",
+            "DA58C248-8AF8-4657-984E-B20E878F8222",
+            "4C7173CA-E84C-46D5-9D08-114EFEF51888",
+            "DBCD8C6A-81C0-423C-97E0-8529A699EE75",
+            "7FA53DAC-680D-4B3E-A2BA-77D0BDE18DDA",
+            "2659EC9B-10F2-42FE-A2A1-A5EB9E9CD514",
+            "5FC3D53F-9310-48BB-87A5-4F7D9125C689",
+            "4C54D099-D2B3-4E6A-9244-272E0F95660D",
+            "B4C8591E-E0E2-40C0-BCE4-4CE70BB2A7CF",
+            "8A32B53E-F69A-4BAB-BF80-D5521E6B5354",
+            "576E2244-D790-4BC6-9B4A-93C905C9DD64",
+            "C825A289-4139-4BB5-BFB1-DD7E0009F811",
+            "AAF428C0-CF35-4015-98D2-2BFB0EAD4A48",
+            "728BD236-41E9-4E69-B5AB-12AF6A67E946",
+            "EE4C10F0-54F2-4185-9B64-8A8EB298B2F3",
+            "000BA923-489F-4D0C-90B4-3207D3A3D467",
+            "7F241BDE-3614-4E4F-8126-6A3FFC67C40C",
+            "D21633AF-4197-4A61-8554-24C12633B20B",
+            "F6C882FB-DE8D-4346-AB52-2C217BB9674E",
+            "1BB10827-448A-4563-A090-83555B6E5700",
+            "441FDC7B-3465-4846-A842-41E68651BFC3",
+            "16BCE212-099C-406D-ADAB-09E8B763D2C5",
+            "2E90C926-52A5-4547-BC25-34C65F97D1A1",
+            "C4AB1595-A628-4152-965F-ED48CAD7D097",
+            "68D405D0-0A8F-4C18-9F69-AAE74FF7B83E",
+            "07C77B88-BF72-475A-B4D6-A26CF4528DB6",
+            "A46999E6-54A6-4109-B164-32C09AD976A7",
+            "787363B5-081A-4FF5-B1CE-2E84F4027D75",
+            "DDA28041-A6CA-4DB4-9CAD-1605AAC685F5",
+            "61FE519F-EC0E-4332-AA9B-5DF9BA4EECC3",
+            "D7EC21E0-E33A-4FB9-A049-B577B39F364B",
+            "AE395518-B53B-4713-A7AF-54B1A935F1C2",
+            "1A482D81-001B-4A67-92C6-6A84CEE1C675",
+            "5B24F232-CF68-4922-A403-1CD17B340BB5",
+            "4317909D-1941-43EC-8416-B546E5B877F3"
+          ],
+          "totalEarned": 2794004
         },
         "nfg_vault_run": {
           "session": {
@@ -1746,36 +727,11 @@
             "classic"
           ],
           "equippedShip": "classic",
-          "bestDistance": 361
-        }
-      },
-      "claimedMissions": [],
-      "lastArcadeStakeAt": 1782076314961
-    },
-    "f9otp": {
-      "dayKey": "2026-06-18",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
-        "nfg_snake_jump": {
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
-            "vsMatchId": null,
-            "vsDeferred": false
-          },
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic",
-          "bestHeight": 1940
+          "bestDistance": 10932,
+          "syncedOfflineQueueIds": [
+            "F2E679F3-B531-4EE3-9B3D-18A9CDB64D69",
+            "CFE8806C-8B18-4CBB-AC1B-230C4603ADE4"
+          ]
         },
         "nfg_blocks": {
           "session": {
@@ -1784,41 +740,16 @@
             "sessionLevels": 0,
             "sessionPoints": 0
           },
-          "bestLevel": 2
+          "bestLevel": 8,
+          "syncedOfflineQueueIds": [
+            "47EF741D-708A-4CF9-916D-CC16D9D94504"
+          ]
         }
       },
       "claimedMissions": []
     },
-    "offline_x14": {
-      "dayKey": "2026-06-19",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
-        "nfg_snake_jump": {
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
-            "vsMatchId": null,
-            "vsDeferred": false
-          },
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic",
-          "bestHeight": 1154
-        }
-      },
-      "claimedMissions": []
-    },
-    "appuser_61545f23024d05b6": {
-      "dayKey": "2026-06-22",
+    "arhamm.a1": {
+      "dayKey": "2026-06-28",
       "stats": {
         "rounds": 0,
         "wins": 0,
@@ -1827,12 +758,12 @@
       "games": {},
       "claimedMissions": []
     },
-    "appuser_9596c3f791b412d1": {
-      "dayKey": "2026-06-23",
+    "ghi4462": {
+      "dayKey": "2026-07-18",
       "stats": {
-        "rounds": 0,
+        "rounds": 1,
         "wins": 0,
-        "lost": 0
+        "lost": 3440
       },
       "games": {
         "nfg_snake_jump": {
@@ -1844,61 +775,33 @@
             "lastMilestoneAt": 0,
             "peakHeight": 0,
             "vsMatchId": null,
+            "vsMatchSeed": null,
             "vsDeferred": false
           },
           "ownedSkins": [
             "classic"
           ],
           "equippedSkin": "classic",
+          "bestHeight": 100421,
+          "totalEarned": 267286,
           "syncedOfflineQueueIds": [
-            "pc-test-001"
-          ],
-          "bestHeight": 2500,
-          "totalEarned": 3449
-        }
-      },
-      "claimedMissions": []
-    },
-    "appuser_3ef475b373a45f86": {
-      "dayKey": "2026-06-23",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
-        "nfg_snake_jump": {
-          "session": {
-            "active": false,
-            "milestones": 0,
-            "sessionPoints": 0,
-            "lastMilestoneHeight": 0,
-            "lastMilestoneAt": 0,
-            "peakHeight": 0,
-            "vsMatchId": null,
-            "vsDeferred": false
-          },
-          "ownedSkins": [
-            "classic"
-          ],
-          "equippedSkin": "classic",
-          "syncedOfflineQueueIds": [
-            "pc-test-dup-001"
-          ],
-          "bestHeight": 2500,
-          "totalEarned": 3449
-        }
-      },
-      "claimedMissions": []
-    },
-    "appuser_81be281f12ae6762": {
-      "dayKey": "2026-06-23",
-      "stats": {
-        "rounds": 0,
-        "wins": 0,
-        "lost": 0
-      },
-      "games": {
+            "70DC07A6-202D-44BF-B9A4-0104F37CA1C8",
+            "D0CEFD30-1C42-4ACF-8993-19B44EECA77E",
+            "F1F8B265-0593-410E-ACF0-481C81F8CA22",
+            "F04138C9-F28D-44CC-9E9C-06F6C12C5D76",
+            "E5F4A704-EF3A-46F7-A8F3-A0FC72C9A05F",
+            "B0740CC6-0B7B-41E4-A8ED-969A988CD9ED",
+            "357C6D74-67DC-46BA-A5D8-A3E26B3F943A",
+            "26FA7225-6C7B-4587-9AB8-91AA1DD750ED",
+            "420B3BA5-9D48-47A1-B2AC-76477132DA39",
+            "A39410E7-6940-4BAF-8748-90424850C2A6",
+            "CE087695-AED3-4057-B3CB-D027255AEB6F",
+            "3C17C792-D1DC-4117-901C-BEA4A4504980",
+            "37B98A6D-D53D-4662-BB9A-9AB40F7D942B",
+            "F0F6EC35-9A47-44E9-9F2F-D539D3672D18",
+            "0297C5AA-6B63-4987-9411-84950E283B37"
+          ]
+        },
         "nfg_blocks": {
           "session": {
             "active": false,
@@ -1906,10 +809,21 @@
             "sessionLevels": 0,
             "sessionPoints": 0
           },
-          "syncedOfflineQueueIds": [
-            "pc-test-blocks-001"
-          ],
-          "bestLevel": 2
+          "bestLevel": 4
+        },
+        "nfg_hilo": {
+          "session": null,
+          "skillLevel": 9
+        },
+        "nfg_plinko": {
+          "skillLevel": 4
+        },
+        "nfg_mines": {
+          "session": null,
+          "skillLevel": 10
+        },
+        "nfg_dice": {
+          "skillLevel": 2
         },
         "nfg_vault_run": {
           "session": {
@@ -1924,16 +838,14 @@
             "classic"
           ],
           "equippedShip": "classic",
-          "syncedOfflineQueueIds": [
-            "pc-test-vault-001"
-          ],
-          "bestDistance": 400
+          "bestDistance": 3
         }
       },
-      "claimedMissions": []
+      "claimedMissions": [],
+      "lastArcadeStakeAt": 1784381876206
     },
-    "appuser_ac547c178bed935a": {
-      "dayKey": "2026-06-23",
+    "sk.07020": {
+      "dayKey": "2026-07-27",
       "stats": {
         "rounds": 0,
         "wins": 0,
@@ -1949,6 +861,630 @@
             "lastMilestoneAt": 0,
             "peakHeight": 0,
             "vsMatchId": null,
+            "vsMatchSeed": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "bestHeight": 77602,
+          "totalEarned": 2206104,
+          "syncedOfflineQueueIds": [
+            "9BE04163-B854-46F9-A7A7-358C0CACFD1A",
+            "43D64524-BA32-4A8A-876E-4BCF97FA5E2E",
+            "D1ED2FA8-E8A5-4812-997D-F480F3017904",
+            "F9DDE700-3021-4FDE-87DE-A30E84D9854F",
+            "67A1B88F-0EDD-4573-8078-446C8E0519FC",
+            "1C7E4E7E-A335-46B6-9F0B-5B1CB0F28D22",
+            "E743D599-4D9E-40B7-BB64-D6BDED131791",
+            "4CD993CE-F4EB-442F-813F-CB268F9D19CD",
+            "55903EBD-8933-48A2-87EE-E6E7FFE7379E",
+            "6F332384-15AE-4B18-A99E-142F06E84138",
+            "F011F4D4-A3AC-4F4A-BB82-8312594C3471",
+            "E72D2128-999E-4311-8777-2724F080544D",
+            "B85C5620-B693-43BB-9457-683D5C60CEC8",
+            "AEF1FA9A-9CBE-48D6-A4FF-3032727CED35",
+            "F321E28A-02FC-418E-BA8E-176D7A9B065E",
+            "97D9074E-1B4E-4E24-AEB0-57B1F235ACB9",
+            "85B9C9C5-5A47-417C-8FEC-5AB2EEA4D021",
+            "B7E74DFB-2180-4FB0-84A5-81284AF3967D",
+            "E594CAE5-5BE5-4C66-80B6-35269B3FA64D",
+            "CEB5D535-4D66-40F1-AE4F-B2E0E754CAB6",
+            "3E2AEC77-BE18-4AA4-B889-F1899935ECD7",
+            "ADB92112-6049-4364-8971-B2E785C437F7",
+            "C253FBB3-D418-4CEA-898D-59AAC94D5697",
+            "BBC605F3-FA85-4E20-A601-83ACCE42E303",
+            "4C2E5D73-79EA-4EA9-85AE-A0C6F8187FEA",
+            "630728DE-1843-4297-9247-CF4C1FE8BA16",
+            "D2D4E935-6F9D-4B34-A1EC-4B31656AD34C",
+            "FEA759D1-72B4-4E48-95CC-D45763FD15FB",
+            "41AFEF28-682D-4840-B1F9-11B2ECDB80AD",
+            "D75A2432-1592-4F43-ABBC-5C97241B132A",
+            "EE58F2BB-B7DB-4255-B412-835177D25FAE",
+            "E45CDE04-EE0C-48C3-BBBA-B722D2CDFEE8",
+            "C2B81581-4966-456D-8BBC-BEC888042CE8",
+            "0D3C4846-7A5A-4D14-92B8-4941F43449BF",
+            "19BC5258-2F43-4857-8A0A-E5E7F3A5B94D",
+            "2AD66399-CCF4-4C80-8E98-A98DA1F4098A",
+            "E97D7AA1-6419-4C56-AD66-408524C3FC07",
+            "0A700C85-FFFE-4F6B-BC8F-89A63A0EA91D",
+            "E0CAB4F5-A024-472B-94AF-06D8BCE33AE1",
+            "7A30BEF9-F5D2-48A1-BD76-4862AA94A86C",
+            "56A5D343-57CC-4D97-B06D-FED35BC1EA0C",
+            "E0B09E2B-A1B3-4B7C-B616-E42C3D64E184",
+            "D7A0E2E1-35C8-4333-85E7-78A7E33958FD",
+            "16331E06-CF0E-4A22-A691-92BF34055F7E",
+            "045674B8-19AB-4DAC-AB27-829417554C69",
+            "3195A93A-84FA-4B6F-A2BF-DEED7EA5DBF8",
+            "D03C7FF0-8C88-435C-A3EC-AC1A0D6FA5B4",
+            "0EA3D338-DD30-435E-AA92-523B226A978A",
+            "4A3E5D47-F0DC-4F92-ADD9-A40B51D149B8",
+            "A3A41340-330A-4B0C-ADA2-C2CCF7A419E0",
+            "57528765-98C8-4077-8DDE-FAFDFA868DBB",
+            "C92AE03F-020E-4EDF-BC3A-29E28385B710",
+            "FBF2D24D-303F-4EEC-9017-3EFCFE560922",
+            "D6947CF0-7D02-4F19-AB8B-AB25A8E244EE",
+            "C5910683-D723-4595-97FA-5463294DEFBA",
+            "79DE54CF-1B61-4E2E-97D0-3D07F26E2422",
+            "F8FA17B6-6CC1-4CCF-8AF1-3686CCEC1A17",
+            "FA05B474-C62B-410E-8E82-C49F9D155371",
+            "C00DE52F-7E65-4B91-B735-24687FBAFEFF",
+            "4563ECC0-3FFE-4E5F-9099-7B9932611603",
+            "1D31D155-64AC-47C0-9559-B19A2F9B28AD",
+            "396F683E-4303-4864-AC39-72D7D8D46C9D",
+            "6BD9603E-788A-41E8-9225-B71ACD9F6A2A",
+            "D938CFFD-5913-4C94-AE0B-E145CD651E78",
+            "2A7A30EE-794B-4276-A4B1-303ACBE0AA99",
+            "853AEC30-57D2-48B5-BE6A-679EBFADDFB8",
+            "9ED75A7F-96BE-499A-BCC6-1EF93714FAF6",
+            "977AC015-9B05-4410-AD2A-2B125E261885",
+            "DDEF597D-E161-4DE6-93D2-B04D1E6FE8B7",
+            "99DEF4C3-5644-4175-984B-FAC6698F9A8C",
+            "7A9333CC-CA6E-45A5-AE31-B71C12BF17A6",
+            "0D03E7AC-6EF9-4B71-9F72-A00FFD45E3AD",
+            "95EB01E1-3C05-43F9-8BF9-15FAB187913D",
+            "E75259A5-4D71-433C-904D-2C90B40BCEFF",
+            "5650612A-E33E-4819-ADD1-FEA728D8F70C",
+            "DB4C33DF-E24B-48FB-BA08-A32CEECC7232",
+            "D71E6DAC-7D4C-486A-81ED-13E837864540",
+            "CC4120F1-C5C0-4F3B-8295-A37C39887050",
+            "EF9D7EF4-433E-4E53-BDF7-22D77C86DBF6",
+            "5D693D83-89EF-4656-B0A8-A139F8CE4F30",
+            "5241209D-F28E-40A7-88C8-73D00ED12DC6",
+            "1126B97D-D80A-4004-BBE1-0D3480AC3248",
+            "1AE3DAA4-992F-4DE4-8D91-4FBF464896A5",
+            "7A2533AE-326C-4867-A783-1686EDF459E2",
+            "1B52912D-303A-43FB-983C-7A40D516A2C6",
+            "96E1D912-2F7C-480D-B030-F26A0937835A",
+            "0EE21264-403F-4CDE-A057-4C427A4A0984",
+            "05AE7BBB-CFC6-4459-ABBF-0A37EE263ED8",
+            "FD8333E0-D600-4E7A-8622-A140CD647FDD",
+            "808CF227-FB4A-40EA-8C01-3040BC7F47C7",
+            "80153A1B-9A45-4ACF-8E24-3AF6409668AF",
+            "37B135AB-3C96-43B5-8ACE-61CD80A92DBA",
+            "39489C6C-FE12-41DE-9CD0-A3C9994A9583",
+            "B982B298-A9D2-4168-ACA4-2E3A9B74F2C7",
+            "7B05F6DD-7280-4508-BE96-ECE11F10E027",
+            "E099C16E-873B-4320-8C1D-FF1428C9C755",
+            "3BC08501-0CBA-4BBB-8307-C9DDD2FA48EE",
+            "C86D020E-8BDA-47EF-A72B-C47772419DC0",
+            "202A7B44-C664-4C4F-A943-4BDBFCAE0E21",
+            "8A818102-82DA-46F7-A014-61CCD26CED5B",
+            "AF692880-0E08-47F5-B145-AF75F7A8BDAA",
+            "B582E7A8-8863-4B63-B503-5F8E87E35210",
+            "2ED40BE1-B6E3-484C-BE90-78FE515C6CFD",
+            "5CD3D2B7-E9AA-48FB-97D7-2F80137D0572",
+            "BE708957-0B9E-41D6-810D-FAA2C74DC4E3",
+            "9E1F917D-7A2C-4E76-A28D-18B57E345827",
+            "46F9F41D-8EA6-465F-9C36-D2779B024DD6",
+            "E827892D-F6BC-4D9A-B3D8-389E1B298FA0",
+            "62FC74CC-56C0-4FD1-83C8-C3330A3E2A7A",
+            "82604D4E-55E5-43B1-9102-6F447AFB7311",
+            "BCB7A212-23E0-425A-825C-B386AE20A22C",
+            "6D6111F1-46AB-4D1D-9EC5-AA080C090BD8",
+            "1C46AEAC-D612-46DE-A358-68881A1603BF",
+            "D361B784-2A7D-4F96-93F3-DE7477C3666B",
+            "AC089389-21D2-4D2A-9812-944138DF0E86",
+            "AAAEF92B-6E07-4A0F-B6AB-773FD8870AA1",
+            "6D1F04B0-3CC9-47DC-8EF7-8965840AE344",
+            "06132472-9E06-42BE-A287-2D3D1544F85D",
+            "33844778-3E5E-4DEF-9C2B-EBA7FBF091A2",
+            "81D6D7AE-B926-4EED-B64A-E7D399F9FE68",
+            "683801CF-DC95-4410-A258-81BAE645A382",
+            "409C3E57-E3D7-4024-B781-060274E0CF1A",
+            "3C19AF1B-3B40-4CD6-A5B6-30F569D44AFA",
+            "DBAA8BC1-9559-4C08-8A03-5524F521F86E",
+            "79E8EE77-BF26-4E40-9EB1-A67381C9889F",
+            "D3FDA208-3258-4B7B-A3BF-950A232A0D96",
+            "6E2818F7-CAC3-4399-9166-873BA90E5E6F",
+            "B6ED0EFA-EC2D-4FE4-A177-EE83D5E0DEDA",
+            "D58103FE-418A-49C9-917A-C82CD3D617FC",
+            "C8DD0A76-7363-4931-B412-EB03CF8E2D7B",
+            "DD4190DF-6BAA-41A2-9EAC-D08EE47D6A51",
+            "69B9C052-5EBC-44EB-8697-CC3FFEAC24AD",
+            "B6B8E903-AFCC-4702-8F35-701E68D2EB82",
+            "D30818DE-339D-4273-B196-85275195F077",
+            "3BF9DA80-655E-49F0-AA77-77ABCA26F37D",
+            "0F850072-1102-4E82-946E-68E3650F8C95",
+            "1D5D1B7D-B3B6-47CA-9A6B-FB4BD969D315",
+            "B1A74D0F-D183-44FC-B836-1412E8A590FB",
+            "9FA8C9C9-F4B2-4D98-98C1-FDDAE53869BE",
+            "B5E20A48-F8CC-4219-AADB-D8F2B2C9D62B",
+            "F0A84746-6BBE-42EE-B022-D7D5CC4C9E8B",
+            "E7A7E8CF-93A5-4927-94B0-F815A892ABEC",
+            "68473045-746E-45B7-859D-58907D4C6F24",
+            "35ECFB88-77A7-4F66-A7B0-C0B2B198E8D5",
+            "773C2D93-90F6-411E-BD2D-7614DBAD0783",
+            "FF674542-A213-41BC-A7E1-0DDECE4187B7",
+            "4A354330-7F2F-4F43-B6BD-D154E203BB97",
+            "E61A40C4-0FB2-48E8-9131-9FBBC08CEE05",
+            "6C9A21FF-CFBA-4D38-8802-C1863470656C",
+            "84A476B1-0EF4-4BC9-A494-11AE97BBA1B4",
+            "DF73F7A4-5B2B-4F37-BA79-82AF3F7423FB",
+            "6A5E1B07-48F9-4630-A370-6DF2E5433D82",
+            "898C69D2-CA32-4A31-BC32-6B6DEFDC60F2",
+            "32BF7389-DC72-438C-AB22-A9E27F344F54",
+            "C9760FD5-B6B3-4DC1-88AC-6759DDF68C93"
+          ]
+        },
+        "nfg_blocks": {
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          },
+          "bestLevel": 7
+        },
+        "nfg_vault_run": {
+          "session": {
+            "active": true,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneDistance": 0,
+            "lastMilestoneAt": 0,
+            "peakDistance": 0
+          },
+          "ownedShips": [
+            "classic"
+          ],
+          "equippedShip": "classic",
+          "bestDistance": 1699
+        },
+        "nfg_wheel": {
+          "skillLevel": 2
+        },
+        "nfg_mines": {
+          "session": null
+        }
+      },
+      "claimedMissions": [],
+      "lastArcadeStakeAt": 1782947242912
+    },
+    "sameya.bx": {
+      "dayKey": "2026-07-31",
+      "stats": {
+        "rounds": 1,
+        "wins": 0,
+        "lost": 100000
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsMatchSeed": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "bestHeight": 111123,
+          "totalEarned": 1964780,
+          "syncedOfflineQueueIds": [
+            "13E577D1-1948-4741-8224-9BFB65728BA0",
+            "022ED4D5-2FE9-441C-8EF2-84EF394740E7",
+            "5530CF1F-B512-4964-8C86-25F8C3B2F3B2",
+            "ECA113DF-1E79-4C33-9D90-69BC416ED592",
+            "84C95FF6-C8D1-4B31-BEA3-9AFAB7AC45EF",
+            "165A3F89-869F-4206-9589-413AD9AB36A9",
+            "0C4BEF55-1458-4CB8-AEA6-1C7014801F40",
+            "D6332BD1-99CD-49AB-8599-E71E30C64E65",
+            "BEE20F95-6E68-4D47-8ACB-158298E8944A",
+            "BA08DE22-EB2B-4657-A098-3AC01F1C18D3",
+            "0E7CEC56-6371-44C5-B115-87050242544F",
+            "08924BF5-3504-4733-90AF-CFC87213FD06",
+            "91F250B0-5FE7-4882-988E-B8410F517797",
+            "3F11E306-6B78-44D1-8C67-658C826C1837",
+            "22891232-101E-485A-9222-7C01E207E20E",
+            "CBCAD7B2-C929-448E-B4A2-34BF48B79CB9",
+            "AC1F563B-941E-4634-A70C-AD36C4F5B6C7",
+            "0874C842-52A4-4B23-8CF5-9C14F8AFF25D",
+            "16624182-E32E-4283-BC7C-FF3DC1B49B37",
+            "0D01EEA9-AC9C-4794-B054-59224CCA6F06",
+            "768FD869-5736-451A-AD1E-AF5AD75C81A8",
+            "751910BD-5F21-4580-B97E-26CF36747209",
+            "70B052FE-0E4C-4F93-89EE-417D2158BA37",
+            "85F63CB6-7946-4AF7-9BCB-CCEA66D3CBA3",
+            "71078820-D581-4607-9561-89B8C7073FA9",
+            "80E812DD-13FB-410A-B09D-4FB0547D1407",
+            "D3B8AE4B-9316-4863-95F5-A14A2738DC85",
+            "6BCD2B19-FF2A-4370-A3F0-FA8AE2B0AB54",
+            "23C53B9B-857C-4240-BB1D-5407BBD32643",
+            "60BA9653-BCDF-4392-90B2-F30A86DA7AF5",
+            "5090EAD6-5BF6-453F-A2CF-BBB9DE01F980",
+            "3131FA70-A4C2-4DFE-8C1F-90B2F8FCA19E",
+            "A7CD0D8B-A0F6-404B-9A84-81BA6A423BAE",
+            "590D0751-1CBD-4F74-A2CA-A053E53A0533",
+            "0C8B913C-BDBB-4C80-A454-2A4BF86C3ED2",
+            "1BB1E8FA-4D38-463D-A7AA-FE24482D829C",
+            "C6121241-1EC5-48AE-A5D9-9AB827418876",
+            "F9F617C8-A601-440A-AE45-FF22C9A66ED9",
+            "370D3F6D-59B4-4BDC-8C19-387889EEC73B",
+            "47FD5019-5041-414A-99A1-B6A6F97C3D9D",
+            "8098C019-6940-4B80-85E6-F81938DB4A23",
+            "1AF66198-23EB-4ADC-96F8-938C6C14C8FF",
+            "D07A53A4-0D24-469A-B995-9DD6B108AB81",
+            "2B6DD264-CBB5-41B9-9D4B-7419BD62E864",
+            "5D2DEFD5-F909-4671-A20D-846CF1A378E4",
+            "452EA2CA-F534-4069-AEC9-B6A445347915",
+            "385EEC19-AF6E-4286-825A-237E263E34B4",
+            "EC560F97-3C8C-4EB7-9FBA-2DA4E905D61E",
+            "9BC4D53E-330A-4213-AB15-5A076F4FDF95",
+            "A45E0FF0-3601-481E-9AC4-545EF2E4C0CC",
+            "6A7A9887-526D-4439-A5ED-321AF35B18B0",
+            "AE4FA684-4446-4DA1-8151-853F803FE7F4",
+            "F8EF29AD-27D4-4BF5-9D2B-C2DFF19F0E0C",
+            "636A1EBA-E1A3-4687-ACD6-89138A20F118",
+            "BC772DC8-9A88-420E-B3FB-F260769EBB39",
+            "70BFA23E-FC89-4518-A0DB-5720680FFE32",
+            "A25C9589-1BEA-4F35-BB61-1CD461E6A62A",
+            "857BF9B9-AAE1-4CE3-BE2B-021C2EE4A616",
+            "D87EE58A-067E-431C-94E8-BD82FF871F95",
+            "1AD900C4-FC05-4400-B359-80708D521AB3",
+            "92262EBE-FB73-4108-8A71-FB249B27C123",
+            "170A20E8-8A15-4C3E-A341-44F4CEF9603B",
+            "EB3C0A0A-83F2-4FD2-A7A1-D57AE35625FF",
+            "F8CD1B09-317F-401A-8C3B-689AF2DED546",
+            "A679D9DC-BC43-49B2-B12A-6CB3EFE95687",
+            "D1AF483C-B060-44B2-9050-0090340C49F3",
+            "B35A3013-F9A6-4DBA-935D-F4EE1FB06B96",
+            "307362F3-84CE-4067-8200-63CF92CF1C14",
+            "C692B6C2-BB0A-445A-8236-8D00EB058A3E",
+            "F3C0577C-B94C-4D5E-A7E5-34D9E3C2C422",
+            "8AC1D857-6388-479B-BAE2-7E538BFF8138",
+            "2DB01DCD-E5A2-4AD9-8F37-1761ABA4BA59",
+            "92594B87-160D-41A6-95AE-B3318B6E1FB1",
+            "189D73E7-8FBF-4BBB-AE0D-ADC967C4E0B9",
+            "DC4686EA-E4A5-4371-B734-C48C14E6EE3B",
+            "3ABDDF8F-C0B5-48A3-B057-66BAC73A0A71",
+            "511F3863-D8C2-478B-8992-79E9CCA4FA71",
+            "3C3EC017-46EB-4B18-9381-3A373E85C024",
+            "F787BD58-5C77-4ECA-AE23-819C509BEB51",
+            "FB4F26F3-A2EB-47BB-8639-2BC1F3D736C8",
+            "1EDF6576-EDAF-46DA-B88A-58D28E0BFDF9",
+            "6E37E14C-3407-4385-BD8E-923AE721B4C5",
+            "CB2E76E0-245D-4B7D-9223-B4345BCF457E",
+            "79257792-0AD6-4772-9505-DD248C7E3A93",
+            "90ACAD09-F5BE-440D-A54F-9491E07AAE0C",
+            "1623574C-2C62-4214-8F7F-845A6EB1EC39",
+            "73695FC2-29E1-4079-90FF-5F1F4337980B",
+            "EF40F692-05EE-4F07-AD23-184ED9B90A1E",
+            "A3991CAE-C629-4694-A171-D30266628E49",
+            "DF99C943-A111-49E8-8113-FF809B1F793A",
+            "393B457A-E880-4CBE-B2EA-877E37806F11",
+            "CBED51B3-BE77-41E8-AE24-32E1D35D18CE",
+            "B010E844-8686-402E-B449-96EA8E280D08",
+            "6869BCCA-023B-4FEA-8FE4-91278D9DC2CD",
+            "8ED8FF5B-A1F9-45AD-85C5-C6404BEB71A6",
+            "99994E1E-8413-459A-A76C-81314017D6F4",
+            "E480D4B8-7B7A-44BF-B14C-E9F16E75801C",
+            "12A70F14-6B90-4F20-B397-3F6491AA7E61",
+            "B2C34194-E0C9-43CC-AE22-750829DFCA1E",
+            "D5DC4353-4B2C-41B3-AA14-B295D1BBDB0E",
+            "6645CD6F-A198-4C74-8C63-33BDCAD0D7C3",
+            "8751FCCC-AA59-4C03-B09D-62A609D965EE",
+            "C1E546A0-CE44-4D24-BE82-83696EA2A0F0",
+            "9EB779E9-CE6F-443E-90DC-F115F1215A87",
+            "22029395-33ED-4D0C-98D1-8BB75B96DA72",
+            "91EB6707-59A5-4020-9285-B7AEC78DF899",
+            "69A97C2B-6A5D-4FA1-9539-07CB9C0916DB",
+            "B998A0F5-F09D-44C7-B98C-BB967738AD0F",
+            "AE840405-6623-410C-A47F-E85EF02042B6",
+            "2BF3EC10-E569-4511-B839-179B00CC4631",
+            "083D9F47-E48E-4E1C-B7AD-787D86CEEF41",
+            "93A501C6-9DF3-48E6-AB96-EE4937FC9E1C",
+            "72D1ECA0-A3E4-43E2-B6E9-C7141B2D26B2",
+            "86980FA6-4749-428E-8CE0-F3C1D249F50F",
+            "8A86F4BF-1300-4B73-A74A-50C3764C903D",
+            "F90A1D06-3261-4734-B998-4F49B451012F",
+            "723CB665-CF42-433A-8D40-73014B380207",
+            "2B3EBDBF-CBCF-45BB-8F0E-0800A9AABC72",
+            "CBF31EB5-9098-434C-9D99-13AB2CE2A396",
+            "2FB65F8E-892A-429A-B628-71BB5107E201",
+            "26FA16A3-511C-4EED-9099-8596D151AE52",
+            "B2282DD8-7B75-44F7-A21C-E4696B7B2783",
+            "47164646-F9CD-4465-A3BD-8922BEEF0727",
+            "E33EADE0-4C37-427D-9802-05EA34E72AFB",
+            "4CC08350-E010-45A0-B545-529CFCE58976",
+            "2036268F-F284-4B70-8767-5B8ACFA7AC2B",
+            "19F0A646-2AD6-4B11-AA51-736F1F5C5E0D",
+            "1F2C3BF9-B937-48D6-9072-BB0E089D5C31",
+            "AB2E9EEA-3029-4CEA-A273-C960EBA2057D",
+            "629C6EBF-EFE0-4830-8553-9355403D23FC",
+            "1CD3B1B3-8573-46CB-9623-7957AEA03BDC",
+            "CC6FC040-0D00-4F2A-91BB-90DDF1F8A030",
+            "ADD16F42-70D8-4B9D-B9CD-C6D288889A39",
+            "364FA71A-364D-4FDC-A2DD-E4D623FC0A08",
+            "233D5C01-054B-4957-85F8-EF74C1A3A507",
+            "7E265791-2E49-49D3-82BD-4A4D0C6F40E6",
+            "9D4151B1-DBCB-4CEB-A659-61C53B6E1621",
+            "0D7F44BE-F09F-4EC0-A2CB-E46F6DB62893",
+            "4505BB12-DC27-4366-A8F2-A32CF514C05E",
+            "2608B807-39BD-4B8A-B228-8FDEAD26CC28",
+            "3723DBD8-0835-4C22-A1D6-F5B7DF2F7FF3",
+            "BB264771-7C7C-4DD1-B605-7D084D15AD8B",
+            "A7B76792-28C5-408E-82DF-A4668ABAFDF8",
+            "FD2E983C-5678-4378-B641-1127639045BD",
+            "2AF7B5BC-F0F1-4FE8-A80D-62163A8560C1",
+            "0F0504ED-6A2E-45DF-9966-B0348AE29862",
+            "1B3CF67F-99FA-45C9-9195-0DB54722F602",
+            "9A966AD3-FCA3-4C90-ACDC-1BDA227569EE",
+            "4EDB8C1A-2029-492E-B391-B27805B56C66",
+            "27927819-5F7F-4987-8EF6-CF023ACBC136",
+            "D8C04E08-5CD9-4A40-AE97-971058FD48A3",
+            "43C298CA-F424-4495-AD43-0FE5E5B60D3D",
+            "B2BF0794-D4EC-4EFE-9C17-DBF8E88DA795",
+            "60216C74-5131-474E-A03E-FD352506911D",
+            "9E09BCE2-F8D3-425B-937E-42AB83176A92",
+            "FD27AFDF-61D0-4349-AE2D-54413434EC1E",
+            "72064527-433C-4664-82CC-99716AD1A8E2",
+            "BD641500-74AF-40A1-8611-F5EFEBC6C449",
+            "AA6EA6DE-5E9F-4AC0-A8D3-F1A2083B984D",
+            "D8170A6A-5ABE-49C6-A39B-A10E3406FF87",
+            "8F86581E-B025-4972-A0B1-1ED22F34F8FC",
+            "6C47E936-DDC7-4C59-862D-B110233D5DAB",
+            "405577BD-C771-48BC-9A0A-6F83D0BA86F9",
+            "B27DAE4D-2505-4D3A-BF37-0E4D564A3128",
+            "8AB7D105-EBC3-4C6E-A729-B734645C79EB",
+            "FD9764F9-F996-4213-9877-E9BA559B7748",
+            "EFB38FAF-7D86-44B1-8067-7877795DD73C",
+            "0BBBEC3F-97EB-4FE4-B600-F1519E607EDE",
+            "73A2B1BF-BF14-4A62-8417-BA0B40F4895C",
+            "6402A118-0971-495C-83B7-6599F07E9918",
+            "2FA70489-1C3F-4803-8C68-CE4FFAD7335A",
+            "8F3B3FEF-6704-4861-8516-B6A40051F148",
+            "801B5ED7-3B1F-48B9-A446-870E720D1D46",
+            "13B07DDA-BF8F-4EC4-AC0E-495C1674F4FA",
+            "B91F0BFF-B27D-4767-93C7-4A0AED8DBCE6",
+            "BED1FE21-4622-41C7-8F08-07CE330A4E19",
+            "0B8B3F67-87B2-4E9C-A59B-64846983B977",
+            "7E933649-97F8-4A91-BDB3-5C03A4CC02D3",
+            "23216F5A-5C74-4B4E-9F6B-946F661F4702",
+            "7C6BB734-AA2A-42D7-88C9-26AD6427A357",
+            "66BA8D8F-28EE-4C84-8FD7-6AA8A1FE48F9",
+            "16618056-1BDB-4575-A0F8-449541722E67",
+            "BC2E27EE-2723-4871-8C2F-CCDD4D0B9DC3",
+            "0DF89CCB-4156-489F-BDEF-9600513B28CD",
+            "75BFA4EA-BD55-471A-8614-8CE092696676",
+            "07442977-BA8E-43C1-A11A-867FF9198F77",
+            "A99F5AF4-1E8C-4239-A97F-AB6660A99827",
+            "5DA70D0C-7F08-4997-BBC0-1337C91BA152",
+            "D293EC40-923A-4C58-B090-66F028DBEDB4",
+            "134EF6AC-A4C7-45CE-A828-5514FB008E1C",
+            "E287117E-6602-4E63-8196-A9A0C361E077",
+            "8A8E4A0B-0F4B-4571-9A14-789E42C9497D",
+            "A9F61D4F-D3C3-481D-83A2-46A02A415895",
+            "7BA5E1DB-2658-4F0A-8FAB-7600F9614E38",
+            "FC86BE54-4A93-46C1-93E1-082A2603C39F",
+            "584A77D5-DB7A-4A48-8F2E-8E1B01062F5B",
+            "F445D447-8483-4E6E-95B7-969CAD40BF57",
+            "57A286AE-7C44-4720-A631-2DF23FD8D8AD",
+            "C6558766-3526-4706-9D51-0D0096361373",
+            "5DAD94D6-321B-424A-B955-12FACA4B05CC",
+            "67F5A8B7-A713-4787-8192-785AF5BECB86",
+            "27969E77-BB1E-4A5E-80E4-1EE558A96219",
+            "9E478049-0A13-4950-BB1C-B7D3BA775A2B",
+            "32788484-CC83-49D8-ACF6-E9A0CEF84FF3",
+            "B23E9BF5-33C2-456D-9D74-7B3F562E0B67",
+            "4A500021-DE33-450E-A934-DEF9A2478073",
+            "1D0119B1-DEBC-437F-8DCF-296AA850098D",
+            "BBFD6BED-4D02-4C68-A349-F21FDAD38AAF",
+            "47F4838B-155B-442A-8811-6D1946000BCD",
+            "14C93E38-A648-4D7A-B7E4-F3D38D24523D",
+            "CD9E34EC-4999-433E-A818-8B0A2C5E1F0D",
+            "9956115E-4DB5-406D-BF4C-2492B83193A3",
+            "613826AB-D202-4592-B677-081810B5DB17",
+            "4F15AFB3-362D-4655-84BB-23066AF1F8D1",
+            "C8DC76CF-927C-4E7D-B0DB-3372E6762383",
+            "9F2DBE66-08D3-4F8A-8A4A-6332322245BE",
+            "2C855F25-C40D-4727-BFB9-59D0FF2B5207",
+            "E372C8A9-0268-467E-B681-0E9C86B13D4F",
+            "3D768E3B-E377-4F65-B25D-73BE393EDC39",
+            "CC516D41-082D-4478-BB59-65117EFC487B",
+            "8214C8CC-AA28-407C-8C29-EBD5EF113810",
+            "C881CC8C-F56A-4C3E-A311-DDD04F556646",
+            "C5218BD1-4B8B-4480-A7D1-15BF45E7666A",
+            "730222C4-3FED-4098-9C4B-4D5D9F707B9C",
+            "350E89A7-2C26-4B49-899B-12CBE8B6FB37",
+            "DE86851B-DEF8-4E85-B418-D7AD237D3BBE",
+            "14DD3204-6A6E-4072-AFB7-5ABDBDE9312D",
+            "F8943216-B0E2-42A9-BFFC-1A9B765FA9B1",
+            "919B264F-A018-424C-80A5-CB23A6F1BAF9",
+            "D38E97BE-6959-4D1E-9C46-43F4DE417B7F",
+            "7D961E7E-824A-4658-AFE4-1CB326BEB247",
+            "C9397D59-37BA-42F9-95A4-C51D68F224B2",
+            "6DF7B109-7B7D-4052-8485-20CFFF8A329C",
+            "EB278E43-B754-403B-8A96-75D41A0DAAE1",
+            "C94E20E6-21CE-4CBA-82FA-895FD9C94041",
+            "99502ABB-0360-42A9-9DE6-94C2D5128AE8",
+            "217A3A6B-14CA-49C4-B712-FD1BC4E3D848",
+            "44C52700-E65A-4615-9E33-AA3806BB7255",
+            "A1A6466B-5BE0-4067-9BAB-E7F0B5DE9AF2",
+            "853A9742-F977-49AE-99AD-301A615775C4",
+            "4EFE1A34-7BAB-4682-9613-B05A328CD05E",
+            "0622FB8B-0D28-4B67-910C-20C3B59A02D8",
+            "42696FC4-1F75-432E-97B2-C7E61205E314",
+            "D19D2B34-C149-4926-8996-7ABA6FA1EEDC",
+            "CC3AFA1B-FDE1-48F9-AA4F-2E2014620287",
+            "DF0D4EDD-C0EB-48F5-B8C2-A8E8AFF82F3B",
+            "A53FA18B-2AD3-4765-AA2F-F5B41BA4760A",
+            "8D7CA7DE-99D9-4BEB-A27B-23ED2C427B98",
+            "E0AEF6F5-FC18-4051-9837-9A09CAB6FED2",
+            "FB6466A0-81DE-4951-AA08-52A2A876F08E",
+            "E01AC852-E5C2-4E18-8E21-3F50591B6D6E",
+            "07F1C260-4DA4-4E7E-A00B-B597A9AA8C59",
+            "008B22AE-FCFE-4170-82E3-C685D09A6E02",
+            "5ED87D48-DDD5-4351-9505-07BAF57BD97A",
+            "308721FA-336C-41E3-8315-871983AF250A",
+            "1B539F01-EB3A-41AE-8255-059FE6759211",
+            "9C79CE9D-4C4F-432A-B20B-31791B62A507",
+            "179CBD8A-C4E7-41A6-ACD3-430CE11F7820",
+            "202D01D3-AA65-41F9-8883-4111F5D7223B",
+            "11F0A40F-4DF9-4736-A795-C404006A7632",
+            "477E9A8E-58BC-4841-A91F-6F04346663BC",
+            "866A3E78-B0A5-4444-AC3C-CD509019C57B",
+            "8A991EC9-1BED-4488-9C7A-31AE2A2C2ED5",
+            "4FDEC6F5-23CA-48E9-A83B-E25FC7F8CBDC",
+            "9FF86495-CCF1-4AA5-83B1-0E5A4F3F5824",
+            "B4985998-2BF0-47EF-9396-33201CB932AB",
+            "DC327177-4F50-40BA-A7F5-5D53E73AB5A5",
+            "769D0412-052E-46DF-B491-1FE153E69CEC",
+            "35653CD0-1517-41EF-8926-1A16AEBC96F9",
+            "9C45FB3A-C4E5-4088-AE55-39863F0A3293",
+            "C90AB8D9-37BA-4313-8045-28273241BF07",
+            "65FB8FB2-E2E6-42F2-810D-16AC2FA2A427",
+            "9F9EF334-5151-4615-A3F2-4E822965A973",
+            "ABC89EC7-F4BE-4593-B535-BCBDACD03C0B",
+            "97072A8A-48C1-4BAC-BA40-71459854F173",
+            "3D228637-4E56-4634-AB2A-0C23E0B2A8BE",
+            "8A606CE9-0B59-4AD0-948C-1D6BBD8E8E7B",
+            "358B0828-EA0E-4B81-8CDE-E98F150A6EB8",
+            "0120EC1A-50D7-421F-9B4B-BEC0506E816F",
+            "7BC5FFCF-E87C-4F3C-8BF3-D08EFB73FC2C",
+            "2DC46111-F3D6-4BE8-9491-67D7A610A9DF",
+            "02A060DF-E9A0-4267-B4EC-5FC5BF60A2EC",
+            "755BEF72-3E87-469C-87B1-3D4B6A5CCDEC",
+            "F49601AD-77CB-4DF1-833D-8810B29135F7",
+            "A5902519-7BCE-43CA-89FE-B19084C41FFA",
+            "D11B9E72-F05D-483C-B08B-2FE36E9A1B89",
+            "C9BCDEA2-3490-47A3-B55D-ADFC299CFC96",
+            "22D0EE83-C576-4CDD-A5AF-072F276C4719",
+            "3A7D2AE7-B257-4ADC-B269-72B2E05D8152",
+            "80D4A16B-7AC0-4338-A0CB-D5E53CFADB29",
+            "D7BA5C55-11B8-479F-B551-A2142CD7E714",
+            "3873CABE-D791-43ED-94CD-09557153835C",
+            "33DE25C6-0C37-455E-BA7F-834447B6AA41",
+            "004BBD5C-98F4-46D2-9AFF-968059F97DE5",
+            "3391C35D-6FB6-43BA-9515-E34221BD589E",
+            "977B7520-E6DE-40F9-AC52-33BF87036D0F",
+            "C92EC2EC-17C4-486C-B9D9-3BFB7ADA7113",
+            "92F8AD67-B7AA-4596-AED3-874FA684004F",
+            "BDE1D4B6-64D3-4B27-9619-0F14AE2CD31C",
+            "B6DA02CD-B730-4187-9885-08B644ADF5AA",
+            "0F6B3F64-1498-4524-9CD0-F777822E9956",
+            "F5B8BE6A-3579-45F7-AFD2-76F1F59810AB",
+            "AF77E828-E5B7-4C6B-AE93-E8A5F05C31D0",
+            "C5AA3D1F-92C3-4D23-8048-9B30FB5541AB",
+            "97267AC7-E125-4CBB-B2AE-0D3992CFF6C5",
+            "BDEE3B2A-AD70-4D7E-A361-3AFC58C78DEB",
+            "603789EA-1DA9-418C-8F33-97C68C4ED729",
+            "D0BC4FDA-58B4-4824-87E6-505229D6AA3A",
+            "44A4E8CD-CB02-4EBD-BC55-BD8A644BB0FA",
+            "B69837F4-D64C-44DA-A41B-C2A649F859D1",
+            "1ABD5E03-57F6-43FA-B48A-4FE98911B6DD",
+            "D915FEEC-1567-4C20-B60F-52053BC22023",
+            "93926E06-7649-41B2-9C55-BCA620B5D107",
+            "68986E00-B7A0-4BB7-A3AC-830B70F40D69",
+            "34293923-1CF9-45E8-8D19-2BAFC247C141",
+            "704AEE8D-D642-4952-9B80-C9C93A208C8C",
+            "2B85120D-2CBE-4212-9739-4159F0E424FA",
+            "E610EBB6-1BAA-4BA4-9217-B6D25D09E78B",
+            "7C498A74-8B2B-47C1-BFD5-90020FA0D753",
+            "15E74E5C-52F5-473D-8E2F-B3A5E1C95D23",
+            "5B0B15C3-5459-4121-9D51-AD4299C01EBC",
+            "3465A2EB-8560-4914-9839-5481E57C88A1",
+            "C6EF761A-4C61-49E8-BF0A-42EC220D6BF4",
+            "64E5399C-CF69-4FA5-9B20-CCD9B10079C4",
+            "0A3936E7-3DBC-4CDF-9710-C8C175318F10",
+            "816879AF-8462-4ED3-8A60-7CAACD1E5A0C",
+            "35F12A02-7C00-4D08-B9DF-8286172E0633",
+            "ED3692A3-CBCC-4C2A-A0D4-91C9EEEF6C31",
+            "F04E8A7E-C9D7-4BCD-AC93-8AE3E54F9532",
+            "7074E6D3-6B72-4B57-AE9F-6328551F5F66",
+            "70C10947-DB03-46FF-8F68-E4C9CB84819C",
+            "5EFE7DBB-9811-428E-8EC1-DA8C2CD63C7F",
+            "2A41264F-6DEE-4D0B-AC39-323045D6EC3B",
+            "0BAA9393-F4C6-4357-9D1B-9563149CB0EB",
+            "CB7D4323-64E2-4114-B473-4F2E3A1DA5B6",
+            "3865432B-2A22-4C29-A9EF-BB379FA7BB0B",
+            "D236A1B7-5C4A-4E2E-AA8D-6CC4384509FD",
+            "6D31D932-6D4E-4BAE-9434-877B8C7943E1",
+            "82240193-BC75-42DA-B455-38E3769E41B2",
+            "4A73E2AE-1D22-48E3-B105-AFB455833AF5",
+            "CF488C4B-B782-4080-844E-D444EE2D7E5A",
+            "C92BD4D9-DB66-4749-B45B-B5636B46D1DB",
+            "4437E710-41E0-4EE2-A94C-F1DB05064F41",
+            "7D4063CE-B5CB-441C-9D6F-D8FDAB8FF868",
+            "C5AE7560-F4D6-462A-995C-8A8C9907ADE4",
+            "3C9641DF-42D7-487A-A49F-986D037674DA"
+          ]
+        },
+        "nfg_plinko": {
+          "skillLevel": 10
+        },
+        "nfg_blocks": {
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          }
+        },
+        "nfg_vault_run": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneDistance": 0,
+            "lastMilestoneAt": 0,
+            "peakDistance": 0
+          },
+          "ownedShips": [
+            "classic"
+          ],
+          "equippedShip": "classic"
+        },
+        "nfg_wheel": {}
+      },
+      "claimedMissions": [],
+      "lastArcadeStakeAt": 1785505018495
+    },
+    "sk_x120": {
+      "dayKey": "2026-07-30",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsMatchSeed": null,
             "vsDeferred": false
           },
           "ownedSkins": [
@@ -1956,324 +1492,224 @@
           ],
           "equippedSkin": "classic",
           "syncedOfflineQueueIds": [
-            "pc-prod-test-001"
+            "641E5F95-484E-4A8B-9092-DC9DE1233C48",
+            "497D9DDC-EBC9-42DA-BABC-27D20A6DCA03",
+            "C540A90B-956D-4EDC-8673-EA67B7D049E8",
+            "4356FDFB-AB20-49F8-9086-0413FE7C6823",
+            "863C8921-11BB-48AE-8F45-0C4BCA4E2B8B",
+            "4C326563-7BEF-4BDB-BA00-BACF13D88DE5",
+            "9FF97034-DB58-4F82-A1DA-6456E0B4AA5F",
+            "BF8FF7A3-2C9B-430C-9BBA-FFCE6458418F",
+            "2F737388-AE60-4CF0-B5B4-5CAFD7C2D0C1",
+            "366625C1-FB74-455C-9214-14C2B47B3BFD",
+            "8E69C12D-32BD-4B56-BAD4-DE7451220595",
+            "B613AC9A-FF9D-439F-BE07-3012E4818C64",
+            "B1462CA7-0039-4F12-994B-121C49166FE8",
+            "65BD3DA0-9099-42FD-9A11-01A3AD5979B5",
+            "C2F7E445-88AE-4228-B4EA-A161BD1CD936",
+            "623786AF-B743-4FE4-B80A-09F552566EE2",
+            "7573A9F3-F253-48C4-91F2-0CE7E6F33151",
+            "06DA5DCC-8ED0-4244-B457-6C87E4A16E6C"
           ],
-          "bestHeight": 2500,
-          "totalEarned": 3449
+          "bestHeight": 64308,
+          "totalEarned": 177592
         }
       },
+      "claimedMissions": []
+    },
+    "_35114_": {
+      "dayKey": "2026-07-14",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {
+        "nfg_vault_run": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneDistance": 0,
+            "lastMilestoneAt": 0,
+            "peakDistance": 0
+          },
+          "ownedShips": [
+            "classic"
+          ],
+          "equippedShip": "classic",
+          "bestDistance": 4425
+        },
+        "nfg_snake_jump": {
+          "session": {
+            "active": false,
+            "milestones": 0,
+            "sessionPoints": 0,
+            "lastMilestoneHeight": 0,
+            "lastMilestoneAt": 0,
+            "peakHeight": 0,
+            "vsMatchId": null,
+            "vsMatchSeed": null,
+            "vsDeferred": false
+          },
+          "ownedSkins": [
+            "classic"
+          ],
+          "equippedSkin": "classic",
+          "bestHeight": 19037,
+          "totalEarned": 33000,
+          "syncedOfflineQueueIds": [
+            "85C34F64-814F-46F6-8366-BE0AE62D82CA"
+          ]
+        },
+        "nfg_blocks": {
+          "session": {
+            "active": false,
+            "level": 1,
+            "sessionLevels": 0,
+            "sessionPoints": 0
+          },
+          "bestLevel": 4
+        }
+      },
+      "claimedMissions": []
+    },
+    "beshimatisnah45": {
+      "dayKey": "2026-07-01",
+      "stats": {
+        "rounds": 0,
+        "wins": 0,
+        "lost": 0
+      },
+      "games": {},
       "claimedMissions": []
     }
   },
   "leaderboards": {
     "nfg_blocks": [
       {
-        "userId": "fatimahxm",
-        "displayName": "fatimah",
-        "points": 12,
-        "updatedAt": 1780685772856
-      },
-      {
-        "userId": "y666.suf",
-        "displayName": "Y666SUF 👨🏾‍🦯",
+        "userId": "huma2882",
+        "displayName": "Huma",
         "points": 8,
-        "updatedAt": 1781041555061
+        "updatedAt": 1783152301080
       },
       {
         "userId": "nina.k825",
         "displayName": "Nina🩵K",
-        "points": 8,
-        "updatedAt": 1782059598660
-      },
-      {
-        "userId": "ghi4462",
-        "displayName": "G",
         "points": 7,
-        "updatedAt": 1780994990647
-      },
-      {
-        "userId": "huma2882",
-        "displayName": "Huma",
-        "points": 6,
-        "updatedAt": 1780577170264
-      },
-      {
-        "userId": "sameya.bx",
-        "displayName": "Sameya🐨",
-        "points": 6,
-        "updatedAt": 1780720754287
-      },
-      {
-        "userId": "sk_x120",
-        "displayName": "𝓢.𝓴𝓱𝔁𝓷🫶🏽",
-        "points": 5,
-        "updatedAt": 1780654836722
+        "updatedAt": 1783109018445
       },
       {
         "userId": "sk.07020",
         "displayName": "SK",
-        "points": 5,
-        "updatedAt": 1780702317874
+        "points": 7,
+        "updatedAt": 1783117052357
+      },
+      {
+        "userId": "ghi4462",
+        "displayName": "G",
+        "points": 4,
+        "updatedAt": 1782720785762
       },
       {
         "userId": "_35114_",
-        "displayName": "E",
-        "points": 5,
-        "updatedAt": 1781356064750
-      },
-      {
-        "userId": "madebymanah",
-        "displayName": "madebymanah",
+        "displayName": "🦒",
         "points": 4,
-        "updatedAt": 1780510025519
-      },
-      {
-        "userId": "cj_hern",
-        "displayName": "cj_hern",
-        "points": 3,
-        "updatedAt": 1780492030008
-      },
-      {
-        "userId": "moinazarin",
-        "displayName": "moinazarin",
-        "points": 2,
-        "updatedAt": 1780492030008
-      },
-      {
-        "userId": "meowcloud__",
-        "displayName": "__CloudMeow",
-        "points": 2,
-        "updatedAt": 1780511254370
-      },
-      {
-        "userId": "f9otp",
-        "displayName": "F9",
-        "points": 2,
-        "updatedAt": 1781749967805
-      },
-      {
-        "userId": "appuser_81be281f12ae6762",
-        "displayName": "App User",
-        "points": 2,
-        "updatedAt": 1782169430073
-      },
-      {
-        "userId": "apple_app_review",
-        "displayName": "Apple Review",
-        "points": 1,
-        "updatedAt": 1780654806907
+        "updatedAt": 1782753628967
       }
     ],
     "nfg_snake_jump": [
       {
-        "userId": "ghi4462",
-        "displayName": "G",
-        "points": 53790,
-        "updatedAt": 1782167760749,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
-      },
-      {
         "userId": "sameya.bx",
         "displayName": "Sameya🐨",
-        "points": 50126,
-        "updatedAt": 1782165540707,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
+        "points": 111123,
+        "updatedAt": 1783549832263
       },
       {
-        "userId": "sk.07020",
-        "displayName": "SK",
-        "points": 35010,
-        "updatedAt": 1782085021188,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
-      },
-      {
-        "userId": "sk_x120",
-        "displayName": "𝓢.𝓴𝓱𝔁𝓷🫶🏽",
-        "points": 33387,
-        "updatedAt": 1782152634411,
-        "jumpSkinId": "nfg_fire",
-        "jumpSkinName": "NFG Inferno",
-        "jumpSkinFill": "#ff6b35",
-        "jumpSkinRing": "#ffd700"
-      },
-      {
-        "userId": "y666.suf",
-        "displayName": "Y666SUF 👨🏾‍🦯",
-        "points": 26971,
-        "updatedAt": 1782083883550,
-        "jumpSkinId": "emerald",
-        "jumpSkinName": "Emerald Elite",
-        "jumpSkinFill": "#34d399",
-        "jumpSkinRing": "#a7f3d0"
-      },
-      {
-        "userId": "cj_hern",
-        "displayName": "cj_hern",
-        "points": 25486,
-        "updatedAt": 1782148769065
-      },
-      {
-        "userId": "nina.k825",
-        "displayName": "Nina🩵K",
-        "points": 21727,
-        "updatedAt": 1782160047012,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
+        "userId": "ghi4462",
+        "displayName": "G",
+        "points": 100421,
+        "updatedAt": 1782940030712
       },
       {
         "userId": "huma2882",
         "displayName": "Huma",
-        "points": 19737,
-        "updatedAt": 1781288919782,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
-      },
-      {
-        "userId": "_35114_",
-        "displayName": "E",
-        "points": 19416,
-        "updatedAt": 1781831182192,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
-      },
-      {
-        "userId": "fatimahxm",
-        "displayName": "fatimah",
-        "points": 14016,
-        "updatedAt": 1781200724537,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
-      },
-      {
-        "userId": "akerzk",
-        "displayName": "ZK",
-        "points": 9198,
-        "updatedAt": 1780698100713
-      },
-      {
-        "userId": "meowcloud__",
-        "displayName": "__CloudMeow",
-        "points": 6421,
-        "updatedAt": 1780511101968
-      },
-      {
-        "userId": "madebymanah",
-        "displayName": "madebymanah",
-        "points": 4330,
-        "updatedAt": 1780947180559,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
-      },
-      {
-        "userId": "appuser_9596c3f791b412d1",
-        "displayName": "App User",
-        "points": 2500,
-        "updatedAt": 1782169406901
-      },
-      {
-        "userId": "appuser_3ef475b373a45f86",
-        "displayName": "App User",
-        "points": 2500,
-        "updatedAt": 1782169429822
-      },
-      {
-        "userId": "appuser_ac547c178bed935a",
-        "displayName": "App User",
-        "points": 2500,
-        "updatedAt": 1782169462047
-      },
-      {
-        "userId": "f9otp",
-        "displayName": "F9",
-        "points": 1940,
-        "updatedAt": 1781749845046,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
-      },
-      {
-        "userId": "offline_x14",
-        "displayName": "User1304858394093 🙈",
-        "points": 1154,
-        "updatedAt": 1781830490389,
-        "jumpSkinId": "classic",
-        "jumpSkinName": null,
-        "jumpSkinFill": "#596ff2",
-        "jumpSkinRing": "#f2c733"
-      }
-    ],
-    "nfg_vault_run": [
-      {
-        "userId": "sameya.bx",
-        "displayName": "Sameya🐨",
-        "points": 7218,
-        "updatedAt": 1782085425206
-      },
-      {
-        "userId": "sk_x120",
-        "displayName": "𝓢.𝓴𝓱𝔁𝓷🫶🏽",
-        "points": 4405,
-        "updatedAt": 1782170508041,
-        "jumpSkinId": "nfg_fire",
-        "jumpSkinName": "NFG Inferno",
-        "jumpSkinFill": "#ff6b35",
-        "jumpSkinRing": "#ffd700"
-      },
-      {
-        "userId": "y666.suf",
-        "displayName": "Y666SUF 👨🏾‍🦯",
-        "points": 2667,
-        "updatedAt": 1780881783148
+        "points": 87537,
+        "updatedAt": 1782895085337
       },
       {
         "userId": "sk.07020",
         "displayName": "SK",
-        "points": 1872,
-        "updatedAt": 1782159339867
-      },
-      {
-        "userId": "ghi4462",
-        "displayName": "G",
-        "points": 421,
-        "updatedAt": 1782113162384
-      },
-      {
-        "userId": "appuser_81be281f12ae6762",
-        "displayName": "App User",
-        "points": 400,
-        "updatedAt": 1782169430337
+        "points": 77602,
+        "updatedAt": 1783590015507
       },
       {
         "userId": "nina.k825",
         "displayName": "Nina🩵K",
-        "points": 361,
-        "updatedAt": 1782142510407
+        "points": 74396,
+        "updatedAt": 1784337933039
+      },
+      {
+        "userId": "sk_x120",
+        "displayName": "𝓢.𝓴𝓱𝔁𝓷🫶🏽",
+        "points": 64308,
+        "updatedAt": 1783192470548
+      },
+      {
+        "userId": "y666.suf",
+        "displayName": "Y666SUF 👨🏾‍🦯",
+        "points": 41075,
+        "updatedAt": 1782919934202
       },
       {
         "userId": "cj_hern",
         "displayName": "cj_hern",
-        "points": 334,
-        "updatedAt": 1782148881464
+        "points": 29138,
+        "updatedAt": 1782915749154
+      },
+      {
+        "userId": "_35114_",
+        "displayName": "🦒",
+        "points": 19037,
+        "updatedAt": 1783262886066
+      },
+      {
+        "userId": "appuser_07972e30d660be3f",
+        "displayName": "App User",
+        "points": 3001,
+        "updatedAt": 1782524055484
+      }
+    ],
+    "nfg_vault_run": [
+      {
+        "userId": "huma2882",
+        "displayName": "Huma",
+        "points": 10932,
+        "updatedAt": 1782982050554
+      },
+      {
+        "userId": "_35114_",
+        "displayName": "E",
+        "points": 4425,
+        "updatedAt": 1783204522604
+      },
+      {
+        "userId": "sk.07020",
+        "displayName": "SK",
+        "points": 1699,
+        "updatedAt": 1782891522899
+      },
+      {
+        "userId": "nina.k825",
+        "displayName": "Nina🩵K",
+        "points": 298,
+        "updatedAt": 1784000795771
+      },
+      {
+        "userId": "ghi4462",
+        "displayName": "G",
+        "points": 3,
+        "updatedAt": 1783346902235
       }
     ]
   }

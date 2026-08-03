@@ -85,6 +85,8 @@
 		E1B2C3D500000000000000D1 /* ArcadeOfflinePointsQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000D2 /* ArcadeOfflinePointsQueue.swift */; };
 		E2B2C3D70000000000000201 /* LocalWalletStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2B2C3D70000000000000202 /* LocalWalletStore.swift */; };
 		E2B2C3D70000000000000203 /* OfflineInventoryLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2B2C3D70000000000000204 /* OfflineInventoryLedger.swift */; };
+		E2B2C3D70000000000000205 /* LocalCrashEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2B2C3D70000000000000206 /* LocalCrashEngine.swift */; };
+		E2B2C3D70000000000000207 /* CrashOfflineLedger.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2B2C3D70000000000000208 /* CrashOfflineLedger.swift */; };
 		E1B2C3D500000000000000D3 /* LastBetStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000D4 /* LastBetStore.swift */; };
 		E1B2C3D500000000000000E6 /* JumpShopLocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000E7 /* JumpShopLocalStore.swift */; };
 		E1B2C3D500000000000000D5 /* JumpShopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1B2C3D500000000000000D6 /* JumpShopSheet.swift */; };
@@ -187,6 +189,8 @@
 		E1B2C3D500000000000000D2 /* ArcadeOfflinePointsQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArcadeOfflinePointsQueue.swift; sourceTree = "<group>"; };
 		E2B2C3D70000000000000202 /* LocalWalletStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalWalletStore.swift; sourceTree = "<group>"; };
 		E2B2C3D70000000000000204 /* OfflineInventoryLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfflineInventoryLedger.swift; sourceTree = "<group>"; };
+		E2B2C3D70000000000000206 /* LocalCrashEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalCrashEngine.swift; sourceTree = "<group>"; };
+		E2B2C3D70000000000000208 /* CrashOfflineLedger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CrashOfflineLedger.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000D4 /* LastBetStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastBetStore.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000E7 /* JumpShopLocalStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpShopLocalStore.swift; sourceTree = "<group>"; };
 		E1B2C3D500000000000000D6 /* JumpShopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JumpShopSheet.swift; sourceTree = "<group>"; };
@@ -289,9 +293,19 @@
 			path = Rush;
 			sourceTree = "<group>";
 		};
+		E2B2C3D70000000000000209 /* Crash */ = {
+			isa = PBXGroup;
+			children = (
+				E2B2C3D70000000000000206 /* LocalCrashEngine.swift */,
+				E2B2C3D70000000000000208 /* CrashOfflineLedger.swift */,
+			);
+			path = Crash;
+			sourceTree = "<group>";
+		};
 		E1B2C3D500000000000000BE /* Games */ = {
 			isa = PBXGroup;
 			children = (
+				E2B2C3D70000000000000209 /* Crash */,
 				E1B2C3D500000000000000BF /* Jump */,
 				E1B2C3D500000000000000C4 /* Blocks */,
 				F3B4C5D60000000000000017 /* Rush */,
@@ -511,6 +525,8 @@
 				E1B2C3D500000000000000D1 /* ArcadeOfflinePointsQueue.swift in Sources */,
 				E2B2C3D70000000000000201 /* LocalWalletStore.swift in Sources */,
 				E2B2C3D70000000000000203 /* OfflineInventoryLedger.swift in Sources */,
+				E2B2C3D70000000000000205 /* LocalCrashEngine.swift in Sources */,
+				E2B2C3D70000000000000207 /* CrashOfflineLedger.swift in Sources */,
 				E1B2C3D500000000000000D3 /* LastBetStore.swift in Sources */,
 				A1B2C3D4000000000000000A /* NFGTheme.swift in Sources */,
 				E2B2C3D60000000000000101 /* NFGThemeVaultTerminal.swift in Sources */,

@@ -655,6 +655,26 @@ struct OfflineInventorySyncResponse: Decodable {
     var wallet: PlayerWallet?
 }
 
+struct SoloCrashSyncResponse: Decodable {
+    var ok: Bool?
+    var message: String?
+    var applied: Int?
+    var remaining: [CrashPendingRoundDTO]?
+    var wallet: PlayerWallet?
+}
+
+struct CrashPendingRoundDTO: Decodable, Equatable {
+    var id: String?
+    var roundId: Int?
+    var stake: Int?
+    var result: String?
+    var settleMult: Double?
+    var crashPoint: Double?
+    var payout: Int?
+    var tax: Int?
+    var netDelta: Int?
+}
+
 struct OfflineInventorySpendDTO: Decodable, Equatable {
     var id: String?
     var kind: String?

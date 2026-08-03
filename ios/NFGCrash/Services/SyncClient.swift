@@ -26,10 +26,13 @@ final class SyncClient: ObservableObject {
     @Published var pendingArcadeSyncPoints: Int = 0
     @Published var pendingArcadeSyncCount: Int = 0
     @Published var pendingInventorySyncCount: Int = OfflineInventoryLedger.pendingCount()
+    @Published var pendingCrashSyncCount: Int = CrashOfflineLedger.pendingCount()
     /// True when the app is usable with a cached session/wallet while the live server is down.
     @Published private(set) var isOfflinePlayMode = false
+    /// Crash always runs on-device; server is only for wallet sync / social features.
+    @Published private(set) var usesLocalCrash = true
     @Published var multiplierHistory: [Double] = [1]
-    /// Smooth 60fps multiplier for chart/UI — wall-clock projection during running.
+    /// Live multiplier for chart/UI (driven by LocalCrashEngine).
     @Published var displayMultiplier: Double = 1
     @Published var sublineText = "Connecting…"
     @Published var taxPotAmount: Int = 0
@@ -98,11 +101,18 @@ final class SyncClient: ObservableObject {
     private var lastPhase: GamePhase = .idle
     private var lastAutoBetRoundId: Int = -1
     private var pendingBetAmountText: String?
+    private let localCrash = LocalCrashEngine()
+
     init() {
         restoreCachedWalletIfNeeded()
         refreshPendingArcadeSyncCount()
         pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+        pendingCrashSyncCount = CrashOfflineLedger.pendingCount()
         pendingOfflineCount = OfflineQueue.count
+        configureLocalCrash()
+        if PlayerSession.isLoggedIn {
+            startLocalCrashIfNeeded()
+        }
     }
 
     var isServerReachable: Bool { connectionStatus == "Online" }
@@ -138,11 +148,114 @@ final class SyncClient: ObservableObject {
         restoreCachedWalletIfNeeded()
         refreshPendingArcadeSyncCount()
         pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+        pendingCrashSyncCount = CrashOfflineLedger.pendingCount()
         pendingOfflineCount = OfflineQueue.count
-        sublineText = "Offline mode — Arcade still works. Scores & steals sync when the server is back."
+        startLocalCrashIfNeeded()
+        sublineText = "Offline — crash runs on your phone. Wallet syncs when the server is back."
         appendFeed(reason)
         syncPresencePillFromState()
         scheduleReconnect()
+    }
+
+    private func configureLocalCrash() {
+        localCrash.onNeedBalance = { [weak self] in
+            self?.liveBalance ?? 0
+        }
+        localCrash.onDebit = { [weak self] amount in
+            guard let self else { return false }
+            guard self.liveBalance >= amount else { return false }
+            self.patchWallet { w in
+                w.balance = max(0, w.balance - amount)
+            }
+            return true
+        }
+        localCrash.onCredit = { [weak self] amount in
+            guard let self, amount > 0 else { return }
+            self.patchWallet { w in
+                w.balance = w.balance + amount
+                w.allTime = max(w.allTime, w.balance)
+            }
+        }
+        localCrash.onStateChanged = { [weak self] in
+            self?.publishLocalCrashState()
+        }
+        localCrash.onRoundSettled = { [weak self] settlement in
+            self?.handleLocalCrashSettlement(settlement)
+        }
+    }
+
+    private func startLocalCrashIfNeeded() {
+        guard PlayerSession.isLoggedIn else { return }
+        usesLocalCrash = true
+        localCrash.start()
+        publishLocalCrashState()
+        startDisplayMultiplierTimer()
+    }
+
+    private func publishLocalCrashState() {
+        let previousPhase = lastPhase
+        let state = localCrash.makeGameState()
+        gameState = state
+        multiplierHistory = localCrash.multiplierHistory
+        displayMultiplier = localCrash.phase == .running || localCrash.phase == .ended
+            ? localCrash.multiplier
+            : 1
+        taxPotAmount = state.taxPot?.displayAmount ?? taxPotAmount
+        updateLocalCrashSubline(state)
+
+        if state.phase == .betting && previousPhase != .betting {
+            nearMissMessage = nil
+            maybeRepeatLastBet(roundId: state.roundId)
+            roundResultPopup = nil
+            pendingRoundResultPopup = nil
+        }
+        if state.phase == .ended && previousPhase != .ended {
+            evaluateNearMiss(state)
+            if let result = state.lastResult, result.roundId != lastRoundResultShownId {
+                let summary = RoundResultSummary(from: result)
+                lastRoundResultShownId = result.roundId
+                if summary.hasEntries {
+                    pendingRoundResultPopup = summary
+                }
+            }
+        }
+        lastPhase = state.phase
+    }
+
+    private func updateLocalCrashSubline(_ s: CrashGameState) {
+        switch s.phase {
+        case .betting:
+            let sec = max(0, Int((Double(s.bettingEndsAt) - Date().timeIntervalSince1970 * 1000) / 1000))
+            sublineText = "Entry window \(sec)s — crash runs on your device"
+        case .running:
+            if activeCrashBet != nil {
+                sublineText = "Tap Cash Out — or wait for your target"
+            } else {
+                sublineText = "Watching this round — place a bet next window"
+            }
+        case .ended:
+            if s.lastResult?.isEmptyRound == true, let crash = s.crashPoint {
+                sublineText = "No bet this round — would have crashed at \(String(format: "%.2f", crash))×"
+            } else if let crash = s.crashPoint {
+                sublineText = "Crashed at \(String(format: "%.2f", crash))×"
+            } else {
+                sublineText = "Round ended"
+            }
+        case .idle:
+            sublineText = "Starting next round…"
+        }
+    }
+
+    private func handleLocalCrashSettlement(_ settlement: LocalCrashEngine.RoundSettlement) {
+        CrashOfflineLedger.enqueue(settlement)
+        pendingCrashSyncCount = CrashOfflineLedger.pendingCount()
+        persistWalletLocally()
+        if settlement.result == "win" {
+            lastActionMessage = "Cashed out @ \(String(format: "%.2f", settlement.settleMult ?? 1))× — +\(max(0, settlement.netDelta).formatted()) pts"
+        } else if settlement.result == "lose" {
+            lastActionMessage = "Crashed at \(String(format: "%.2f", settlement.crashPoint))× — lost \(settlement.stake.formatted()) pts"
+        }
+        Task { await flushCrashLedger(silent: true) }
     }
 
     private func bootstrapFromServer(api: GameAPI) async {
@@ -150,10 +263,11 @@ final class SyncClient: ObservableObject {
         await sendPresenceHeartbeat()
 
         do {
-            gameState = enrichState(try await api.fetchState())
-            applyStateSideEffects(gameState)
+            // Crash rounds run locally — don't overwrite with live multiplayer state.
+            _ = try? await api.fetchState()
             connectionStatus = "Online"
             isOfflinePlayMode = false
+            startLocalCrashIfNeeded()
             syncPresencePillFromState()
 
             await refreshProfile()
@@ -167,7 +281,7 @@ final class SyncClient: ObservableObject {
             startArcadeSyncPolling()
             await refreshActiveAppUsers()
         } catch {
-            enterOfflinePlayMode(reason: "Server unreachable — playing offline. Progress will sync when it returns.")
+            enterOfflinePlayMode(reason: "Server unreachable — crash keeps running on your phone.")
         }
     }
 
@@ -198,6 +312,7 @@ final class SyncClient: ObservableObject {
             // Cached session → stay playable even if the server is down.
             if PlayerSession.isLoggedIn {
                 restoreCachedWalletIfNeeded()
+                startLocalCrashIfNeeded()
             }
 
             guard PlayerSession.isLoggedIn else {
@@ -208,7 +323,7 @@ final class SyncClient: ObservableObject {
             do {
                 api = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
             } catch {
-                enterOfflinePlayMode(reason: "Can't reach server — Arcade + cached wallet still available.")
+                enterOfflinePlayMode(reason: "Can't reach server — crash keeps running on your phone.")
                 return
             }
 
@@ -384,24 +499,30 @@ final class SyncClient: ObservableObject {
 
     func applyWalletFromServer(_ next: PlayerWallet) {
         walletDataRevision &+= 1
-        wallet = next
-        liveBalance = next.balance
-        profile.balance = next.balance
-        profile.allTime = next.allTime
-        profile.displayName = next.displayName
-        profile.level = next.level
-        profile.rank = next.rank
-        if let locked = next.displayNameLocked {
+        var merged = next
+        // Local crash is balance authority until pending rounds finish syncing.
+        if CrashOfflineLedger.pendingCount() > 0 {
+            merged.balance = wallet.balance
+            merged.allTime = max(next.allTime, wallet.allTime)
+        }
+        wallet = merged
+        liveBalance = merged.balance
+        profile.balance = merged.balance
+        profile.allTime = merged.allTime
+        profile.displayName = merged.displayName
+        profile.level = merged.level
+        profile.rank = merged.rank
+        if let locked = merged.displayNameLocked {
             AuthStore.displayNameLocked = locked
         }
-        if !next.user.isEmpty {
-            if AuthStore.displayNameLocked || next.displayNameLocked == true {
-                AuthStore.applyCustomDisplayName(next.displayName)
+        if !merged.user.isEmpty {
+            if AuthStore.displayNameLocked || merged.displayNameLocked == true {
+                AuthStore.applyCustomDisplayName(merged.displayName)
             } else {
-                AuthStore.adoptDisplayNameFromServer(next.displayName, userId: next.user)
+                AuthStore.adoptDisplayNameFromServer(merged.displayName, userId: merged.user)
             }
         }
-        syncCosmeticsCatalogFromWallet(next)
+        syncCosmeticsCatalogFromWallet(merged)
         reconcilePendingInventorySpends()
         persistWalletLocally()
     }
@@ -848,17 +969,31 @@ final class SyncClient: ObservableObject {
             lastActionMessage = "Enter amount (e.g. 100, 30k) and cashout ≥ 1.05"
             return
         }
-        guard isServerReachable else {
-            lastActionMessage = "Crash bets need the live server — play Arcade offline; scores sync when you're back."
+        guard PlayerSession.isLoggedIn else {
+            lastActionMessage = "Sign in required."
             return
         }
         guard let amount = BetAmountParser.parse(trimmed) else {
             lastActionMessage = "Enter a valid amount (e.g. 100, 30k, 3m)"
             return
         }
+        startLocalCrashIfNeeded()
+        let user = resolvedBetUserId()
+        let name = resolvedBetDisplayName()
+        if let err = localCrash.placeBet(
+            amount: amount,
+            cashout: cashout,
+            userId: user,
+            displayName: name
+        ) {
+            lastActionMessage = err
+            return
+        }
         rememberPlacedBet(amount: amount, cashout: cashout)
         pendingBetAmountText = trimmed
-        await sendCommand("!\(trimmed) \(cashout)")
+        LastBetStore.save(amountText: trimmed, cashout: cashout)
+        lastActionMessage = "Bet placed: \(amount.formatted()) @ \(String(format: "%.2f", cashout))×"
+        publishLocalCrashState()
     }
 
     /// Cash out an active crash bet at the current live multiplier (before crash / before auto target).
@@ -867,31 +1002,21 @@ final class SyncClient: ObservableObject {
             lastActionMessage = "Sign in required."
             return
         }
-        guard isServerReachable else {
-            lastActionMessage = "Cash out needs the live server."
+        if let err = localCrash.manualCashout() {
+            lastActionMessage = err
             return
         }
-        guard gameState.phase == .running else {
-            lastActionMessage = "You can only cash out while the round is running."
-            return
-        }
-        guard activeCrashBet != nil else {
-            lastActionMessage = "No active bet this round."
-            return
-        }
-        guard displayMultiplier >= 1.05 else {
-            lastActionMessage = "Too early — wait until at least 1.05×"
-            return
-        }
-        await sendCommand("!cashout")
+        publishLocalCrashState()
     }
 
     var activeCrashBet: OpenBet? {
-        guard gameState.phase == .running else { return nil }
-        let user = normalizeBetUser(resolvedBetUserId())
-        guard !user.isEmpty else { return nil }
-        let bets = gameState.openBets.isEmpty ? cachedOpenBets : gameState.openBets
-        return bets.first { normalizeBetUser($0.user) == user }
+        guard localCrash.phase == .running, let bet = localCrash.activeBet else { return nil }
+        return OpenBet(
+            user: bet.userId,
+            displayName: bet.displayName,
+            amount: bet.amount,
+            cashout: bet.cashout
+        )
     }
 
     var canManualCashout: Bool {
@@ -1051,7 +1176,7 @@ final class SyncClient: ObservableObject {
         }
     }
 
-    /// Full offline → online catch-up: inventory, arcade points, chat queue, wallet.
+    /// Full offline → online catch-up: crash rounds, inventory, arcade points, chat queue.
     func flushAllPendingOnReconnect(silent: Bool = false) async {
         guard connectionStatus == "Online", PlayerSession.isLoggedIn else { return }
         refreshPendingArcadeSyncCount()
@@ -1059,23 +1184,89 @@ final class SyncClient: ObservableObject {
             pendingInventorySyncCount > 0
             || pendingOfflineCount > 0
             || pendingArcadeSyncCount > 0
+            || pendingCrashSyncCount > 0
             || JumpPendingRunStore.pendingHeight(for: ArcadeOfflinePointsQueue.userKey()) > 0
         guard hadPending || isOfflinePlayMode else { return }
 
+        let crash = await flushCrashLedger(silent: silent)
         let inv = await flushInventoryLedger(silent: silent)
         await flushOfflineQueue()
         let arcade = await flushArcadeOfflineQueue(silent: silent)
-        if inv > 0 || arcade > 0 || hadPending {
-            await refreshWallet(force: true)
+        if crash > 0 || inv > 0 || arcade > 0 || hadPending {
+            // Only pull server wallet when crash ledger is empty (local crash is balance authority).
+            if CrashOfflineLedger.pendingCount() == 0 {
+                await refreshWallet(force: true)
+            }
         }
         isOfflinePlayMode = false
         refreshPendingArcadeSyncCount()
+    }
+
+    /// Push on-device crash win/loss deltas to the live server wallet.
+    @discardableResult
+    func flushCrashLedger(silent: Bool = false) async -> Int {
+        guard let api, PlayerSession.isLoggedIn, connectionStatus == "Online" else { return 0 }
+        let items = CrashOfflineLedger.load()
+        pendingCrashSyncCount = items.count
+        guard !items.isEmpty else { return 0 }
+
+        let payload: [[String: Any]] = items.map { item in
+            var row: [String: Any] = [
+                "id": item.id,
+                "roundId": item.roundId,
+                "stake": item.stake,
+                "result": item.result,
+                "crashPoint": item.crashPoint,
+                "payout": item.payout,
+                "tax": item.tax,
+                "netDelta": item.netDelta,
+            ]
+            if let m = item.settleMult { row["settleMult"] = m }
+            return row
+        }
+
+        do {
+            let result = try await api.syncSoloCrashRounds(rounds: payload)
+            let remainingDTOs = result.remaining ?? []
+            let remaining: [CrashPendingRound] = remainingDTOs.compactMap { dto in
+                guard let id = dto.id, let result = dto.result else { return nil }
+                return CrashPendingRound(
+                    id: id,
+                    roundId: dto.roundId ?? 0,
+                    stake: dto.stake ?? 0,
+                    result: result,
+                    settleMult: dto.settleMult,
+                    crashPoint: dto.crashPoint ?? 1,
+                    payout: dto.payout ?? 0,
+                    tax: dto.tax ?? 0,
+                    netDelta: dto.netDelta ?? 0,
+                    createdAt: Date().timeIntervalSince1970
+                )
+            }
+            // Server applies all or drops bad rows; keep only explicit remaining.
+            CrashOfflineLedger.replaceAll(remaining)
+            pendingCrashSyncCount = remaining.count
+            if let wallet = result.wallet, remaining.isEmpty {
+                applyWalletFromServer(wallet)
+            }
+            let applied = result.applied ?? max(0, items.count - remaining.count)
+            if applied > 0, !silent {
+                appendFeed("Synced \(applied) crash round(s) to your account.")
+            }
+            return applied
+        } catch {
+            if !silent {
+                lastActionMessage = "Still syncing crash results…"
+            }
+            return 0
+        }
     }
 
     func refreshPendingArcadeSyncCount() {
         pendingArcadeSyncPoints = ArcadeOfflinePointsQueue.pendingPointsTotal()
         pendingArcadeSyncCount = ArcadeOfflinePointsQueue.pendingCount()
         pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+        pendingCrashSyncCount = CrashOfflineLedger.pendingCount()
         pendingOfflineCount = OfflineQueue.count
     }
 
@@ -1271,18 +1462,18 @@ final class SyncClient: ObservableObject {
 
         switch type {
         case "state":
-            if let payload = json["payload"],
-               let payloadData = try? JSONSerialization.data(withJSONObject: payload),
-               let state = try? JSONDecoder().decode(CrashGameState.self, from: payloadData) {
-                let enriched = enrichState(state)
-                gameState = enriched
-                applyStateSideEffects(enriched)
-                if connectionStatus != "Online" {
-                    connectionStatus = "Online"
-                    isOfflinePlayMode = false
-                    syncPresencePillFromState()
-                    Task { await flushAllPendingOnReconnect(silent: true) }
-                }
+            // Crash rounds are on-device — ignore live multiplayer crash state.
+            // Still treat a state packet as proof the server is reachable for sync.
+            if connectionStatus != "Online" {
+                connectionStatus = "Online"
+                isOfflinePlayMode = false
+                syncPresencePillFromState()
+                Task { await flushAllPendingOnReconnect(silent: true) }
+            }
+            if let payload = json["payload"] as? [String: Any],
+               let tax = payload["taxPot"] as? [String: Any] {
+                let pot = (tax["potAmount"] as? Int) ?? (tax["amount"] as? Int) ?? taxPotAmount
+                taxPotAmount = pot
             }
         case "chat_result":
             if let payload = json["payload"] as? [String: Any] {
@@ -1800,15 +1991,22 @@ final class SyncClient: ObservableObject {
     }
 
     private func tickDisplayMultiplier() {
+        // Local engine owns the live multiplier (includes early-pace / adaptive speed).
+        if usesLocalCrash {
+            switch localCrash.phase {
+            case .running, .ended:
+                displayMultiplier = max(localCrash.multiplier, 1)
+            default:
+                displayMultiplier = 1
+            }
+            multiplierHistory = localCrash.multiplierHistory
+            updateLocalCrashSubline(localCrash.makeGameState())
+            return
+        }
         let s = gameState
         switch s.phase {
         case .running:
             displayMultiplier = projectedRunningMult(for: s)
-            let last = multiplierHistory.last ?? 1
-            if multiplierHistory.isEmpty || abs(last - displayMultiplier) > 0.0005 {
-                multiplierHistory.append(displayMultiplier)
-                if multiplierHistory.count > 240 { multiplierHistory.removeFirst() }
-            }
         case .ended:
             displayMultiplier = max(s.crashPoint ?? s.multiplier, 1)
         default:

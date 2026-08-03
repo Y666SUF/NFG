@@ -36,7 +36,9 @@ struct GameView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
-                        if sync.isOfflinePlayMode || sync.connectionStatus == "Offline" {
+                        if sync.isOfflinePlayMode
+                            || sync.connectionStatus == "Offline"
+                            || sync.pendingCrashSyncCount > 0 {
                             offlineSyncBanner
                         }
 
@@ -191,36 +193,41 @@ struct GameView: View {
     // MARK: - Offline banner
 
     private var offlineSyncBanner: some View {
+        let offline = sync.isOfflinePlayMode || sync.connectionStatus != "Online"
         let pendingBits: [String] = [
+            sync.pendingCrashSyncCount > 0
+                ? "\(sync.pendingCrashSyncCount) crash round\(sync.pendingCrashSyncCount == 1 ? "" : "s")"
+                : nil,
             sync.pendingArcadeSyncCount > 0
-                ? "\(sync.pendingArcadeSyncPoints.formatted()) pts"
+                ? "\(sync.pendingArcadeSyncPoints.formatted()) arcade pts"
                 : nil,
             sync.pendingInventorySyncCount > 0
                 ? "\(sync.pendingInventorySyncCount) steal\(sync.pendingInventorySyncCount == 1 ? "" : "s")"
                 : nil,
-            sync.pendingOfflineCount > 0
-                ? "\(sync.pendingOfflineCount) action\(sync.pendingOfflineCount == 1 ? "" : "s")"
-                : nil,
         ].compactMap { $0 }
 
         return HStack(spacing: 8) {
-            Image(systemName: "wifi.slash")
+            Image(systemName: offline ? "iphone" : "arrow.triangle.2.circlepath")
                 .font(.system(size: 11, weight: .bold))
             VStack(alignment: .leading, spacing: 2) {
-                Text("Offline — Arcade still works")
+                Text(offline ? "On-device crash — no server needed" : "Syncing to server…")
                     .font(.system(size: 12, weight: .semibold, design: .rounded))
                 Text(
                     pendingBits.isEmpty
-                        ? "Crash bets pause until the server is back. Progress syncs automatically."
+                        ? (offline
+                            ? "Rounds run on your phone. Results sync when you're back online."
+                            : "Wallet is up to date.")
                         : "Pending sync: \(pendingBits.joined(separator: " · "))"
                 )
                 .font(.system(size: 10, weight: .medium))
                 .foregroundStyle(NFGTheme.muted)
             }
             Spacer(minLength: 0)
-            Button("Retry") { sync.connect() }
-                .font(.system(size: 11, weight: .bold, design: .rounded))
-                .foregroundStyle(NFGTheme.accent2)
+            if offline {
+                Button("Retry") { sync.connect() }
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(NFGTheme.accent2)
+            }
         }
         .foregroundStyle(NFGTheme.gold)
         .padding(.horizontal, 10)

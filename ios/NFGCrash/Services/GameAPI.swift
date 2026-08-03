@@ -856,6 +856,31 @@ struct GameAPI {
         return decoded
     }
 
+    /// Flush on-device crash round balance deltas to the live wallet.
+    func syncSoloCrashRounds(rounds: [[String: Any]]) async throws -> SoloCrashSyncResponse {
+        guard authToken != nil else { throw GameAPIError.notLoggedIn }
+        let req = try authorizedRequest(
+            url: baseURL.appending(path: "/api/mobile/crash/solo/sync"),
+            method: "POST",
+            jsonBody: ["rounds": rounds]
+        )
+        let (data, response) = try await GameHTTP.data(for: req)
+        guard let http = response as? HTTPURLResponse else {
+            throw GameAPIError.serverError("No response")
+        }
+        if http.statusCode == 401 { throw GameAPIError.notLoggedIn }
+        if http.statusCode == 404 {
+            throw GameAPIError.serverError(
+                "Solo crash sync is not on the game server yet. Pull latest server files and restart Node."
+            )
+        }
+        let decoded = try JSONDecoder().decode(SoloCrashSyncResponse.self, from: data)
+        if http.statusCode >= 400 || decoded.ok == false {
+            throw GameAPIError.serverError(decoded.message ?? "Crash sync failed")
+        }
+        return decoded
+    }
+
     /// Flush offline powerup spends (steal charges, etc.) so server inventory matches the app.
     func syncOfflineInventory(spends: [[String: Any]]) async throws -> OfflineInventorySyncResponse {
         guard authToken != nil else { throw GameAPIError.notLoggedIn }

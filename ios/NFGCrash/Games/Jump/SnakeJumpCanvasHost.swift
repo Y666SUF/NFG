@@ -41,8 +41,15 @@ struct SnakeJumpCanvasHost: UIViewRepresentable {
             view.touchHandler = self
             view.controller = controller
             let link = CADisplayLink(target: self, selector: #selector(step(_:)))
+            let perf = SnakeJumpPerformanceSettings.current
             if #available(iOS 15.0, *) {
-                link.preferredFrameRateRange = CAFrameRateRange(minimum: 60, maximum: 120, preferred: 120)
+                link.preferredFrameRateRange = CAFrameRateRange(
+                    minimum: Float(perf.minFPS),
+                    maximum: Float(perf.maxFPS),
+                    preferred: Float(perf.preferredFPS)
+                )
+            } else {
+                link.preferredFramesPerSecond = perf.preferredFPS
             }
             link.add(to: .main, forMode: .common)
             displayLink = link
@@ -94,11 +101,13 @@ struct SnakeJumpCanvasHost: UIViewRepresentable {
             if view.bounds.width > 1 { lastKnownWidth = view.bounds.width }
             if view.bounds.height > 1 { lastKnownHeight = view.bounds.height }
 
+            controller.refreshLivePlayersDisplay()
             controller.tickFrame(
                 dt: dt,
                 viewWidth: Double(lastKnownWidth),
                 viewHeight: Double(lastKnownHeight)
             )
+            controller.sendVSNetworkUpdateIfNeeded()
 
             let center = controller.playerDotCenter(
                 viewWidth: lastKnownWidth,
@@ -107,6 +116,13 @@ struct SnakeJumpCanvasHost: UIViewRepresentable {
             view.updatePlayerDot(
                 center: center,
                 controller: controller,
+                engine: controller.engine
+            )
+            view.updateLivePlayers(
+                controller.livePlayerRenders,
+                cameraAnchorY: controller.engine.cameraAnchorY,
+                viewWidth: lastKnownWidth,
+                viewHeight: lastKnownHeight,
                 engine: controller.engine
             )
             view.setNeedsDisplay()
@@ -119,7 +135,7 @@ final class SnakeJumpCanvasController: ObservableObject {
     let engine = SnakeJumpEngine()
     @Published var skinFill = "#596ff2"
     @Published var skinRing = "#f2c733"
-    @Published var ghostOpponents: [JumpGhostOpponent] = []
+    private(set) var livePlayerRenders: [JumpLivePlayerRender] = []
     @Published var sessionActive = false
     @Published var running = false
     @Published var profileImage: UIImage?
@@ -130,14 +146,42 @@ final class SnakeJumpCanvasController: ObservableObject {
     var onMilestone: (() async -> Void)?
     var onGameOver: ((Int) async -> Void)?
     var onProgressTick: ((Int, Int) -> Void)?
+    var onVsNetworkTick: ((Double, Double, Double, Int, Int, Double) -> Void)?
 
     /// Drawn horizontal position — updated only by thumb *delta* while finger is down.
     private(set) var displayScreenX: CGFloat = 0
     private var touchDown = false
     private var steeringActive = false
     private var milestoneSync = 0
-    private var vsProgressTick = 0
+    private var lastProgressPersistAt: CFTimeInterval = 0
+    private var lastPersistedHeight = 0
     private var localMatchSeed: Int?
+    private var vsMatchStartedAtMs: Int64?
+
+    private struct LiveNetworkSnapshot {
+        let id: String
+        var displayName: String?
+        var playerX: Double
+        var playerY: Double
+        var velocityY: Double
+        var fill: String
+        var ring: String
+        var eliminated: Bool
+        var receivedAt: CFTimeInterval
+    }
+
+    private var liveNetworkHistory: [String: [LiveNetworkSnapshot]] = [:]
+    private let liveHistoryLimit = 12
+    /// Small buffer so we interpolate between two known samples (smooth bounce / movement).
+    private let liveInterpolationDelay: CFTimeInterval = 0.06
+    private var lastNetworkSendAt: CFTimeInterval = 0
+    private var lastSentX = 0.0
+    private var lastSentY = 0.0
+    private var lastSentVelocityY = 0.0
+
+    var isVSReportingActive: Bool {
+        localMatchSeed != nil && sessionActive && running
+    }
 
     static let playerDrawScale: CGFloat = 1.1
     static let worldScreenYOffset: CGFloat = -40
@@ -182,10 +226,25 @@ final class SnakeJumpCanvasController: ObservableObject {
         guard !running else { return }
         let w = max(Double(viewWidth), 280)
         if let seed = localMatchSeed {
-            resetEngine(viewWidth: w, matchSeed: seed)
+            resetEngine(viewWidth: w, matchSeed: seed, matchStartedAtMs: vsMatchStartedAtMs)
         } else {
             resetEngine(viewWidth: w)
         }
+        if let startedAt = vsMatchStartedAtMs {
+            engine.alignElapsedToMatchStart(startedAtMs: startedAt)
+        }
+        sessionActive = true
+        running = true
+        displayScreenX = viewWidth / 2
+        engine.setFingerTarget(screenX: Double(displayScreenX), viewWidth: w)
+    }
+
+    /// VS match — everyone starts together on the shared map (no touch required).
+    func autoStartVSMatch(viewWidth: CGFloat, startedAtMs: Int64?) {
+        vsMatchStartedAtMs = startedAtMs
+        guard let seed = localMatchSeed else { return }
+        let w = max(Double(viewWidth), SnakeJumpEngine.vsCanonicalViewWidth)
+        resetEngine(viewWidth: w, matchSeed: seed, matchStartedAtMs: startedAtMs)
         sessionActive = true
         running = true
         displayScreenX = viewWidth / 2
@@ -194,6 +253,144 @@ final class SnakeJumpCanvasController: ObservableObject {
 
     func configureMatchSeed(_ seed: Int?) {
         localMatchSeed = seed
+        if seed == nil {
+            vsMatchStartedAtMs = nil
+            engine.clearVSMode()
+        }
+    }
+
+    func applyLiveOpponents(_ opponents: [JumpVsOpponent]) {
+        for opp in opponents {
+            applyOpponentUpdate(opp)
+        }
+    }
+
+    func applyOpponentUpdate(_ opp: JumpVsOpponent) {
+        let now = CACurrentMediaTime()
+        let snap = LiveNetworkSnapshot(
+            id: opp.id,
+            displayName: opp.displayName,
+            playerX: opp.playerX ?? 0,
+            playerY: opp.playerY ?? Double(opp.height) + 80,
+            velocityY: opp.velocityY ?? 0,
+            fill: opp.fill ?? "#596ff2",
+            ring: opp.ring ?? "#f2c733",
+            eliminated: opp.eliminated,
+            receivedAt: now
+        )
+        var history = liveNetworkHistory[opp.id] ?? []
+        if let last = history.last,
+           abs(last.playerX - snap.playerX) < 0.01,
+           abs(last.playerY - snap.playerY) < 0.01,
+           abs(last.velocityY - snap.velocityY) < 0.5,
+           now - last.receivedAt < 0.008 {
+            return
+        }
+        history.append(snap)
+        if history.count > liveHistoryLimit {
+            history.removeFirst(history.count - liveHistoryLimit)
+        }
+        liveNetworkHistory[opp.id] = history
+    }
+
+    func clearLiveOpponents() {
+        liveNetworkHistory.removeAll()
+        livePlayerRenders = []
+    }
+
+    func sendVSNetworkUpdateIfNeeded() {
+        guard isVSReportingActive else { return }
+        let now = CACurrentMediaTime()
+        let x = engine.playerX
+        let y = engine.playerY
+        let vy = engine.velocityY
+        let minInterval = 1.0 / 30.0
+        if now - lastNetworkSendAt < minInterval,
+           abs(x - lastSentX) < 0.5,
+           abs(y - lastSentY) < 0.5,
+           abs(vy - lastSentVelocityY) < 5 {
+            return
+        }
+        lastNetworkSendAt = now
+        lastSentX = x
+        lastSentY = y
+        lastSentVelocityY = vy
+        onVsNetworkTick?(
+            x,
+            y,
+            vy,
+            engine.currentHeight,
+            sessionPoints,
+            engine.elapsed
+        )
+    }
+
+    private func advanceLivePlayers() {
+        guard !liveNetworkHistory.isEmpty else {
+            livePlayerRenders = []
+            return
+        }
+        let renderAnchor = CACurrentMediaTime() - liveInterpolationDelay
+        var rendered: [JumpLivePlayerRender] = []
+        rendered.reserveCapacity(liveNetworkHistory.count)
+
+        for (_, history) in liveNetworkHistory {
+            guard let first = history.first else { continue }
+            if history.count == 1 || renderAnchor <= first.receivedAt {
+                let snap = history.last ?? first
+                rendered.append(renderFromSnapshot(snap, at: renderAnchor))
+                continue
+            }
+            var older = first
+            var newer = history.last ?? first
+            for snap in history {
+                if snap.receivedAt <= renderAnchor { older = snap }
+                if snap.receivedAt >= renderAnchor {
+                    newer = snap
+                    break
+                }
+            }
+            if newer.receivedAt < older.receivedAt {
+                rendered.append(renderFromSnapshot(newer, at: renderAnchor))
+                continue
+            }
+            if renderAnchor > newer.receivedAt {
+                rendered.append(renderFromSnapshot(newer, at: renderAnchor))
+                continue
+            }
+            let span = newer.receivedAt - older.receivedAt
+            let alpha = span > 0.0001 ? min(1, max(0, (renderAnchor - older.receivedAt) / span)) : 1
+            rendered.append(
+                JumpLivePlayerRender(
+                    id: newer.id,
+                    displayName: newer.displayName,
+                    worldX: older.playerX + (newer.playerX - older.playerX) * alpha,
+                    worldY: older.playerY + (newer.playerY - older.playerY) * alpha,
+                    fill: newer.fill,
+                    ring: newer.ring,
+                    eliminated: newer.eliminated
+                )
+            )
+        }
+        livePlayerRenders = rendered.sorted { $0.id < $1.id }
+    }
+
+    private func renderFromSnapshot(_ snap: LiveNetworkSnapshot, at renderAnchor: CFTimeInterval) -> JumpLivePlayerRender {
+        let dt = min(0.12, max(0, renderAnchor - snap.receivedAt))
+        let worldY = snap.playerY + snap.velocityY * dt
+        return JumpLivePlayerRender(
+            id: snap.id,
+            displayName: snap.displayName,
+            worldX: snap.playerX,
+            worldY: worldY,
+            fill: snap.fill,
+            ring: snap.ring,
+            eliminated: snap.eliminated
+        )
+    }
+
+    func refreshLivePlayersDisplay() {
+        advanceLivePlayers()
     }
 
     func tickFrame(dt: Double, viewWidth: Double, viewHeight: Double) {
@@ -210,10 +407,13 @@ final class SnakeJumpCanvasController: ObservableObject {
         if engine.reachedNewMilestone {
             Task { await syncMilestone() }
         }
-        if vsProgressTick % 8 == 0 {
-            onProgressTick?(engine.currentHeight, sessionPoints)
+        let now = CACurrentMediaTime()
+        let height = engine.currentHeight
+        if now - lastProgressPersistAt >= 0.25 {
+            lastProgressPersistAt = now
+            if height > lastPersistedHeight { lastPersistedHeight = height }
+            onProgressTick?(height, sessionPoints)
         }
-        vsProgressTick += 1
         if engine.gameOver {
             running = false
             sessionActive = false
@@ -224,10 +424,18 @@ final class SnakeJumpCanvasController: ObservableObject {
         }
     }
 
-    func resetEngine(viewWidth: Double, matchSeed: Int? = nil) {
+    func resetEngine(viewWidth: Double, matchSeed: Int? = nil, matchStartedAtMs: Int64? = nil) {
+        lastProgressPersistAt = 0
+        lastPersistedHeight = 0
+        if let started = matchStartedAtMs {
+            vsMatchStartedAtMs = started
+        }
         if let matchSeed {
-            engine.setMatchSeed(matchSeed)
+            engine.setMatchSeed(matchSeed, matchStartedAtMs: vsMatchStartedAtMs)
         } else {
+            engine.clearVSMode()
+            localMatchSeed = nil
+            vsMatchStartedAtMs = nil
             engine.reset(viewWidth: viewWidth)
         }
     }
@@ -275,6 +483,7 @@ final class SnakeJumpCanvasView: UIView {
 
     private let touchLayer = SnakeJumpTouchLayerView()
     private let playerDot = SnakeJumpPlayerDotLayerView()
+    private var skyGradientCache: (tier: Int, width: Int, height: Int, gradient: CGGradient)?
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -413,35 +622,132 @@ final class SnakeJumpCanvasView: UIView {
 
         let center = controller.playerDotCenter(viewWidth: w, viewHeight: h)
         controller.recordTrail(screenX: center.x, screenY: center.y)
+    }
 
-        for opp in controller.ghostOpponents {
-            let ox = CGFloat(opp.x) * scaleX + w * 0.5
-            let oy = h - CGFloat(opp.worldY - cam) + yOffset
-            if oy < -30 || oy > h + 30 { continue }
-            drawGhostSnake(ctx: ctx, x: ox, y: oy, fill: opp.fill, ring: opp.ring)
+    func updateLivePlayers(
+        _ players: [JumpLivePlayerRender],
+        cameraAnchorY: Double,
+        viewWidth: CGFloat,
+        viewHeight: CGFloat,
+        engine: SnakeJumpEngine
+    ) {
+        let scaleX = CGFloat(engine.screenScale(viewWidth: Double(viewWidth)))
+        let yOffset = SnakeJumpCanvasController.worldScreenYOffset
+        let activeIds = Set(players.map(\.id))
+
+        for id in livePlayerDots.keys where !activeIds.contains(id) {
+            livePlayerDots[id]?.removeFromSuperview()
+            liveNameLabels[id]?.removeFromSuperview()
+            livePlayerDots.removeValue(forKey: id)
+            liveNameLabels.removeValue(forKey: id)
+        }
+
+        for player in players where !player.eliminated {
+            let dot: SnakeJumpPlayerDotLayerView
+            if let existing = livePlayerDots[player.id] {
+                dot = existing
+            } else {
+                let created = SnakeJumpPlayerDotLayerView()
+                created.isUserInteractionEnabled = false
+                insertSubview(created, belowSubview: playerDot)
+                livePlayerDots[player.id] = created
+                dot = created
+            }
+
+            let label: UILabel
+            if let existing = liveNameLabels[player.id] {
+                label = existing
+            } else {
+                let created = UILabel()
+                created.font = .systemFont(ofSize: 10, weight: .bold)
+                created.textColor = UIColor.white.withAlphaComponent(0.92)
+                created.textAlignment = .center
+                created.layer.shadowColor = UIColor.black.cgColor
+                created.layer.shadowOpacity = 0.85
+                created.layer.shadowRadius = 2
+                created.layer.shadowOffset = .zero
+                created.isUserInteractionEnabled = false
+                addSubview(created)
+                liveNameLabels[player.id] = created
+                label = created
+            }
+
+            let px = CGFloat(player.worldX) * scaleX + viewWidth * 0.5
+            let py = viewHeight - CGFloat(player.worldY - cameraAnchorY) + yOffset
+            if py < -60 || py > viewHeight + 60 {
+                dot.isHidden = true
+                label.isHidden = true
+                continue
+            }
+
+            dot.isHidden = false
+            label.isHidden = false
+            let pr = SnakeJumpEngine.playerRadius * SnakeJumpCanvasController.playerDrawScale
+            let pulse = 0.88 + 0.12 * sin(engine.elapsed * 4.2)
+            CATransaction.begin()
+            CATransaction.setDisableActions(true)
+            dot.apply(
+                center: CGPoint(x: px, y: py),
+                radius: CGFloat(pr),
+                fill: SnakeJumpTheme.uiColor(hex: player.fill, fallback: SnakeJumpTheme.defaultFill),
+                ring: SnakeJumpTheme.uiColor(hex: player.ring, fallback: SnakeJumpTheme.defaultRing),
+                profileImage: nil,
+                pulse: CGFloat(pulse),
+                boostActive: false
+            )
+            CATransaction.commit()
+
+            let name = player.displayName?.trimmingCharacters(in: .whitespacesAndNewlines)
+            label.text = (name?.isEmpty == false) ? name : "Player"
+            label.sizeToFit()
+            label.center = CGPoint(x: px, y: py - CGFloat(pr) - 12)
+        }
+
+        for id in activeIds {
+            if let player = players.first(where: { $0.id == id }), player.eliminated {
+                livePlayerDots[id]?.isHidden = true
+                liveNameLabels[id]?.isHidden = true
+            }
         }
     }
 
-    private func drawSky(ctx: CGContext, width: CGFloat, height: CGFloat, heightM: Int, elapsed: Double) {
-        let (top, mid, bottom) = SnakeJumpCasinoDraw.skyGradient(heightM: heightM)
-        let gradient = CGGradient(
-            colorsSpace: CGColorSpaceCreateDeviceRGB(),
-            colors: [top.cgColor, mid.cgColor, bottom.cgColor] as CFArray,
-            locations: [0, 0.55, 1]
-        )!
-        ctx.drawLinearGradient(gradient, start: CGPoint(x: width * 0.5, y: 0), end: CGPoint(x: width * 0.5, y: height), options: [])
-        SnakeJumpCasinoDraw.drawAnimatedSky(ctx: ctx, width: width, height: height, heightM: heightM, elapsed: elapsed)
-    }
+    private var livePlayerDots: [String: SnakeJumpPlayerDotLayerView] = [:]
+    private var liveNameLabels: [String: UILabel] = [:]
 
-    private func drawGhostSnake(ctx: CGContext, x: CGFloat, y: CGFloat, fill: String, ring: String) {
-        let pr = SnakeJumpEngine.playerRadius * 0.82
-        ctx.setAlpha(0.72)
-        SnakeJumpTheme.uiColor(hex: fill, fallback: UIColor(red: 0.58, green: 0.64, blue: 0.71, alpha: 1)).setFill()
-        ctx.fillEllipse(in: CGRect(x: x - pr, y: y - pr, width: pr * 2, height: pr * 2))
-        SnakeJumpTheme.uiColor(hex: ring, fallback: UIColor(red: 0.80, green: 0.84, blue: 0.88, alpha: 1)).setStroke()
-        ctx.setLineWidth(2)
-        ctx.strokeEllipse(in: CGRect(x: x - pr, y: y - pr, width: pr * 2, height: pr * 2))
-        ctx.setAlpha(1)
+    private func drawSky(ctx: CGContext, width: CGFloat, height: CGFloat, heightM: Int, elapsed: Double) {
+        let tier = SnakeJumpCasinoDraw.skyTier(heightM: heightM)
+        let (top, mid, bottom) = SnakeJumpCasinoDraw.skyGradient(heightM: heightM)
+        let wKey = Int(width.rounded())
+        let hKey = Int(height.rounded())
+        let gradient: CGGradient
+        if let cached = skyGradientCache,
+           cached.tier == tier,
+           cached.width == wKey,
+           cached.height == hKey {
+            gradient = cached.gradient
+        } else {
+            let built = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                colors: [top.cgColor, mid.cgColor, bottom.cgColor] as CFArray,
+                locations: [0, 0.55, 1]
+            )!
+            skyGradientCache = (tier, wKey, hKey, built)
+            gradient = built
+        }
+        ctx.drawLinearGradient(
+            gradient,
+            start: CGPoint(x: width * 0.5, y: 0),
+            end: CGPoint(x: width * 0.5, y: height),
+            options: []
+        )
+        SnakeJumpCasinoDraw.drawAnimatedSky(
+            ctx: ctx,
+            width: width,
+            height: height,
+            heightM: heightM,
+            elapsed: elapsed,
+            liteEffects: SnakeJumpPerformanceSettings.current.liteVisualEffects
+        )
     }
 }
 

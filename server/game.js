@@ -317,6 +317,7 @@ class CrashGame {
       peakCashoutTarget: this.phase === PHASE.RUNNING ? this._peakCashoutTarget() : null,
       bettingEndsAt: this.bettingEndsAt,
       nextRoundStartsAt: this.nextRoundStartsAt,
+      runStartedAt: this.phase === PHASE.RUNNING && this._runStartedAt > 0 ? this._runStartedAt : null,
       opts: { ...this.opts },
       lastResult: this.lastResult,
       openBets: this.phase === PHASE.BETTING ? this.listOpenBets() : [],

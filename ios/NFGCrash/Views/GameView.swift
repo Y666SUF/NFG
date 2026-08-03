@@ -13,6 +13,7 @@ struct GameView: View {
     @State private var betAmount = "100"
     @State private var cashoutTarget = "2.00"
     @State private var repeatLastBet = AppPreferences.repeatLastBetEnabled
+    @State private var isCashingOut = false
 
     var body: some View {
         GeometryReader { geo in
@@ -33,6 +34,12 @@ struct GameView: View {
                                 .foregroundStyle(NFGTheme.muted)
                                 .lineLimit(1)
                                 .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        if sync.isOfflinePlayMode
+                            || sync.connectionStatus == "Offline"
+                            || sync.pendingCrashSyncCount > 0 {
+                            offlineSyncBanner
                         }
 
                         if let nearMiss = sync.nearMissMessage {
@@ -183,6 +190,58 @@ struct GameView: View {
         )
     }
 
+    // MARK: - Offline banner
+
+    private var offlineSyncBanner: some View {
+        let offline = sync.isOfflinePlayMode || sync.connectionStatus != "Online"
+        let pendingBits: [String] = [
+            sync.pendingCrashSyncCount > 0
+                ? "\(sync.pendingCrashSyncCount) crash round\(sync.pendingCrashSyncCount == 1 ? "" : "s")"
+                : nil,
+            sync.pendingArcadeSyncCount > 0
+                ? "\(sync.pendingArcadeSyncPoints.formatted()) arcade pts"
+                : nil,
+            sync.pendingInventorySyncCount > 0
+                ? "\(sync.pendingInventorySyncCount) steal\(sync.pendingInventorySyncCount == 1 ? "" : "s")"
+                : nil,
+        ].compactMap { $0 }
+
+        return HStack(spacing: 8) {
+            Image(systemName: offline ? "iphone" : "arrow.triangle.2.circlepath")
+                .font(.system(size: 11, weight: .bold))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(offline ? "On-device crash — no server needed" : "Syncing to server…")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                Text(
+                    pendingBits.isEmpty
+                        ? (offline
+                            ? "Rounds run on your phone. Results sync when you're back online."
+                            : "Wallet is up to date.")
+                        : "Pending sync: \(pendingBits.joined(separator: " · "))"
+                )
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(NFGTheme.muted)
+            }
+            Spacer(minLength: 0)
+            if offline {
+                Button("Retry") { sync.connect() }
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .foregroundStyle(NFGTheme.accent2)
+            }
+        }
+        .foregroundStyle(NFGTheme.gold)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                .fill(NFGTheme.gold.opacity(0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                .stroke(NFGTheme.gold.opacity(0.35), lineWidth: 1)
+        )
+    }
+
     // MARK: - Bet dock
 
     private func dismissBetKeyboard() {
@@ -195,9 +254,12 @@ struct GameView: View {
     }
 
     private var displayBalance: Int {
-        if sync.liveBalance > 0 { return sync.liveBalance }
-        if sync.wallet.balance > 0 { return sync.wallet.balance }
-        return sync.profile.balance
+        let base: Int = {
+            if sync.liveBalance > 0 { return sync.liveBalance }
+            if sync.wallet.balance > 0 { return sync.wallet.balance }
+            return sync.profile.balance
+        }()
+        return max(0, base + max(0, sync.pendingArcadeSyncPoints))
     }
 
     private let quickStakeAmounts = [1000, 5000, 10000, 25000]
@@ -291,6 +353,10 @@ struct GameView: View {
             quickStakeRow
             quickCashoutRow
 
+            if let activeBet = sync.activeCrashBet, sync.gameState.phase == .running {
+                activeBetCashOutSection(activeBet)
+            }
+
             Toggle(isOn: $repeatLastBet) {
                 HStack(spacing: 6) {
                     Image(systemName: "arrow.triangle.2.circlepath")
@@ -332,19 +398,6 @@ struct GameView: View {
                 }
                 .buttonStyle(NFGSecondaryButtonStyle(tint: NFGTheme.accent2))
             }
-
-            Button {
-                dismissBetKeyboard()
-                Task { await sync.sendCommand("!all 2") }
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "flame.fill")
-                        .font(.system(size: 10))
-                    Text("All-in @ 2× (!all 2)")
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                }
-                .foregroundStyle(NFGTheme.gold.opacity(0.85))
-            }
         }
         .padding(NFGSpacing.md)
         .background(
@@ -363,6 +416,94 @@ struct GameView: View {
                 )
         )
         .shadow(color: NFGTheme.accent.opacity(0.14), radius: 16, y: -4)
+    }
+
+    private func activeBetCashOutSection(_ bet: OpenBet) -> some View {
+        let mult = sync.displayMultiplier
+        let payout = sync.estimatedManualCashoutPayout(for: bet)
+        let canCashOut = sync.canManualCashout && !isCashingOut
+
+        return VStack(spacing: NFGSpacing.sm) {
+            HStack(spacing: 8) {
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(NFGTheme.accent2)
+                Text("Live bet · \(bet.amount.formatted()) @ \(String(format: "%.2f", bet.cashout))×")
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(NFGTheme.text)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                Spacer(minLength: 0)
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(String(format: "%.2f", mult))
+                    .font(NFGFont.numeric(28, weight: .heavy))
+                    .foregroundStyle(NFGTheme.accent2)
+                    .contentTransition(.numericText())
+                Text("×")
+                    .font(NFGFont.numeric(18, weight: .heavy))
+                    .foregroundStyle(NFGTheme.accent2.opacity(0.85))
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("You'd get")
+                        .font(.system(size: 9, weight: .bold, design: .rounded))
+                        .foregroundStyle(NFGTheme.muted)
+                    Text("\(payout.formatted()) pts")
+                        .font(NFGFont.numeric(16, weight: .heavy))
+                        .foregroundStyle(NFGTheme.gold)
+                        .contentTransition(.numericText())
+                }
+            }
+
+            Button {
+                guard canCashOut else { return }
+                dismissBetKeyboard()
+                isCashingOut = true
+                Task {
+                    await sync.manualCashout()
+                    isCashingOut = false
+                }
+            } label: {
+                HStack(spacing: 8) {
+                    if isCashingOut {
+                        ProgressView()
+                            .tint(.black.opacity(0.85))
+                    } else {
+                        Image(systemName: "banknote.fill")
+                            .font(.system(size: 14, weight: .bold))
+                    }
+                    Text(isCashingOut ? "CASHING OUT…" : "CASH OUT NOW")
+                        .tracking(1.3)
+                }
+            }
+            .buttonStyle(NFGPrimaryButtonStyle(
+                tintGradient: NFGTheme.goldGradient,
+                glowColor: NFGTheme.gold,
+                isDisabled: !canCashOut || !PlayerSession.isLoggedIn
+            ))
+            .disabled(!canCashOut || !PlayerSession.isLoggedIn)
+
+            if mult < 1.05 {
+                Text("Wait until 1.05× to cash out early")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(NFGTheme.muted)
+            } else if bet.cashout > mult {
+                Text("Auto cashout at \(String(format: "%.2f", bet.cashout))× if you hold — or tap above to take profit now")
+                    .font(.system(size: 11, weight: .medium, design: .rounded))
+                    .foregroundStyle(NFGTheme.mutedSoft)
+                    .multilineTextAlignment(.center)
+            }
+        }
+        .padding(NFGSpacing.sm)
+        .background(
+            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                .fill(NFGTheme.accent2.opacity(0.08))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
+                .stroke(NFGTheme.accent2.opacity(0.35), lineWidth: 1)
+        )
     }
 
     private var quickStakeRow: some View {

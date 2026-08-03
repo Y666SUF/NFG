@@ -357,12 +357,12 @@ function handleClientMessage(userId, raw, pointStore) {
     const playerX = Number(msg.playerX);
     const playerY = Number(msg.playerY);
     const velocityY = Number(msg.velocityY);
-    const elapsed = Math.max(0, Math.floor(Number(msg.elapsed) || 0));
+    const elapsed = Number(msg.elapsed);
     rec.player.height = height;
     if (Number.isFinite(playerX)) rec.player.playerX = playerX;
     if (Number.isFinite(playerY)) rec.player.playerY = playerY;
     if (Number.isFinite(velocityY)) rec.player.velocityY = velocityY;
-    rec.player.elapsed = elapsed;
+    if (Number.isFinite(elapsed)) rec.player.elapsed = elapsed;
     if (msg.sessionPoints != null) {
       rec.player.sessionPoints = Math.max(0, Math.floor(Number(msg.sessionPoints) || 0));
     } else {
@@ -378,7 +378,7 @@ function handleClientMessage(userId, raw, pointStore) {
         playerX: rec.player.playerX ?? 0,
         playerY: rec.player.playerY ?? height + 80,
         velocityY: rec.player.velocityY ?? 0,
-        elapsed: rec.player.elapsed ?? 0,
+        elapsed: rec.player.elapsed ?? null,
         skinId: rec.player.skinId,
         fill: rec.player.fill,
         ring: rec.player.ring,

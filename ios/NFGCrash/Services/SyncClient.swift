@@ -25,7 +25,14 @@ final class SyncClient: ObservableObject {
     @Published var pendingOfflineCount: Int = OfflineQueue.count
     @Published var pendingArcadeSyncPoints: Int = 0
     @Published var pendingArcadeSyncCount: Int = 0
+    @Published var pendingInventorySyncCount: Int = OfflineInventoryLedger.pendingCount()
+    @Published var pendingCrashSyncCount: Int = CrashOfflineLedger.pendingCount()
+    /// True when the app is usable with a cached session/wallet while the live server is down.
+    @Published private(set) var isOfflinePlayMode = false
+    /// Crash always runs on-device; server is only for wallet sync / social features.
+    @Published private(set) var usesLocalCrash = true
     @Published var multiplierHistory: [Double] = [1]
+    /// Live multiplier for chart/UI (driven by LocalCrashEngine).
     @Published var displayMultiplier: Double = 1
     @Published var sublineText = "Connecting…"
     @Published var taxPotAmount: Int = 0
@@ -72,6 +79,8 @@ final class SyncClient: ObservableObject {
     private var lastRoundId: Int = 0
     private var lastRoundResultShownId: Int = 0
     private var pingTimer: Timer?
+    private var displayMultTimer: Timer?
+    private var localRunStartedAtMs: Int64 = 0
     private var liveStatusTimer: Timer?
     private var presenceTimer: Timer?
     private var knownPresenceUserIds = Set<String>()
@@ -79,7 +88,6 @@ final class SyncClient: ObservableObject {
     private var presenceJoinDismissTask: Task<Void, Never>?
     private var walletRefreshTimer: Timer?
     private var arcadeSyncTimer: Timer?
-    private var smoothMultTimer: Timer?
     /// Bumped whenever wallet balance is updated from a purchase or `applyWalletFromServer` — stale `refreshWallet` responses are ignored.
     private var walletDataRevision: UInt64 = 0
     private var api: GameAPI?
@@ -93,22 +101,179 @@ final class SyncClient: ObservableObject {
     private var lastPhase: GamePhase = .idle
     private var lastAutoBetRoundId: Int = -1
     private var pendingBetAmountText: String?
+    private let localCrash = LocalCrashEngine()
+
+    init() {
+        restoreCachedWalletIfNeeded()
+        refreshPendingArcadeSyncCount()
+        pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+        pendingCrashSyncCount = CrashOfflineLedger.pendingCount()
+        pendingOfflineCount = OfflineQueue.count
+        configureLocalCrash()
+        if PlayerSession.isLoggedIn {
+            startLocalCrashIfNeeded()
+        }
+    }
+
+    var isServerReachable: Bool { connectionStatus == "Online" }
+
+    /// Balance shown in UI — includes pending offline arcade credits still waiting to sync.
+    var displayBalanceIncludingPending: Int {
+        max(0, liveBalance + max(0, pendingArcadeSyncPoints))
+    }
+
+    private func restoreCachedWalletIfNeeded() {
+        guard PlayerSession.isLoggedIn, let cached = LocalWalletStore.load() else { return }
+        wallet = cached
+        liveBalance = cached.balance
+        profile.balance = cached.balance
+        profile.allTime = cached.allTime
+        profile.displayName = cached.displayName.isEmpty ? profile.displayName : cached.displayName
+        profile.level = cached.level
+        profile.rank = cached.rank
+    }
+
+    private func persistWalletLocally() {
+        guard PlayerSession.isLoggedIn else { return }
+        var snap = wallet
+        if snap.user.isEmpty {
+            snap.user = AuthStore.verifiedUserId
+        }
+        LocalWalletStore.save(snap)
+    }
+
+    private func enterOfflinePlayMode(reason: String) {
+        isOfflinePlayMode = true
+        connectionStatus = "Offline"
+        restoreCachedWalletIfNeeded()
+        refreshPendingArcadeSyncCount()
+        pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+        pendingCrashSyncCount = CrashOfflineLedger.pendingCount()
+        pendingOfflineCount = OfflineQueue.count
+        startLocalCrashIfNeeded()
+        sublineText = "Offline — crash runs on your phone. Wallet syncs when the server is back."
+        appendFeed(reason)
+        syncPresencePillFromState()
+        scheduleReconnect()
+    }
+
+    private func configureLocalCrash() {
+        localCrash.onNeedBalance = { [weak self] in
+            self?.liveBalance ?? 0
+        }
+        localCrash.onDebit = { [weak self] amount in
+            guard let self else { return false }
+            guard self.liveBalance >= amount else { return false }
+            self.patchWallet { w in
+                w.balance = max(0, w.balance - amount)
+            }
+            return true
+        }
+        localCrash.onCredit = { [weak self] amount in
+            guard let self, amount > 0 else { return }
+            self.patchWallet { w in
+                w.balance = w.balance + amount
+                w.allTime = max(w.allTime, w.balance)
+            }
+        }
+        localCrash.onStateChanged = { [weak self] in
+            self?.publishLocalCrashState()
+        }
+        localCrash.onRoundSettled = { [weak self] settlement in
+            self?.handleLocalCrashSettlement(settlement)
+        }
+    }
+
+    private func startLocalCrashIfNeeded() {
+        guard PlayerSession.isLoggedIn else { return }
+        usesLocalCrash = true
+        localCrash.start()
+        publishLocalCrashState()
+        startDisplayMultiplierTimer()
+    }
+
+    private func publishLocalCrashState() {
+        let previousPhase = lastPhase
+        let state = localCrash.makeGameState()
+        gameState = state
+        multiplierHistory = localCrash.multiplierHistory
+        displayMultiplier = localCrash.phase == .running || localCrash.phase == .ended
+            ? localCrash.multiplier
+            : 1
+        taxPotAmount = state.taxPot?.displayAmount ?? taxPotAmount
+        updateLocalCrashSubline(state)
+
+        if state.phase == .betting && previousPhase != .betting {
+            nearMissMessage = nil
+            maybeRepeatLastBet(roundId: state.roundId)
+            roundResultPopup = nil
+            pendingRoundResultPopup = nil
+        }
+        if state.phase == .ended && previousPhase != .ended {
+            evaluateNearMiss(state)
+            if let result = state.lastResult, result.roundId != lastRoundResultShownId {
+                let summary = RoundResultSummary(from: result)
+                lastRoundResultShownId = result.roundId
+                if summary.hasEntries {
+                    pendingRoundResultPopup = summary
+                }
+            }
+        }
+        lastPhase = state.phase
+    }
+
+    private func updateLocalCrashSubline(_ s: CrashGameState) {
+        switch s.phase {
+        case .betting:
+            let sec = max(0, Int((Double(s.bettingEndsAt) - Date().timeIntervalSince1970 * 1000) / 1000))
+            sublineText = "Entry window \(sec)s — crash runs on your device"
+        case .running:
+            if activeCrashBet != nil {
+                sublineText = "Tap Cash Out — or wait for your target"
+            } else {
+                sublineText = "Watching this round — place a bet next window"
+            }
+        case .ended:
+            if s.lastResult?.isEmptyRound == true, let crash = s.crashPoint {
+                sublineText = "No bet this round — would have crashed at \(String(format: "%.2f", crash))×"
+            } else if let crash = s.crashPoint {
+                sublineText = "Crashed at \(String(format: "%.2f", crash))×"
+            } else {
+                sublineText = "Round ended"
+            }
+        case .idle:
+            sublineText = "Starting next round…"
+        }
+    }
+
+    private func handleLocalCrashSettlement(_ settlement: LocalCrashEngine.RoundSettlement) {
+        CrashOfflineLedger.enqueue(settlement)
+        pendingCrashSyncCount = CrashOfflineLedger.pendingCount()
+        persistWalletLocally()
+        if settlement.result == "win" {
+            lastActionMessage = "Cashed out @ \(String(format: "%.2f", settlement.settleMult ?? 1))× — +\(max(0, settlement.netDelta).formatted()) pts"
+        } else if settlement.result == "lose" {
+            lastActionMessage = "Crashed at \(String(format: "%.2f", settlement.crashPoint))× — lost \(settlement.stake.formatted()) pts"
+        }
+        Task { await flushCrashLedger(silent: true) }
+    }
 
     private func bootstrapFromServer(api: GameAPI) async {
         await refreshMobileStatus()
         await sendPresenceHeartbeat()
 
         do {
-            gameState = enrichState(try await api.fetchState())
-            applyStateSideEffects(gameState)
+            // Crash rounds run locally — don't overwrite with live multiplayer state.
+            _ = try? await api.fetchState()
             connectionStatus = "Online"
+            isOfflinePlayMode = false
+            startLocalCrashIfNeeded()
             syncPresencePillFromState()
 
             await refreshProfile()
             await refreshWallet()
             await loadAppChatHistory()
-            await flushOfflineQueue()
-            await flushArcadeOfflineQueue(silent: true)
+            await flushAllPendingOnReconnect(silent: true)
             await refreshLeaderboard()
             startLiveStatusPolling()
             startPresencePolling()
@@ -116,9 +281,7 @@ final class SyncClient: ObservableObject {
             startArcadeSyncPolling()
             await refreshActiveAppUsers()
         } catch {
-            connectionStatus = "Offline"
-            syncPresencePillFromState()
-            appendFeed("Connection lost")
+            enterOfflinePlayMode(reason: "Server unreachable — crash keeps running on your phone.")
         }
     }
 
@@ -139,10 +302,17 @@ final class SyncClient: ObservableObject {
         connectionStatus = "Connecting…"
 
         Task {
+            isBootstrappingSession = true
+            _ = await AuthStore.refreshSessionFromServer()
             if !PlayerSession.isLoggedIn {
-                isBootstrappingSession = true
                 await ensureAppGuestSession()
-                isBootstrappingSession = false
+            }
+            isBootstrappingSession = false
+
+            // Cached session → stay playable even if the server is down.
+            if PlayerSession.isLoggedIn {
+                restoreCachedWalletIfNeeded()
+                startLocalCrashIfNeeded()
             }
 
             guard PlayerSession.isLoggedIn else {
@@ -153,7 +323,7 @@ final class SyncClient: ObservableObject {
             do {
                 api = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
             } catch {
-                connectionStatus = error.localizedDescription
+                enterOfflinePlayMode(reason: "Can't reach server — crash keeps running on your phone.")
                 return
             }
 
@@ -166,18 +336,24 @@ final class SyncClient: ObservableObject {
             webSocketTask?.resume()
             receiveLoop()
             startPing()
-            startSmoothMultTimer()
+            startDisplayMultiplierTimer()
         }
     }
 
     func ensureAppGuestSession() async {
+        if AuthStore.isTikTokLinked, AuthStore.sessionToken != nil {
+            _ = await AuthStore.refreshSessionFromServer()
+            return
+        }
         do {
             let bootstrapApi = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
             let resp = try await bootstrapApi.bootstrapAppGuest(deviceId: AuthStore.deviceId)
-            AuthStore.saveGuestSession(
-                token: resp.token ?? "",
-                userId: resp.userId ?? "",
-                displayName: resp.displayName ?? AuthStore.appGuestDisplayName
+            guard let token = resp.token, let userId = resp.userId else { return }
+            AuthStore.applyServerSession(
+                token: token,
+                userId: userId,
+                displayName: resp.displayName ?? AuthStore.appGuestDisplayName,
+                linkedVia: resp.linkedVia
             )
         } catch {
             // Server may be down — user can retry connect.
@@ -187,6 +363,7 @@ final class SyncClient: ObservableObject {
     func disconnect() {
         pingTimer?.invalidate()
         pingTimer = nil
+        stopDisplayMultiplierTimer()
         liveStatusTimer?.invalidate()
         liveStatusTimer = nil
         presenceTimer?.invalidate()
@@ -203,7 +380,6 @@ final class SyncClient: ObservableObject {
         walletRefreshTimer = nil
         arcadeSyncTimer?.invalidate()
         arcadeSyncTimer = nil
-        stopSmoothMultTimer()
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
         if connectionStatus != "Server unreachable" {
@@ -215,7 +391,7 @@ final class SyncClient: ObservableObject {
     /// Clears session and starts a fresh app guest account.
     func signOut() async {
         if let api {
-            await api.logoutSession()
+            await api.logoutSession(unlink: true)
         }
         disconnect()
         reconnectTask?.cancel()
@@ -286,6 +462,7 @@ final class SyncClient: ObservableObject {
         guard next != wallet else { return }
         wallet = next
         liveBalance = next.balance
+        persistWalletLocally()
     }
 
     func refreshWallet(force: Bool = false) async {
@@ -298,6 +475,17 @@ final class SyncClient: ObservableObject {
             let next = try await api.fetchMobileWallet()
             guard force || revisionAtStart == walletDataRevision else { return }
             applyWalletFromServer(next)
+        } catch GameAPIError.notLoggedIn {
+            if await AuthStore.refreshSessionFromServer(),
+               let refreshed = try? GameAPI(baseURLString: PlayerSession.serverBaseURL) {
+                self.api = refreshed
+                if let next = try? await refreshed.fetchMobileWallet() {
+                    guard force || revisionAtStart == walletDataRevision else { return }
+                    applyWalletFromServer(next)
+                }
+            } else {
+                walletError = GameAPIError.notLoggedIn.errorDescription
+            }
         } catch {
             walletError = error.localizedDescription
         }
@@ -311,24 +499,48 @@ final class SyncClient: ObservableObject {
 
     func applyWalletFromServer(_ next: PlayerWallet) {
         walletDataRevision &+= 1
-        wallet = next
-        liveBalance = next.balance
-        profile.balance = next.balance
-        profile.allTime = next.allTime
-        profile.displayName = next.displayName
-        profile.level = next.level
-        profile.rank = next.rank
-        if let locked = next.displayNameLocked {
+        var merged = next
+        // Local crash is balance authority until pending rounds finish syncing.
+        if CrashOfflineLedger.pendingCount() > 0 {
+            merged.balance = wallet.balance
+            merged.allTime = max(next.allTime, wallet.allTime)
+        }
+        wallet = merged
+        liveBalance = merged.balance
+        profile.balance = merged.balance
+        profile.allTime = merged.allTime
+        profile.displayName = merged.displayName
+        profile.level = merged.level
+        profile.rank = merged.rank
+        if let locked = merged.displayNameLocked {
             AuthStore.displayNameLocked = locked
         }
-        if !next.user.isEmpty {
-            if AuthStore.displayNameLocked || next.displayNameLocked == true {
-                AuthStore.applyCustomDisplayName(next.displayName)
+        if !merged.user.isEmpty {
+            if AuthStore.displayNameLocked || merged.displayNameLocked == true {
+                AuthStore.applyCustomDisplayName(merged.displayName)
             } else {
-                AuthStore.adoptDisplayNameFromServer(next.displayName, userId: next.user)
+                AuthStore.adoptDisplayNameFromServer(merged.displayName, userId: merged.user)
             }
         }
-        syncCosmeticsCatalogFromWallet(next)
+        syncCosmeticsCatalogFromWallet(merged)
+        reconcilePendingInventorySpends()
+        persistWalletLocally()
+    }
+
+    /// Keep steal-charge UI aligned with spends already taken in the app while offline.
+    private func reconcilePendingInventorySpends() {
+        let stealPending = OfflineInventoryLedger.pendingStealSpends()
+        guard stealPending > 0 else {
+            pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+            return
+        }
+        let adjusted = max(0, wallet.inventory.stealCharges - stealPending)
+        if adjusted != wallet.inventory.stealCharges {
+            var next = wallet
+            next.inventory.stealCharges = adjusted
+            wallet = next
+        }
+        pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
     }
 
     func applyBalanceFromServer(balance: Int, allTime: Int? = nil) {
@@ -757,13 +969,67 @@ final class SyncClient: ObservableObject {
             lastActionMessage = "Enter amount (e.g. 100, 30k) and cashout ≥ 1.05"
             return
         }
+        guard PlayerSession.isLoggedIn else {
+            lastActionMessage = "Sign in required."
+            return
+        }
         guard let amount = BetAmountParser.parse(trimmed) else {
             lastActionMessage = "Enter a valid amount (e.g. 100, 30k, 3m)"
             return
         }
+        startLocalCrashIfNeeded()
+        let user = resolvedBetUserId()
+        let name = resolvedBetDisplayName()
+        if let err = localCrash.placeBet(
+            amount: amount,
+            cashout: cashout,
+            userId: user,
+            displayName: name
+        ) {
+            lastActionMessage = err
+            return
+        }
         rememberPlacedBet(amount: amount, cashout: cashout)
         pendingBetAmountText = trimmed
-        await sendCommand("!\(trimmed) \(cashout)")
+        LastBetStore.save(amountText: trimmed, cashout: cashout)
+        lastActionMessage = "Bet placed: \(amount.formatted()) @ \(String(format: "%.2f", cashout))×"
+        publishLocalCrashState()
+    }
+
+    /// Cash out an active crash bet at the current live multiplier (before crash / before auto target).
+    func manualCashout() async {
+        guard PlayerSession.isLoggedIn else {
+            lastActionMessage = "Sign in required."
+            return
+        }
+        if let err = localCrash.manualCashout() {
+            lastActionMessage = err
+            return
+        }
+        publishLocalCrashState()
+    }
+
+    var activeCrashBet: OpenBet? {
+        guard localCrash.phase == .running, let bet = localCrash.activeBet else { return nil }
+        return OpenBet(
+            user: bet.userId,
+            displayName: bet.displayName,
+            amount: bet.amount,
+            cashout: bet.cashout
+        )
+    }
+
+    var canManualCashout: Bool {
+        activeCrashBet != nil && displayMultiplier >= 1.05
+    }
+
+    func estimatedManualCashoutPayout(for bet: OpenBet) -> Int {
+        let mult = displayMultiplier
+        guard mult >= 1.05 else { return 0 }
+        let gross = Int((Double(bet.amount) * mult).rounded(.down))
+        let profit = max(0, gross - bet.amount)
+        let tax = profit * 5 / 100
+        return gross - tax
     }
 
     func checkBalance() async {
@@ -778,12 +1044,53 @@ final class SyncClient: ObservableObject {
             lastActionMessage = "Pick a player to steal from"
             return
         }
-        await sendCommand("!steal @\(target)")
+        guard wallet.inventory.stealCharges > 0 else {
+            lastActionMessage = "No steal charges left"
+            return
+        }
+
+        if let api, isServerReachable {
+            let user = AuthStore.verifiedUserId
+            let name = resolvedChatDisplayName()
+            do {
+                let result = try await api.sendChat(
+                    message: "!steal @\(target)",
+                    userId: user,
+                    displayName: name
+                )
+                handleChatResult(result)
+                await refreshWallet()
+                return
+            } catch {
+                // Fall through to offline queue so the spend is not lost.
+            }
+        }
+
+        // Offline / flaky: spend locally, sync charge + steal when the server returns.
+        patchWallet { w in
+            w.inventory.stealCharges = max(0, w.inventory.stealCharges - 1)
+        }
+        OfflineInventoryLedger.enqueue(kind: "steal", count: 1, target: target)
+        pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+        lastActionMessage = "Steal queued — will sync when the server is back (\(wallet.inventory.stealCharges) left)"
+        appendFeed("Queued steal on @\(target)")
     }
 
     func flushOfflineQueue() async {
         guard let api, PlayerSession.isLoggedIn else { return }
-        var queue = OfflineQueue.load()
+        // Drop stale crash bets/cashouts queued while offline — those rounds are gone.
+        let queue = OfflineQueue.load().filter { item in
+            let msg = item.message.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            if msg.hasPrefix("!cashout") { return false }
+            if msg.hasPrefix("!all ") { return false }
+            // Bare amount bets like "!100 2" / "!3m 2.5"
+            if msg.hasPrefix("!"), !msg.hasPrefix("!steal"), !msg.hasPrefix("!balance"), !msg.hasPrefix("!bal") {
+                let rest = msg.dropFirst()
+                if rest.first?.isNumber == true || rest.hasPrefix("all") { return false }
+            }
+            return true
+        }
+        OfflineQueue.save(queue)
         guard !queue.isEmpty else {
             pendingOfflineCount = 0
             return
@@ -791,6 +1098,10 @@ final class SyncClient: ObservableObject {
 
         var remaining: [QueuedChat] = []
         for item in queue {
+            // Steals are handled by inventory sync (avoids double-spend).
+            if item.message.lowercased().contains("!steal") {
+                continue
+            }
             do {
                 let result = try await api.sendChat(
                     message: item.message,
@@ -806,14 +1117,157 @@ final class SyncClient: ObservableObject {
         OfflineQueue.save(remaining)
         pendingOfflineCount = remaining.count
         if remaining.isEmpty && !queue.isEmpty {
-            appendFeed("Synced \(queue.count) offline action(s) to your account.")
+            appendFeed("Synced offline actions to your account.")
         }
         await refreshProfile()
+    }
+
+    /// Sync offline steal / powerup spends so server inventory matches the app.
+    @discardableResult
+    func flushInventoryLedger(silent: Bool = false) async -> Int {
+        guard let api, PlayerSession.isLoggedIn, connectionStatus == "Online" else { return 0 }
+        let items = OfflineInventoryLedger.load()
+        pendingInventorySyncCount = items.count
+        guard !items.isEmpty else { return 0 }
+
+        let payload: [[String: Any]] = items.map { item in
+            var row: [String: Any] = [
+                "id": item.id,
+                "kind": item.kind,
+                "count": item.count,
+            ]
+            if let target = item.target, !target.isEmpty {
+                row["target"] = target
+            }
+            return row
+        }
+
+        do {
+            let result = try await api.syncOfflineInventory(spends: payload)
+            if let wallet = result.wallet {
+                applyWalletFromServer(wallet)
+            } else {
+                await refreshWallet(force: true)
+            }
+            let remainingDTOs = result.remaining ?? []
+            let remaining: [OfflineInventorySpend] = remainingDTOs.compactMap { dto in
+                guard let id = dto.id, let kind = dto.kind else { return nil }
+                return OfflineInventorySpend(
+                    id: id,
+                    kind: kind,
+                    count: dto.count ?? 1,
+                    target: dto.target,
+                    createdAt: Date().timeIntervalSince1970
+                )
+            }
+            OfflineInventoryLedger.replaceAll(remaining)
+            pendingInventorySyncCount = remaining.count
+            let applied = result.applied ?? max(0, items.count - remaining.count)
+            if applied > 0, !silent {
+                appendFeed("Synced \(applied) steal/powerup action(s).")
+                lastActionMessage = "Steal charges synced with the server."
+            }
+            return applied
+        } catch {
+            if !silent {
+                lastActionMessage = "Still syncing steals — retrying…"
+            }
+            return 0
+        }
+    }
+
+    /// Full offline → online catch-up: crash rounds, inventory, arcade points, chat queue.
+    func flushAllPendingOnReconnect(silent: Bool = false) async {
+        guard connectionStatus == "Online", PlayerSession.isLoggedIn else { return }
+        refreshPendingArcadeSyncCount()
+        let hadPending =
+            pendingInventorySyncCount > 0
+            || pendingOfflineCount > 0
+            || pendingArcadeSyncCount > 0
+            || pendingCrashSyncCount > 0
+            || JumpPendingRunStore.pendingHeight(for: ArcadeOfflinePointsQueue.userKey()) > 0
+        guard hadPending || isOfflinePlayMode else { return }
+
+        let crash = await flushCrashLedger(silent: silent)
+        let inv = await flushInventoryLedger(silent: silent)
+        await flushOfflineQueue()
+        let arcade = await flushArcadeOfflineQueue(silent: silent)
+        if crash > 0 || inv > 0 || arcade > 0 || hadPending {
+            // Only pull server wallet when crash ledger is empty (local crash is balance authority).
+            if CrashOfflineLedger.pendingCount() == 0 {
+                await refreshWallet(force: true)
+            }
+        }
+        isOfflinePlayMode = false
+        refreshPendingArcadeSyncCount()
+    }
+
+    /// Push on-device crash win/loss deltas to the live server wallet.
+    @discardableResult
+    func flushCrashLedger(silent: Bool = false) async -> Int {
+        guard let api, PlayerSession.isLoggedIn, connectionStatus == "Online" else { return 0 }
+        let items = CrashOfflineLedger.load()
+        pendingCrashSyncCount = items.count
+        guard !items.isEmpty else { return 0 }
+
+        let payload: [[String: Any]] = items.map { item in
+            var row: [String: Any] = [
+                "id": item.id,
+                "roundId": item.roundId,
+                "stake": item.stake,
+                "result": item.result,
+                "crashPoint": item.crashPoint,
+                "payout": item.payout,
+                "tax": item.tax,
+                "netDelta": item.netDelta,
+            ]
+            if let m = item.settleMult { row["settleMult"] = m }
+            return row
+        }
+
+        do {
+            let result = try await api.syncSoloCrashRounds(rounds: payload)
+            let remainingDTOs = result.remaining ?? []
+            let remaining: [CrashPendingRound] = remainingDTOs.compactMap { dto in
+                guard let id = dto.id, let result = dto.result else { return nil }
+                return CrashPendingRound(
+                    id: id,
+                    roundId: dto.roundId ?? 0,
+                    stake: dto.stake ?? 0,
+                    result: result,
+                    settleMult: dto.settleMult,
+                    crashPoint: dto.crashPoint ?? 1,
+                    payout: dto.payout ?? 0,
+                    tax: dto.tax ?? 0,
+                    netDelta: dto.netDelta ?? 0,
+                    createdAt: Date().timeIntervalSince1970
+                )
+            }
+            // Server applies all or drops bad rows; keep only explicit remaining.
+            CrashOfflineLedger.replaceAll(remaining)
+            pendingCrashSyncCount = remaining.count
+            if let wallet = result.wallet, remaining.isEmpty {
+                applyWalletFromServer(wallet)
+            }
+            let applied = result.applied ?? max(0, items.count - remaining.count)
+            if applied > 0, !silent {
+                appendFeed("Synced \(applied) crash round(s) to your account.")
+            }
+            return applied
+        } catch {
+            if !silent {
+                lastActionMessage = "Still syncing crash results…"
+            }
+            return 0
+        }
     }
 
     func refreshPendingArcadeSyncCount() {
         pendingArcadeSyncPoints = ArcadeOfflinePointsQueue.pendingPointsTotal()
         pendingArcadeSyncCount = ArcadeOfflinePointsQueue.pendingCount()
+        pendingInventorySyncCount = OfflineInventoryLedger.pendingCount()
+        pendingCrashSyncCount = CrashOfflineLedger.pendingCount()
+        pendingOfflineCount = OfflineQueue.count
     }
 
     /// Pushes queued arcade milestone/level rewards to the server when online.
@@ -895,6 +1349,25 @@ final class SyncClient: ObservableObject {
             } else {
                 lastActionMessage = "Balance on cooldown"
             }
+        case "manual_cashout":
+            if parsed.ok == true {
+                let mult = parsed.cashout ?? gameState.multiplier
+                let paid = parsed.payout ?? 0
+                let target = parsed.targetCashout ?? mult
+                if target > mult + 0.001 {
+                    lastActionMessage = "Cashed out @ \(String(format: "%.2f", mult))× (target was \(String(format: "%.2f", target))×) — +\(paid.formatted()) pts"
+                } else {
+                    lastActionMessage = "Cashed out @ \(String(format: "%.2f", mult))× — +\(paid.formatted()) pts"
+                }
+                removeCachedBetForCurrentUser()
+                if let bal = parsed.balance {
+                    applyBalanceFromServer(balance: bal)
+                } else if paid > 0 {
+                    patchWallet { $0.balance = $0.balance + paid }
+                }
+            } else {
+                lastActionMessage = manualCashoutErrorMessage(parsed.reason)
+            }
         default:
             if parsed.ok == false, let reason = parsed.reason {
                 lastActionMessage = reason.replacingOccurrences(of: "_", with: " ")
@@ -912,6 +1385,17 @@ final class SyncClient: ObservableObject {
         case "bad_amount": return "Invalid bet amount"
         case "already_bet": return "You already have a bet this round"
         default: return reason ?? "Bet failed"
+        }
+    }
+
+    private func manualCashoutErrorMessage(_ reason: String?) -> String {
+        switch reason {
+        case "not_running": return "Round isn't running — can't cash out now"
+        case "no_active_bet": return "No active bet to cash out"
+        case "too_early": return "Too early — wait until at least 1.05×"
+        case "jet_lock_active": return "Commands locked — jet freeze active"
+        case "shield_break_lock": return "Commands locked — shield break active"
+        default: return reason?.replacingOccurrences(of: "_", with: " ") ?? "Cash out failed"
         }
     }
 
@@ -978,17 +1462,18 @@ final class SyncClient: ObservableObject {
 
         switch type {
         case "state":
-            if let payload = json["payload"],
-               let payloadData = try? JSONSerialization.data(withJSONObject: payload),
-               let state = try? JSONDecoder().decode(CrashGameState.self, from: payloadData) {
-                let enriched = enrichState(state)
-                gameState = enriched
-                applyStateSideEffects(enriched)
-                if connectionStatus != "Online" {
-                    connectionStatus = "Online"
-                    syncPresencePillFromState()
-                    Task { await flushArcadeOfflineQueue(silent: true) }
-                }
+            // Crash rounds are on-device — ignore live multiplayer crash state.
+            // Still treat a state packet as proof the server is reachable for sync.
+            if connectionStatus != "Online" {
+                connectionStatus = "Online"
+                isOfflinePlayMode = false
+                syncPresencePillFromState()
+                Task { await flushAllPendingOnReconnect(silent: true) }
+            }
+            if let payload = json["payload"] as? [String: Any],
+               let tax = payload["taxPot"] as? [String: Any] {
+                let pot = (tax["potAmount"] as? Int) ?? (tax["amount"] as? Int) ?? taxPotAmount
+                taxPotAmount = pot
             }
         case "chat_result":
             if let payload = json["payload"] as? [String: Any] {
@@ -1131,7 +1616,7 @@ final class SyncClient: ObservableObject {
         arcadeSyncTimer?.invalidate()
         arcadeSyncTimer = Timer.scheduledTimer(withTimeInterval: 30, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                await self?.flushArcadeOfflineQueue(silent: true)
+                await self?.flushAllPendingOnReconnect(silent: true)
             }
         }
     }
@@ -1302,6 +1787,20 @@ final class SyncClient: ObservableObject {
     /// Keeps last-five crash list when server sends it; falls back to local tracking on older PC builds.
     private func enrichState(_ s: CrashGameState) -> CrashGameState {
         var out = enrichOpenBets(s)
+
+        if out.phase == .running {
+            if let serverStart = out.runStartedAt, serverStart > 0 {
+                localRunStartedAtMs = serverStart
+            } else if localRunStartedAtMs <= 0 {
+                localRunStartedAtMs = Int64(Date().timeIntervalSince1970 * 1000)
+            }
+            if out.runStartedAt == nil {
+                out.runStartedAt = localRunStartedAtMs
+            }
+        } else if out.phase != .running {
+            localRunStartedAtMs = 0
+        }
+
         if !out.recentCrashes.isEmpty {
             localRecentCrashes = out.recentCrashes
             return out
@@ -1456,63 +1955,80 @@ final class SyncClient: ObservableObject {
                 pendingRoundResultPopup = nil
             }
         }
+
+        if s.phase == .running && previousPhase != .running {
+            localRunStartedAtMs = s.runStartedAt ?? Int64(Date().timeIntervalSince1970 * 1000)
+            displayMultiplier = 1
+            multiplierHistory = [1]
+        }
+
         taxPotAmount = s.taxPot?.displayAmount ?? 0
         updateSubline(s)
         updateRoundResultPopup(s)
-        tickDisplayMultiplier(from: s)
         if s.phase == .ended {
             let final = max(s.crashPoint ?? s.multiplier, 1)
+            displayMultiplier = final
             let last = multiplierHistory.last ?? 1
             if abs(last - final) > 0.0005 {
                 multiplierHistory.append(final)
                 if multiplierHistory.count > 240 { multiplierHistory.removeFirst() }
             }
-        } else if s.phase == .betting {
-            multiplierHistory = [1]
+        } else if s.phase == .betting || s.phase == .idle {
+            displayMultiplier = 1
+            if s.phase == .betting {
+                multiplierHistory = [1]
+            }
         }
     }
 
-    private func multRatePerSecond(from s: CrashGameState) -> Double {
-        s.opts?.multiplierPerSecond ?? 0.42
-    }
-
-    private func projectedRunningMult(for s: CrashGameState) -> Double {
+    func projectedRunningMult(for s: CrashGameState) -> Double {
         guard s.phase == .running else { return max(s.multiplier, 1) }
-        guard let started = s.runStartedAt, started > 0 else { return max(s.multiplier, 1) }
-        let nowMs = Date().timeIntervalSince1970 * 1000
-        let elapsed = max(0, (nowMs - Double(started)) / 1000)
-        let rate = multRatePerSecond(from: s)
+        let rate = s.opts?.rate ?? 0.42
+        let started = s.runStartedAt ?? (localRunStartedAtMs > 0 ? localRunStartedAtMs : nil)
+        guard let started, started > 0 else { return max(s.multiplier, 1) }
+        let elapsed = max(0, (Date().timeIntervalSince1970 * 1000 - Double(started)) / 1000)
         return floor((1 + rate * elapsed) * 100) / 100
     }
 
-    private func startSmoothMultTimer() {
-        guard smoothMultTimer == nil else { return }
-        smoothMultTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.tickDisplayMultiplier() }
+    private func tickDisplayMultiplier() {
+        // Local engine owns the live multiplier (includes early-pace / adaptive speed).
+        if usesLocalCrash {
+            switch localCrash.phase {
+            case .running, .ended:
+                displayMultiplier = max(localCrash.multiplier, 1)
+            default:
+                displayMultiplier = 1
+            }
+            multiplierHistory = localCrash.multiplierHistory
+            updateLocalCrashSubline(localCrash.makeGameState())
+            return
         }
-    }
-
-    private func stopSmoothMultTimer() {
-        smoothMultTimer?.invalidate()
-        smoothMultTimer = nil
-    }
-
-    private func tickDisplayMultiplier(from state: CrashGameState? = nil) {
-        let s = state ?? gameState
+        let s = gameState
         switch s.phase {
         case .running:
             displayMultiplier = projectedRunningMult(for: s)
-            let m = displayMultiplier
-            let last = multiplierHistory.last ?? 1
-            if multiplierHistory.isEmpty || abs(last - m) > 0.0005 {
-                multiplierHistory.append(m)
-                if multiplierHistory.count > 240 { multiplierHistory.removeFirst() }
-            }
         case .ended:
             displayMultiplier = max(s.crashPoint ?? s.multiplier, 1)
         default:
             displayMultiplier = 1
         }
+    }
+
+    private func startDisplayMultiplierTimer() {
+        displayMultTimer?.invalidate()
+        let timer = Timer(timeInterval: 1.0 / 60.0, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.tickDisplayMultiplier()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        displayMultTimer = timer
+        tickDisplayMultiplier()
+    }
+
+    private func stopDisplayMultiplierTimer() {
+        displayMultTimer?.invalidate()
+        displayMultTimer = nil
     }
 
     private func maybeRepeatLastBet(roundId: Int) {
@@ -1586,11 +2102,16 @@ final class SyncClient: ObservableObject {
             let sec = max(0, Int((Double(s.bettingEndsAt) - Date().timeIntervalSince1970 * 1000) / 1000))
             sublineText = "Entry window \(sec)s — !amount mult (e.g. !3m 2.5, !30k 2)"
         case .running:
-            sublineText = "Multiplier climbing — auto cashout when targets hit."
+            if activeCrashBet != nil {
+                sublineText = "Tap Cash Out to take profit at the live multiplier — or wait for your target."
+            } else {
+                sublineText = "Multiplier climbing — auto cashout when targets hit."
+            }
         case .ended:
-            if s.lastResult?.emptyRound == true, let crash = s.lastResult?.crashPoint {
+            let crashValue = s.crashPoint ?? s.lastResult?.crashPoint
+            if s.lastResult?.isEmptyRound == true, let crash = crashValue {
                 sublineText = "No players this round — would have crashed at \(String(format: "%.2f", crash))×"
-            } else if let crash = s.crashPoint {
+            } else if let crash = crashValue {
                 sublineText = "Crashed at \(String(format: "%.2f", crash))×"
             } else {
                 sublineText = "Round ended"
@@ -1612,6 +2133,12 @@ final class SyncClient: ObservableObject {
         case "bet_line", "bet":
             if let amt = payload["amount"], let co = payload["cashout"] {
                 appendFeed("\(user) bet \(amt) @ \(co)×")
+            }
+        case "manual_cashout":
+            if payload["ok"] as? Bool == true,
+               let mult = payload["cashout"],
+               let paid = payload["payout"] {
+                appendFeed("\(user) cashed out @ \(mult)× (+ \(paid) pts)")
             }
         default:
             break

@@ -1,3 +1,4 @@
+# Allow Google AdMob app-ads.txt crawler
 User-agent: Google-adstxt
 Disallow:
 
@@ -7,6 +8,7 @@ Disallow:
 User-agent: Googlebot
 Disallow:
 
+# Site is mostly a SPA; allow crawlers to read authorization files at root
 User-agent: *
 Allow: /app-ads.txt
 Allow: /ads.txt

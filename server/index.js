@@ -266,6 +266,7 @@ app.get("/privacy.html", (_req, res) => res.redirect(302, "/privacy"));
 app.get("/legal.html", (_req, res) => res.redirect(302, "/legal"));
 app.get("/sideload.html", (_req, res) => res.redirect(302, "/sideload"));
 app.get("/contact.html", (_req, res) => res.status(404).send("Not found"));
+
 /** AdMob authorization — must return plain text on y666suf.com (not the React SPA). */
 const appAdsTxtFile = path.join(publicDir, "app-ads.txt");
 const adsTxtFile = path.join(publicDir, "ads.txt");

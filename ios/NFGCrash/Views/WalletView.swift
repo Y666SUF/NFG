@@ -166,7 +166,7 @@ struct WalletView: View {
             Text("TikTok Live")
                 .font(.system(size: 14, weight: .bold))
                 .foregroundStyle(NFGTheme.text)
-            Text("You're playing as App User with app points. Link TikTok later to use your live username and merge progress.")
+            Text("You're playing as App User with app points. Link TikTok to use your live username — your app points and progress will be combined with your TikTok account.")
                 .font(.system(size: 11))
                 .foregroundStyle(NFGTheme.muted)
             Button {

@@ -64,6 +64,71 @@ struct LinkStatusResponse: Decodable {
     var displayName: String?
     var token: String?
     var expiresAt: Int64?
+    var merge: LinkMergeSummary?
+
+    struct LinkMergeSummary: Decodable {
+        var combinedBalance: Int?
+        var mergedLevel: Int?
+    }
+
+    var mergedBalance: Int? { merge?.combinedBalance }
+}
+
+struct TikTokLinkingHealthResponse: Decodable {
+    var ok: Bool?
+    var linkStart: Bool?
+    var linkStatus: Bool?
+    var pendingLinks: Int?
+    var message: String?
+    var tiktokBridge: TikTokBridgeHealth?
+
+    struct TikTokBridgeHealth: Decodable {
+        var enabled: Bool?
+        var state: String?
+        var uniqueId: String?
+        var isLive: Bool?
+    }
+}
+
+enum TikTokLinkingAvailability: Equatable {
+    case checking
+    case ready(isLive: Bool, hostLive: String)
+    case serverUnreachable
+    case linkingNotOnServer
+    case needsAppSession
+    case error(String)
+
+    var bannerMessage: String {
+        switch self {
+        case .checking:
+            return "Checking link service…"
+        case .ready(let isLive, let host):
+            if isLive {
+                return "Link service online — go live on @\(host) and comment your !link code."
+            }
+            return "Link service online. You must be LIVE on @\(host) when you comment the code."
+        case .serverUnreachable:
+            return "Can't reach the game server right now. Linking is temporarily unavailable."
+        case .linkingNotOnServer:
+            return "TikTok linking isn't on this server build yet. The host needs to update the Windows server."
+        case .needsAppSession:
+            return "Starting app session… try again in a moment."
+        case .error(let msg):
+            return msg
+        }
+    }
+
+    var isError: Bool {
+        switch self {
+        case .checking, .ready: return false
+        default: return true
+        }
+    }
+
+    var canStartLink: Bool {
+        if case .ready = self { return true }
+        return false
+    }
 }
 
 struct AppGuestBootstrapResponse: Decodable {
@@ -78,7 +143,7 @@ struct AppGuestBootstrapResponse: Decodable {
 
 struct GameAPI {
     let baseURL: URL
-    var authToken: String?
+    var authToken: String? { AuthStore.sessionToken }
 
     init(baseURLString: String) throws {
         var raw = baseURLString.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -86,7 +151,6 @@ struct GameAPI {
         if !raw.hasPrefix("http") { raw = "http://\(raw)" }
         guard let url = URL(string: raw) else { throw GameAPIError.invalidURL }
         self.baseURL = url
-        self.authToken = AuthStore.sessionToken
     }
 
     private func authorizedRequest(url: URL, method: String = "GET", jsonBody: [String: Any]? = nil) throws -> URLRequest {
@@ -203,7 +267,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode == 404 {
@@ -290,7 +353,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode == 404 {
@@ -317,7 +379,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode == 404 {
@@ -344,7 +405,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode == 404 {
@@ -371,7 +431,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode == 404 {
@@ -397,7 +456,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode == 404 {
@@ -424,7 +482,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode == 404 {
@@ -469,7 +526,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode == 429 {
@@ -567,11 +623,15 @@ struct GameAPI {
         try validateMobileResponse(data: data, response: response, endpoint: endpoint)
     }
 
-    func bootstrapAppGuest(deviceId: String) async throws -> AppGuestBootstrapResponse {
+    func bootstrapAppGuest(deviceId: String, claimUserId: String? = nil) async throws -> AppGuestBootstrapResponse {
+        var body: [String: Any] = ["deviceId": deviceId]
+        if let claimUserId, !claimUserId.isEmpty {
+            body["claimUserId"] = claimUserId
+        }
         let req = try authorizedRequest(
             url: baseURL.appending(path: "/api/mobile/auth/app-guest"),
             method: "POST",
-            jsonBody: ["deviceId": deviceId]
+            jsonBody: body
         )
         let (data, response) = try await GameHTTP.data(for: req)
         try validateMobileResponse(data: data, response: response, endpoint: "auth/app-guest")
@@ -605,12 +665,77 @@ struct GameAPI {
         return try JSONDecoder().decode(LinkStatusResponse.self, from: data)
     }
 
-    func logoutSession() async {
-        guard let authToken, !authToken.isEmpty else { return }
+    /// Probes whether TikTok linking endpoints are reachable on the production server.
+    func checkTikTokLinkingAvailability() async -> TikTokLinkingAvailability {
+        if AuthStore.sessionToken?.isEmpty != false {
+            return .needsAppSession
+        }
+
+        do {
+            let (healthData, healthResponse) = try await GameHTTP.data(
+                from: baseURL.appending(path: "/api/mobile/link/health")
+            )
+            if let http = healthResponse as? HTTPURLResponse, http.statusCode == 200,
+               let health = try? JSONDecoder().decode(TikTokLinkingHealthResponse.self, from: healthData),
+               health.ok == true {
+                let host = health.tiktokBridge?.uniqueId ?? "y666.suf"
+                let live = health.tiktokBridge?.isLive == true
+                return .ready(isLive: live, hostLive: host)
+            }
+        } catch {
+            if let urlErr = error as? URLError,
+               [.cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet, .timedOut].contains(urlErr.code) {
+                return .serverUnreachable
+            }
+        }
+
+        do {
+            _ = try await fetchMobileStatusDetail()
+        } catch {
+            if let urlErr = error as? URLError,
+               [.cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet, .timedOut].contains(urlErr.code) {
+                return .serverUnreachable
+            }
+            return .error((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
+        }
+
+        do {
+            let probe = try authorizedRequest(url: baseURL.appending(path: "/api/mobile/link/status/000000"))
+            let (_, response) = try await GameHTTP.data(for: probe)
+            guard let http = response as? HTTPURLResponse else {
+                return .serverUnreachable
+            }
+            if http.statusCode == 404 {
+                return .linkingNotOnServer
+            }
+            if (200...299).contains(http.statusCode) {
+                let status = try await fetchMobileStatusDetail()
+                let host = status.tiktokLive?.uniqueId ?? "y666.suf"
+                let live = status.tiktokLive?.isLive == true
+                return .ready(isLive: live, hostLive: host)
+            }
+            return .error("Link service returned HTTP \(http.statusCode).")
+        } catch {
+            if let urlErr = error as? URLError,
+               [.cannotConnectToHost, .networkConnectionLost, .notConnectedToInternet, .timedOut].contains(urlErr.code) {
+                return .serverUnreachable
+            }
+            return .error((error as? LocalizedError)?.errorDescription ?? error.localizedDescription)
+        }
+    }
+
+    func logoutSession(unlink: Bool = false) async {
         guard let url = URL(string: baseURL.absoluteString + "/api/mobile/session/logout") else { return }
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
-        req.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: [
+            "deviceId": AuthStore.deviceId,
+            "unlink": unlink,
+        ])
+        if let authToken, !authToken.isEmpty {
+            req.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+        }
         req.setValue(AuthStore.deviceId, forHTTPHeaderField: "X-Device-Id")
         req.timeoutInterval = GameHTTP.requestTimeout
         _ = try? await GameHTTP.data(for: req)
@@ -621,7 +746,9 @@ struct GameAPI {
             throw GameAPIError.serverError("No response from server")
         }
         if http.statusCode == 404 {
-            throw GameAPIError.serverError("Linking is not available right now. Try again later.")
+            throw GameAPIError.serverError(
+                "TikTok linking isn't available on this server yet. Ask the host to update the Windows game server."
+            )
         }
         if http.statusCode >= 400 {
             struct MobileErr: Decodable { var message: String?; var error: String? }
@@ -653,7 +780,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode >= 400 {
@@ -687,7 +813,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode == 404 {
@@ -717,7 +842,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode == 404 {
@@ -728,6 +852,56 @@ struct GameAPI {
         let decoded = try JSONDecoder().decode(ArcadePlayResponse.self, from: data)
         if http.statusCode >= 400 || decoded.ok == false {
             throw GameAPIError.serverError(ArcadeErrors.userMessage(reason: decoded.reason, message: decoded.message))
+        }
+        return decoded
+    }
+
+    /// Flush on-device crash round balance deltas to the live wallet.
+    func syncSoloCrashRounds(rounds: [[String: Any]]) async throws -> SoloCrashSyncResponse {
+        guard authToken != nil else { throw GameAPIError.notLoggedIn }
+        let req = try authorizedRequest(
+            url: baseURL.appending(path: "/api/mobile/crash/solo/sync"),
+            method: "POST",
+            jsonBody: ["rounds": rounds]
+        )
+        let (data, response) = try await GameHTTP.data(for: req)
+        guard let http = response as? HTTPURLResponse else {
+            throw GameAPIError.serverError("No response")
+        }
+        if http.statusCode == 401 { throw GameAPIError.notLoggedIn }
+        if http.statusCode == 404 {
+            throw GameAPIError.serverError(
+                "Solo crash sync is not on the game server yet. Pull latest server files and restart Node."
+            )
+        }
+        let decoded = try JSONDecoder().decode(SoloCrashSyncResponse.self, from: data)
+        if http.statusCode >= 400 || decoded.ok == false {
+            throw GameAPIError.serverError(decoded.message ?? "Crash sync failed")
+        }
+        return decoded
+    }
+
+    /// Flush offline powerup spends (steal charges, etc.) so server inventory matches the app.
+    func syncOfflineInventory(spends: [[String: Any]]) async throws -> OfflineInventorySyncResponse {
+        guard authToken != nil else { throw GameAPIError.notLoggedIn }
+        let req = try authorizedRequest(
+            url: baseURL.appending(path: "/api/mobile/inventory/sync"),
+            method: "POST",
+            jsonBody: ["spends": spends]
+        )
+        let (data, response) = try await GameHTTP.data(for: req)
+        guard let http = response as? HTTPURLResponse else {
+            throw GameAPIError.serverError("No response")
+        }
+        if http.statusCode == 401 { throw GameAPIError.notLoggedIn }
+        if http.statusCode == 404 {
+            throw GameAPIError.serverError(
+                "Inventory sync is not on the game server yet. Pull latest server files and restart Node."
+            )
+        }
+        let decoded = try JSONDecoder().decode(OfflineInventorySyncResponse.self, from: data)
+        if http.statusCode >= 400 || decoded.ok == false {
+            throw GameAPIError.serverError(decoded.message ?? "Inventory sync failed")
         }
         return decoded
     }
@@ -744,7 +918,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode == 404 {
@@ -779,7 +952,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         guard http.statusCode == 200 else {
@@ -853,7 +1025,6 @@ struct GameAPI {
             throw GameAPIError.serverError("No response from server")
         }
         if http.statusCode == 401 {
-            AuthStore.clearSession()
             throw GameAPIError.notLoggedIn
         }
         if http.statusCode == 404 {

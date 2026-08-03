@@ -1,0 +1,186 @@
+# NFG Crash — Windows server: on-device crash + offline inventory sync
+
+Paste this **entire prompt** into **Cursor Agent on your Windows PC**.
+Live repo: `C:\Users\Yusef\test` · Public URL: **https://y666suf.com**
+
+## Goal
+
+iOS now runs **crash rounds entirely on the phone** (no live multiplayer server required for gameplay). When the phone is online it syncs wallet changes to the PC server.
+
+You must **pull from GitHub** (already pushed from Mac — commit message includes “On-device crash”) and **restart the live Node process** so these endpoints exist in production. **Do not copy files by hand from Mac** — git sync only.
+
+**Do not break:** TikTok bridge, Electron, Cloudflare tunnel, crash loop for OBS/web overlay, bets via chat, WebSocket, leaderboard, `data/points.live.json`.
+
+---
+
+## Context (what Mac already shipped)
+
+| Piece | Role |
+|-------|------|
+| iOS `LocalCrashEngine` | Solo crash rounds on-device (betting → running → ended) |
+| iOS `CrashOfflineLedger` | Queues win/loss `netDelta` until server is up |
+| `POST /api/mobile/crash/solo/sync` | Applies those deltas to `points.live.json` (idempotent) |
+| `POST /api/mobile/inventory/sync` | Syncs offline steal-charge spends |
+| iOS ignores live WS crash `state` for the in-app game | Overlay/web can still use live crash; phone uses local |
+
+---
+
+## Step 1 — Pull latest from GitHub (no manual file copy)
+
+```powershell
+cd C:\Users\Yusef\test
+.\scripts\sync-pull.ps1
+# If pull complains about local edits:
+#   .\scripts\sync-pull.ps1 -Merge
+npm install
+```
+
+Confirm these files exist after pull:
+
+```powershell
+Test-Path .\server\mobile-crash-solo.js
+Test-Path .\server\mobile-inventory.js
+Select-String -Path .\server\mobile-api.js -Pattern "mobile-crash-solo|mobile-inventory|registerMobileCrashSolo|registerMobileInventory"
+```
+
+Expected:
+
+- `mobile-crash-solo.js` → **True**
+- `mobile-inventory.js` → **True**
+- `mobile-api.js` contains `require("./mobile-crash-solo")`, `require("./mobile-inventory")`, and both `registerMobile*` calls inside `registerMobileApi`
+
+If any file is missing, you are not on latest `main` — fix git pull / merge, do **not** recreate from scratch unless pull is impossible.
+
+---
+
+## Step 2 — Confirm wiring in `server/mobile-api.js`
+
+Near the other mobile requires you should have:
+
+```js
+const { registerMobileInventoryRoutes } = require("./mobile-inventory");
+const { registerMobileCrashSoloRoutes } = require("./mobile-crash-solo");
+```
+
+Inside `registerMobileApi(app, ctx)` (with the other register* calls):
+
+```js
+registerMobileInventoryRoutes(app, { validateBearer, pointStore, game });
+registerMobileCrashSoloRoutes(app, { validateBearer, pointStore, game });
+```
+
+If pull brought the files but wiring is missing (old merge), add the requires + register calls exactly as above. Do not invent alternate paths.
+
+---
+
+## Step 3 — What the new endpoints do (do not “simplify” them away)
+
+### `POST /api/mobile/crash/solo/sync` (`server/mobile-crash-solo.js`)
+
+- Auth: Bearer session (`validateBearer`)
+- Body: `{ rounds: [ { id, stake, result, netDelta, tax, crashPoint, settleMult?, payout?, roundId? } ] }`
+- `result` is `"win"` or `"lose"`
+- Idempotent via `profile.syncedCrashSoloIds[id]`
+- Applies `pointStore.add(user, netDelta, { countAsEarned: netDelta > 0 })`
+- Optional tax → `pointStore.addTaxToPot(tax)` when present
+- Caps: drop abusive rows (`stake` / `|netDelta|` > 50_000_000) but mark id synced so the client queue unblocks
+- Response: `{ ok, applied, remaining, wallet }`
+
+### `POST /api/mobile/inventory/sync` (`server/mobile-inventory.js`)
+
+- Auth: Bearer session
+- Body: `{ spends: [ { id, kind, count, target? } ] }`
+- `kind`: `steal` | `shield_break` | `jet_lock` (and aliases)
+- Steal **with** `target` → `game._trySteal` (charge burns only on success); retryable failures stay in `remaining`
+- Bare charge burns (no target) → `consumePowerupCharge` idempotent via `syncedInventorySpendIds`
+- Response: `{ ok, applied, remaining, results, wallet }`
+
+---
+
+## Step 4 — Restart the LIVE server only
+
+Restart whatever actually serves **https://y666suf.com** (usually `run-electron-cloudflare.bat` / pm2 / your Electron launcher).
+
+**Rules:**
+
+1. Restart the process that loads `server/index.js` from `C:\Users\Yusef\test` (or whatever folder sync-pull updated).
+2. Do **not** leave two Node instances on port **3847**.
+3. Keep Cloudflare tunnel up so `y666suf.com` still hits this machine.
+4. Do **not** commit or delete `data/points.live.json`.
+
+---
+
+## Step 5 — Verify from production
+
+```powershell
+curl.exe -s -X POST https://y666suf.com/api/mobile/crash/solo/sync -H "Content-Type: application/json" -d "{}"
+curl.exe -s -X POST https://y666suf.com/api/mobile/inventory/sync -H "Content-Type: application/json" -d "{}"
+curl.exe -s -o NUL -w "crash_solo:%{http_code}`n" -X POST https://y666suf.com/api/mobile/crash/solo/sync -H "Content-Type: application/json" -d "{}"
+curl.exe -s -o NUL -w "inventory:%{http_code}`n" -X POST https://y666suf.com/api/mobile/inventory/sync -H "Content-Type: application/json" -d "{}"
+```
+
+**Pass criteria:**
+
+- HTTP **401** (not **404**)
+- JSON roughly `{ "ok": false, "error": "auth_required" }` (or equivalent auth failure)
+- **404** = old process still running or files not loaded — fix restart / cwd
+
+Optional smoke (with a real mobile Bearer token if you have one):
+
+```powershell
+# Replace TOKEN — should return ok + wallet
+curl.exe -s -X POST https://y666suf.com/api/mobile/crash/solo/sync `
+  -H "Authorization: Bearer TOKEN" `
+  -H "Content-Type: application/json" `
+  -d "{\"rounds\":[]}"
+```
+
+---
+
+## Step 6 — Mark cross-device task done + push
+
+Edit `docs/cross-device/pending-on-pc.md` frontmatter:
+
+```yaml
+cross_device_status: done
+```
+
+Then:
+
+```powershell
+cd C:\Users\Yusef\test
+.\scripts\sync-push.ps1 "Server: on-device crash solo sync + inventory sync live"
+```
+
+---
+
+## Step 7 — Quick product check (optional)
+
+On iPhone (build with on-device crash):
+
+1. Play crash with server **up** → balance changes; after a round, pending sync clears.
+2. Stop Node briefly → app still runs crash rounds on-device.
+3. Start Node again → queued crash results + steals sync; balance matches.
+
+---
+
+## Do NOT
+
+- Manually copy files from Mac over USB/AirDrop — use `sync-pull.ps1` only
+- Rewrite crash RNG on the server for phone solo (phone is authoritative for those rounds)
+- Force phone to use live WS crash state again
+- Commit `data/points.live.json` or session secrets
+- Run a second server on another port and think production updated
+
+---
+
+## Done when
+
+- [ ] `sync-pull` succeeded on `C:\Users\Yusef\test`
+- [ ] `server/mobile-crash-solo.js` and `server/mobile-inventory.js` exist
+- [ ] `mobile-api.js` registers both route modules
+- [ ] Live Node restarted once
+- [ ] Both new endpoints return **401** on `y666suf.com` (not 404)
+- [ ] `pending-on-pc.md` → `cross_device_status: done` and pushed
+
+When finished, reply with the curl HTTP codes and confirm Node was restarted.

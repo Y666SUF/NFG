@@ -1,0 +1,103 @@
+# NFG Crash — Windows PC update: TikTok link + account merge
+
+Paste this into **Cursor on your Windows PC** (live server at https://y666suf.com).
+
+## What changed
+
+When a phone **app guest** links TikTok, the server now **combines both accounts**:
+
+| Field | Merge rule |
+|-------|------------|
+| **Points balance** | **SUM** (e.g. 10k app + 400k TikTok = **410k**) |
+| **All-time points** | SUM |
+| **Level / XP** | **Higher** of the two |
+| **Rank** | Recalculated from merged level |
+| **Powerups** (steals, shields, etc.) | SUM charges |
+| **Achievements / missions** | Union (keep both) |
+| **Arcade progress** (Jump, Vault Run, Blocks) | Best scores max'd; Jump total earned summed; skins union'd |
+
+iOS also migrates **local on-device** Jump/Vault shop + personal bests into the TikTok account on link.
+
+---
+
+## Step 1 — Pull latest from GitHub
+
+```powershell
+cd C:\Users\Yusef\test
+.\scripts\sync-pull.ps1 -Merge
+npm install
+```
+
+**Critical files (must match `main`):**
+- `server/store.js` — `_mergeUserAccount` with `tiktok_link` **sum balances** + `_mergeProfilesForAccount`
+- `server/mobile-auth.js` — always finds guest by `deviceId`; merge on link; `/api/mobile/link/health`
+- `server/mobile-arcade.js` — improved `mergeArcadeUserRecords`
+- `server/mobile-api.js` — `registerMobileAuthRoutes(app, { isLocalhost, pointStore, getTikTokBridgeStatus })`
+
+---
+
+## Step 2 — Restart live server (one instance)
+
+Stop duplicate Node processes. Restart your usual launcher (`run-electron-cloudflare.bat` / pm2).
+
+---
+
+## Step 3 — Verify merge logic
+
+### A) Link health
+```powershell
+curl https://y666suf.com/api/mobile/link/health
+```
+Expect `ok: true` (404 = stale server, re-pull).
+
+### B) Smoke test guest + link routes
+```powershell
+curl -X POST https://y666suf.com/api/mobile/auth/app-guest -H "Content-Type: application/json" -d "{\"deviceId\":\"merge-test-device-001\"}"
+```
+Note `userId` (e.g. `appuser_...`) and `balance`.
+
+```powershell
+curl -X POST https://y666suf.com/api/mobile/link/start -H "Content-Type: application/json" -d "{\"deviceId\":\"merge-test-device-001\"}"
+```
+
+Comment `!link CODE` on live from your TikTok account, then:
+```powershell
+curl https://y666suf.com/api/mobile/link/status/CODE
+```
+Expect `status: "linked"` and optional `merge: { combinedBalance, mergedLevel }`.
+
+### C) Confirm combined balance
+If guest had 10k and TikTok @you had 400k before link, wallet should show **410k** after link + app reconnect.
+
+---
+
+## Step 4 — TikTok bridge (required for link to complete)
+
+Link codes are useless unless live comments reach the server:
+
+1. TikTok bridge must be running and connected
+2. You must be **LIVE** on @y666.suf
+3. Comment exactly `!link XXXXXX` from the TikTok account being linked
+4. Node logs should show `[TikTok] Link attempt from @user: !link XXXXXX`
+
+---
+
+## Troubleshooting
+
+| Issue | Fix |
+|-------|-----|
+| Balance only shows higher account, not sum | PC running **old** `store.js` — re-pull and restart |
+| Guest progress not merged | Old `mobile-auth.js` only merged when guest balance > 0 — update and restart |
+| Link code works but never completes | TikTok bridge offline / not live |
+| 404 on link routes | `mobile-auth.js` not registered in `mobile-api.js` |
+
+---
+
+## After deploy
+
+Tell Mac when these pass:
+- [ ] `curl .../api/mobile/link/health` → ok
+- [ ] Test link merges balances (sum, not max)
+- [ ] TikTok live `!link` completes link
+
+Mac will ship updated iOS build with local data migration + merge confirmation message.

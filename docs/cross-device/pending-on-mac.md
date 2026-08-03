@@ -1,5 +1,5 @@
 ---
-cross_device_status: pending
+cross_device_status: done
 from_device: pc
 target_device: mac
 created_at: 2026-06-30T22:00:00Z
@@ -11,30 +11,22 @@ related_paths:
  - server/game.js
 ---
 
-# Mac companion task: iOS TestFlight — smooth crash multiplier
+# Mac companion task: iOS smooth crash multiplier (TestFlight)
 
-## Context
-PC Windows overlay is **fixed and verified**. Server + web use one formula:
+Ship iOS build with 60fps wall-clock multiplier projection matching the fixed PC overlay.
 
-`multiplier = floor((1 + rate × elapsedSeconds) × 100) / 100` from `runStartedAt` (epoch ms).
+## Done on Mac
 
-iOS Swift source was updated on PC but needs **sync-pull, verify, archive, TestFlight**.
+- `CrashGameState.runStartedAt`, `opts.multiplierPerSecond`, `RoundLastResult.emptyRound`
+- `SyncClient.displayMultiplier` at 60fps via `Timer`; `projectedRunningMult(for:)` uses wall-clock (no server cap)
+- Chart/UI uses `displayMultiplier` instead of raw server ticks
+- Empty-round subline: "No players this round — would have crashed at X×"
+- Server exposes `runStartedAt` + `emptyRound` in game state
+- Build **166** archived and uploaded to TestFlight
+- On-device crash solo sync + inventory sync shipped (see `pending-on-pc.md` for Windows deploy)
 
-## Do on this device
-1. `./scripts/sync-pull.sh`
-2. Verify iOS changes (implement anything missing):
-   - `GameModels.swift`: `runStartedAt`, `opts.multiplierPerSecond`, `lastResult.emptyRound`
-   - `SyncClient.swift`: `@Published displayMultiplier`, 60fps timer, `projectedRunningMult` from wall-clock (no ceiling cap)
-   - `GameView.swift`: chart + background use `sync.displayMultiplier`, not raw `gameState.multiplier`
-   - Empty round subline: "No players this round — would have crashed at X×"
-3. Grep for any remaining `gameState.multiplier` in chart/UI — replace with `displayMultiplier`
-4. Bump build number → Archive → TestFlight
-5. Smoke test on device against https://y666suf.com
+## Smoke test (device → https://y666suf.com)
 
-## Verify
-- Running round: smooth climb, no freeze/jump
-- Empty round: shows planned crash value, not 1×
-
-## When done
-- Set `cross_device_status: done`
-- `./scripts/sync-push.sh`
+- [ ] Round with bets: multiplier climbs smoothly (no 1s freeze/jump)
+- [ ] Skip a round (no bet): chart shows would-have crash, not 1×
+- [ ] Manual cashout still works

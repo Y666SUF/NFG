@@ -152,23 +152,10 @@ struct RoundLastResult: Codable, Equatable {
     var losses: [RoundOutcome]
     var emptyRound: Bool?
 
-    enum CodingKeys: String, CodingKey {
-        case roundId, crashPoint, wins, losses, emptyRound
+    var isEmptyRound: Bool {
+        if let emptyRound { return emptyRound }
+        return wins.isEmpty && losses.isEmpty
     }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-        roundId = try c.decodeIfPresent(Int.self, forKey: .roundId) ?? 0
-        crashPoint = try c.decodeIfPresent(Double.self, forKey: .crashPoint) ?? 1
-        wins = try c.decodeIfPresent([RoundOutcome].self, forKey: .wins) ?? []
-        losses = try c.decodeIfPresent([RoundOutcome].self, forKey: .losses) ?? []
-        emptyRound = try c.decodeIfPresent(Bool.self, forKey: .emptyRound)
-    }
-}
-
-struct CrashGameOpts: Codable, Equatable {
-    var multiplierPerSecond: Double?
-    var tickMs: Int?
 }
 
 struct RoundResultSummary: Identifiable, Equatable {
@@ -198,40 +185,50 @@ struct RoundResultSummary: Identifiable, Equatable {
     }
 }
 
+struct CrashGameOpts: Codable, Equatable {
+    var multiplierPerSecond: Double?
+
+    var rate: Double {
+        let v = multiplierPerSecond ?? 0.42
+        return v > 0 ? v : 0.42
+    }
+}
+
 struct CrashGameState: Codable, Equatable {
     var phase: GamePhase
     var roundId: Int
     var multiplier: Double
     var crashPoint: Double?
-    var runStartedAt: Int64?
     var bettingEndsAt: Int64
     var nextRoundStartsAt: Int64?
+    var runStartedAt: Int64?
+    var opts: CrashGameOpts?
     var openBets: [OpenBet]
     var queuedBets: [OpenBet]
     var taxPot: TaxPotStatus?
     var lastResult: RoundLastResult?
     var recentCrashes: [Double]
-    var opts: CrashGameOpts?
 
     static let empty = CrashGameState(
         phase: .idle,
         roundId: 0,
         multiplier: 1,
         crashPoint: nil,
-        runStartedAt: nil,
         bettingEndsAt: 0,
         nextRoundStartsAt: nil,
+        runStartedAt: nil,
+        opts: nil,
         openBets: [],
         queuedBets: [],
         taxPot: nil,
         lastResult: nil,
-        recentCrashes: [],
-        opts: nil
+        recentCrashes: []
     )
 
     enum CodingKeys: String, CodingKey {
-        case phase, roundId, multiplier, crashPoint, runStartedAt, bettingEndsAt, nextRoundStartsAt
-        case openBets, queuedBets, taxPot, lastResult, recentCrashes, opts
+        case phase, roundId, multiplier, crashPoint, bettingEndsAt, nextRoundStartsAt
+        case runStartedAt, opts
+        case openBets, queuedBets, taxPot, lastResult, recentCrashes
     }
 
     init(
@@ -239,29 +236,29 @@ struct CrashGameState: Codable, Equatable {
         roundId: Int,
         multiplier: Double,
         crashPoint: Double?,
-        runStartedAt: Int64?,
         bettingEndsAt: Int64,
         nextRoundStartsAt: Int64?,
+        runStartedAt: Int64? = nil,
+        opts: CrashGameOpts? = nil,
         openBets: [OpenBet],
         queuedBets: [OpenBet],
         taxPot: TaxPotStatus?,
         lastResult: RoundLastResult?,
-        recentCrashes: [Double] = [],
-        opts: CrashGameOpts? = nil
+        recentCrashes: [Double] = []
     ) {
         self.phase = phase
         self.roundId = roundId
         self.multiplier = multiplier
         self.crashPoint = crashPoint
-        self.runStartedAt = runStartedAt
         self.bettingEndsAt = bettingEndsAt
         self.nextRoundStartsAt = nextRoundStartsAt
+        self.runStartedAt = runStartedAt
+        self.opts = opts
         self.openBets = openBets
         self.queuedBets = queuedBets
         self.taxPot = taxPot
         self.lastResult = lastResult
         self.recentCrashes = recentCrashes
-        self.opts = opts
     }
 
     init(from decoder: Decoder) throws {
@@ -270,15 +267,15 @@ struct CrashGameState: Codable, Equatable {
         roundId = try c.decodeIfPresent(Int.self, forKey: .roundId) ?? 0
         multiplier = try c.decodeIfPresent(Double.self, forKey: .multiplier) ?? 1
         crashPoint = try c.decodeIfPresent(Double.self, forKey: .crashPoint)
-        runStartedAt = try c.decodeIfPresent(Int64.self, forKey: .runStartedAt)
         bettingEndsAt = try c.decodeIfPresent(Int64.self, forKey: .bettingEndsAt) ?? 0
         nextRoundStartsAt = try c.decodeIfPresent(Int64.self, forKey: .nextRoundStartsAt)
+        runStartedAt = try c.decodeIfPresent(Int64.self, forKey: .runStartedAt)
+        opts = try c.decodeIfPresent(CrashGameOpts.self, forKey: .opts)
         openBets = try c.decodeIfPresent([OpenBet].self, forKey: .openBets) ?? []
         queuedBets = try c.decodeIfPresent([OpenBet].self, forKey: .queuedBets) ?? []
         taxPot = try c.decodeIfPresent(TaxPotStatus.self, forKey: .taxPot)
         lastResult = try c.decodeIfPresent(RoundLastResult.self, forKey: .lastResult)
         recentCrashes = try c.decodeIfPresent([Double].self, forKey: .recentCrashes) ?? []
-        opts = try c.decodeIfPresent(CrashGameOpts.self, forKey: .opts)
     }
 }
 
@@ -436,6 +433,11 @@ struct ChatActionResult: Codable {
         var target: String?
         var targetDisplayName: String?
         var stolen: Int?
+        var targetCashout: Double?
+        var payout: Int?
+        var grossPayout: Int?
+        var profit: Int?
+        var tax: Int?
         var stealsReady: Int?
     }
 }
@@ -643,6 +645,41 @@ struct PlayerWallet: Codable, Equatable {
         case shieldActive, shieldMsLeft, shieldUntil, jetLockActive, jetLockSecondsLeft, jetLockMsLeft, jetLockUntil
         case inventory, isGameHost, changes
     }
+}
+
+struct OfflineInventorySyncResponse: Decodable {
+    var ok: Bool?
+    var message: String?
+    var applied: Int?
+    var remaining: [OfflineInventorySpendDTO]?
+    var wallet: PlayerWallet?
+}
+
+struct SoloCrashSyncResponse: Decodable {
+    var ok: Bool?
+    var message: String?
+    var applied: Int?
+    var remaining: [CrashPendingRoundDTO]?
+    var wallet: PlayerWallet?
+}
+
+struct CrashPendingRoundDTO: Decodable, Equatable {
+    var id: String?
+    var roundId: Int?
+    var stake: Int?
+    var result: String?
+    var settleMult: Double?
+    var crashPoint: Double?
+    var payout: Int?
+    var tax: Int?
+    var netDelta: Int?
+}
+
+struct OfflineInventorySpendDTO: Decodable, Equatable {
+    var id: String?
+    var kind: String?
+    var count: Int?
+    var target: String?
 }
 
 struct AdminPlayerSeed: Equatable {

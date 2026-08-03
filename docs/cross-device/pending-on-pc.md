@@ -1,26 +1,51 @@
 ﻿---
-cross_device_status: done
+cross_device_status: pending
 from_device: mac
 target_device: pc
-created_at: 2026-06-22T22:00:00Z
-title: Deploy offline_sync arcade pending points fix
+created_at: 2026-08-03T01:00:00Z
+title: Deploy on-device crash sync + inventory sync
 related_paths:
- - server/mobile-arcade.js
+ - server/mobile-crash-solo.js
+ - server/mobile-inventory.js
  - server/mobile-api.js
- - docs/WINDOWS_OFFLINE_SYNC_FIX_PROMPT.txt
 ---
 
-# PC companion task: offline_sync arcade pending points
+# PC companion task: On-device crash wallet sync
 
-## Done on Windows PC
+iOS now runs **crash rounds entirely on the phone** (no live server needed). When online, it syncs win/loss balance deltas.
 
-- Merged `origin/main` commit `e014225c2` — `applyOfflineArcadeSync` + `offline_sync` in `server/mobile-arcade.js`
-- `registerMobileArcadeRoutes` wired in `server/mobile-api.js`
-- Live Node restarted (single instance on 3847)
-- Smoke tests passed locally and via https://y666suf.com:
-  - Jump: `ok: true`, `offlineSync: true`, duplicate returns `gained: 0`
-  - Blocks + Vault Run: `offlineSync: true`
+## New endpoints
 
-## Mac / iOS next
+| Method | Path | Purpose |
+|--------|------|---------|
+| POST | `/api/mobile/crash/solo/sync` | Apply queued solo crash `netDelta`s (idempotent) |
+| POST | `/api/mobile/inventory/sync` | Offline steal charge sync |
 
-Ship TestFlight build with global offline queue flush (connect + 30s timer) and `offline_sync` action — PC server is ready.
+Files:
+
+- `server/mobile-crash-solo.js`
+- `server/mobile-inventory.js`
+- wired in `server/mobile-api.js`
+
+## Do on Windows PC
+
+```powershell
+cd C:\Users\Yusef\test
+.\scripts\sync-pull.ps1
+```
+
+Restart the **live** Node process (do not start a second copy).
+
+## Verify
+
+```powershell
+curl -X POST https://y666suf.com/api/mobile/crash/solo/sync -H "Content-Type: application/json" -d "{}"
+curl -X POST https://y666suf.com/api/mobile/inventory/sync -H "Content-Type: application/json" -d "{}"
+```
+
+Both should return **401** `auth_required` (not 404).
+
+## When done
+
+1. Set `cross_device_status: done`
+2. `.\scripts\sync-push.ps1 "Server: on-device crash + inventory sync"`

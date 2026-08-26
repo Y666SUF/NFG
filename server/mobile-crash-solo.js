@@ -1,11 +1,15 @@
 /**
  * Sync on-device (solo) crash round balance deltas to the live wallet.
- * iOS runs crash locally; this only applies netDelta when the server is online.
+ * iOS runs crash locally; this applies netDelta when online.
+ *
+ * App/offline wallet is authority: optional absolute balance fields override the
+ * server after marking rounds synced, so a stale starter balance cannot wipe phone progress.
  */
 const { buildWalletPayload } = require("./mobile-wallet");
 
 const MAX_ABS_DELTA = 50_000_000;
 const MAX_STAKE = 50_000_000;
+const MAX_ABS_BALANCE = 500_000_000;
 
 function ensureSyncedSet(pointStore, user) {
   pointStore.ensureAccount(user);
@@ -28,6 +32,50 @@ function ensureSyncedSet(pointStore, user) {
   return profile.syncedCrashSoloIds;
 }
 
+function pickFiniteInt(value) {
+  if (value == null || value === "") return null;
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Absolute app wallet from body or last round row.
+ * Keys: balance, clientBalance, appBalance, walletBalance, localBalance,
+ * wallet.balance, per-round balanceAfter / clientBalance / appBalance.
+ */
+function pickAbsoluteBalance(body, rounds) {
+  const bodyKeys = ["clientBalance", "appBalance", "walletBalance", "localBalance", "balance"];
+  for (const k of bodyKeys) {
+    const n = pickFiniteInt(body[k]);
+    if (n != null && n >= 0 && n <= MAX_ABS_BALANCE) return n;
+  }
+  if (body.wallet && typeof body.wallet === "object") {
+    const n = pickFiniteInt(body.wallet.balance);
+    if (n != null && n >= 0 && n <= MAX_ABS_BALANCE) return n;
+  }
+  for (let i = rounds.length - 1; i >= 0; i -= 1) {
+    const raw = rounds[i];
+    if (!raw || typeof raw !== "object") continue;
+    for (const k of ["balanceAfter", "clientBalance", "appBalance"]) {
+      const n = pickFiniteInt(raw[k]);
+      if (n != null && n >= 0 && n <= MAX_ABS_BALANCE) return n;
+    }
+  }
+  return null;
+}
+
+function pickAbsoluteAllTime(body) {
+  for (const k of ["clientAllTime", "allTime", "appAllTime"]) {
+    const n = pickFiniteInt(body[k]);
+    if (n != null && n >= 0 && n <= MAX_ABS_BALANCE) return n;
+  }
+  if (body.wallet && typeof body.wallet === "object") {
+    const n = pickFiniteInt(body.wallet.allTime);
+    if (n != null && n >= 0 && n <= MAX_ABS_BALANCE) return n;
+  }
+  return null;
+}
+
 function registerMobileCrashSoloRoutes(app, ctx) {
   const { validateBearer, pointStore, game } = ctx;
 
@@ -40,7 +88,10 @@ function registerMobileCrashSoloRoutes(app, ctx) {
 
     const body = req.body && typeof req.body === "object" ? req.body : {};
     const rounds = Array.isArray(body.rounds) ? body.rounds : [];
-    if (!rounds.length) {
+    const absoluteBalance = pickAbsoluteBalance(body, rounds);
+    const absoluteAllTime = pickAbsoluteAllTime(body);
+
+    if (!rounds.length && absoluteBalance == null) {
       return res.json({
         ok: true,
         applied: 0,
@@ -81,13 +132,32 @@ function registerMobileCrashSoloRoutes(app, ctx) {
       if (result === "lose" && netDelta > 0) netDelta = -stake;
       if (result === "lose" && netDelta === 0 && stake > 0) netDelta = -stake;
 
-      pointStore.add(user, netDelta, { countAsEarned: netDelta > 0 });
+      // When absolute app balance is present it is the authority — only mark ids
+      // synced here so we do not double-apply deltas on top of clientBalance.
+      if (absoluteBalance == null) {
+        pointStore.add(user, netDelta, { countAsEarned: netDelta > 0 });
+      }
       if (tax > 0 && typeof pointStore.addTaxToPot === "function") {
         pointStore.addTaxToPot(tax);
         taxTotal += tax;
       }
       synced[id] = Date.now();
       applied += 1;
+    }
+
+    if (absoluteBalance != null && typeof pointStore.setBalance === "function") {
+      pointStore.setBalance(user, absoluteBalance);
+    }
+    if (absoluteAllTime != null) {
+      const cur =
+        typeof pointStore.getAllTime === "function" ? pointStore.getAllTime(user) : 0;
+      const next = Math.max(0, cur || 0, absoluteAllTime);
+      if (typeof pointStore.setAllTime === "function") {
+        pointStore.setAllTime(user, next);
+      } else if (pointStore.points && pointStore.points.allTime) {
+        const u = String(user || "").trim().toLowerCase();
+        pointStore.points.allTime[u] = next;
+      }
     }
 
     if (typeof pointStore._savePoints === "function") pointStore._savePoints();
@@ -97,6 +167,7 @@ function registerMobileCrashSoloRoutes(app, ctx) {
       applied,
       remaining,
       taxTotal,
+      appBalanceApplied: absoluteBalance != null,
       wallet: buildWalletPayload(user, pointStore, game),
     });
   });

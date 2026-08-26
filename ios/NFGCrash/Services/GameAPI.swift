@@ -857,12 +857,28 @@ struct GameAPI {
     }
 
     /// Flush on-device crash round balance deltas to the live wallet.
-    func syncSoloCrashRounds(rounds: [[String: Any]]) async throws -> SoloCrashSyncResponse {
+    /// Always sends absolute app wallet so the server cannot snap back to a stale starter balance.
+    func syncSoloCrashRounds(
+        rounds: [[String: Any]],
+        clientBalance: Int,
+        allTime: Int
+    ) async throws -> SoloCrashSyncResponse {
         guard authToken != nil else { throw GameAPIError.notLoggedIn }
+        let bal = max(0, clientBalance)
+        let peak = max(0, allTime)
         let req = try authorizedRequest(
             url: baseURL.appending(path: "/api/mobile/crash/solo/sync"),
             method: "POST",
-            jsonBody: ["rounds": rounds]
+            jsonBody: [
+                "rounds": rounds,
+                "clientBalance": bal,
+                "appBalance": bal,
+                "walletBalance": bal,
+                "localBalance": bal,
+                "balance": bal,
+                "allTime": peak,
+                "clientAllTime": peak,
+            ]
         )
         let (data, response) = try await GameHTTP.data(for: req)
         guard let http = response as? HTTPURLResponse else {

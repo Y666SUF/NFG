@@ -109,7 +109,8 @@ struct ContentView: View {
                 Task {
                     _ = await AuthStore.refreshSessionFromServer()
                     if sync.connectionStatus != "Online" {
-                        sync.connect()
+                        // Don't tear down local crash with a full connect() cycle.
+                        sync.attemptBackgroundReconnect()
                     } else {
                         await sync.flushAllPendingOnReconnect(silent: true)
                     }

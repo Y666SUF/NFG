@@ -36,12 +36,6 @@ struct GameView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
 
-                        if sync.isOfflinePlayMode
-                            || sync.connectionStatus == "Offline"
-                            || sync.pendingCrashSyncCount > 0 {
-                            offlineSyncBanner
-                        }
-
                         if let nearMiss = sync.nearMissMessage {
                             HStack(spacing: 6) {
                                 Image(systemName: "target")
@@ -133,7 +127,10 @@ struct GameView: View {
             }
         }
         .onAppear {
-            if sync.connectionStatus == "Offline" { sync.connect() }
+            // Soft retry only — full connect() tears down the display timer and hitches the chart.
+            if sync.connectionStatus != "Online" {
+                sync.attemptBackgroundReconnect()
+            }
             repeatLastBet = AppPreferences.repeatLastBetEnabled
             if let last = LastBetStore.load() {
                 betAmount = last.amountText
@@ -187,58 +184,6 @@ struct GameView: View {
         .overlay(
             RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
                 .stroke(NFGTheme.gold.opacity(0.4), lineWidth: 1)
-        )
-    }
-
-    // MARK: - Offline banner
-
-    private var offlineSyncBanner: some View {
-        let offline = sync.isOfflinePlayMode || sync.connectionStatus != "Online"
-        let pendingBits: [String] = [
-            sync.pendingCrashSyncCount > 0
-                ? "\(sync.pendingCrashSyncCount) crash round\(sync.pendingCrashSyncCount == 1 ? "" : "s")"
-                : nil,
-            sync.pendingArcadeSyncCount > 0
-                ? "\(sync.pendingArcadeSyncPoints.formatted()) arcade pts"
-                : nil,
-            sync.pendingInventorySyncCount > 0
-                ? "\(sync.pendingInventorySyncCount) steal\(sync.pendingInventorySyncCount == 1 ? "" : "s")"
-                : nil,
-        ].compactMap { $0 }
-
-        return HStack(spacing: 8) {
-            Image(systemName: offline ? "iphone" : "arrow.triangle.2.circlepath")
-                .font(.system(size: 11, weight: .bold))
-            VStack(alignment: .leading, spacing: 2) {
-                Text(offline ? "On-device crash — no server needed" : "Syncing to server…")
-                    .font(.system(size: 12, weight: .semibold, design: .rounded))
-                Text(
-                    pendingBits.isEmpty
-                        ? (offline
-                            ? "Rounds run on your phone. Results sync when you're back online."
-                            : "Wallet is up to date.")
-                        : "Pending sync: \(pendingBits.joined(separator: " · "))"
-                )
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(NFGTheme.muted)
-            }
-            Spacer(minLength: 0)
-            if offline {
-                Button("Retry") { sync.connect() }
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
-                    .foregroundStyle(NFGTheme.accent2)
-            }
-        }
-        .foregroundStyle(NFGTheme.gold)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
-                .fill(NFGTheme.gold.opacity(0.12))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: NFGRadius.md, style: .continuous)
-                .stroke(NFGTheme.gold.opacity(0.35), lineWidth: 1)
         )
     }
 

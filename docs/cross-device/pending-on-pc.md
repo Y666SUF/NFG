@@ -2,50 +2,54 @@
 cross_device_status: done
 from_device: mac
 target_device: pc
-created_at: 2026-08-03T01:00:00Z
-title: Deploy on-device crash sync + inventory sync
+created_at: 2026-08-26T01:40:00Z
+title: Solo crash sync — honor absolute clientBalance
 related_paths:
- - server/mobile-crash-solo.js
- - server/mobile-inventory.js
- - server/mobile-api.js
+  - server/mobile-crash-solo.js
+  - server/mobile-api.js
 ---
 
-# PC companion task: On-device crash wallet sync
+# PC companion task: Absolute app wallet on solo crash sync
 
-iOS now runs **crash rounds entirely on the phone** (no live server needed). When online, it syncs win/loss balance deltas.
+## Context
 
-## New endpoints
+iOS TestFlight will send **absolute** phone balance on `POST /api/mobile/crash/solo/sync` (`clientBalance` / `appBalance` / `allTime`). Without the updated server file, the PC keeps applying only `netDelta` from a stale starter balance and the phone can snap back to **5,000** / **100,000** after sync.
 
-| Method | Path | Purpose |
-|--------|------|---------|
-| POST | `/api/mobile/crash/solo/sync` | Apply queued solo crash `netDelta`s (idempotent) |
-| POST | `/api/mobile/inventory/sync` | Offline steal charge sync |
+Mac already updated `server/mobile-crash-solo.js` in git — pull and restart Node.
 
-Files:
-
-- `server/mobile-crash-solo.js`
-- `server/mobile-inventory.js`
-- wired in `server/mobile-api.js`
-
-## Do on Windows PC
+## Do on this device
 
 ```powershell
 cd C:\Users\Yusef\test
 .\scripts\sync-pull.ps1
 ```
 
-Restart the **live** Node process (do not start a second copy).
+1. Confirm `server/mobile-crash-solo.js` mentions `clientBalance` / `pickAbsoluteBalance` / `appBalanceApplied`.
+2. Confirm `server/mobile-api.js` still registers `registerMobileCrashSoloRoutes`.
+3. **Restart** the live Node process (do not start a second copy).
 
 ## Verify
 
 ```powershell
-curl -X POST https://y666suf.com/api/mobile/crash/solo/sync -H "Content-Type: application/json" -d "{}"
-curl -X POST https://y666suf.com/api/mobile/inventory/sync -H "Content-Type: application/json" -d "{}"
+# Expect 401 (auth required), NOT 404
+curl -s -o NUL -w "%{http_code}" -X POST https://y666suf.com/api/mobile/crash/solo/sync -H "Content-Type: application/json" -d "{}"
 ```
 
-Both should return **401** `auth_required` (not 404).
+From a logged-in phone (or with a real bearer token), body shape:
+
+```json
+{
+  "rounds": [],
+  "clientBalance": 12345,
+  "appBalance": 12345,
+  "allTime": 12345,
+  "clientAllTime": 12345
+}
+```
+
+Response should include `"appBalanceApplied": true` and `wallet.balance` matching `clientBalance`.
 
 ## When done
 
-1. Set `cross_device_status: done`
-2. `.\scripts\sync-push.ps1 "Server: on-device crash + inventory sync"`
+- Set `cross_device_status: done` in frontmatter
+- `.\scripts\sync-push.ps1 "PC: solo crash absolute clientBalance deployed"`

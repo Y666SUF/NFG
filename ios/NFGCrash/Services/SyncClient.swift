@@ -93,6 +93,7 @@ final class SyncClient: ObservableObject {
     private var api: GameAPI?
     private var knownChatIds = Set<String>()
     private var reconnectTask: Task<Void, Never>?
+    private var absoluteWalletPushTask: Task<Void, Never>?
     private var pendingRoundResultPopup: RoundResultSummary?
     private var localRecentCrashes: [Double] = []
     /// Keeps entries visible when the live server omits `openBets` after betting (older PC builds).
@@ -143,6 +144,7 @@ final class SyncClient: ObservableObject {
     }
 
     private func enterOfflinePlayMode(reason: String) {
+        let alreadyOffline = isOfflinePlayMode && connectionStatus == "Offline"
         isOfflinePlayMode = true
         connectionStatus = "Offline"
         restoreCachedWalletIfNeeded()
@@ -151,8 +153,10 @@ final class SyncClient: ObservableObject {
         pendingCrashSyncCount = CrashOfflineLedger.pendingCount()
         pendingOfflineCount = OfflineQueue.count
         startLocalCrashIfNeeded()
-        sublineText = "Offline — crash runs on your phone. Wallet syncs when the server is back."
-        appendFeed(reason)
+        // Keep subline as local crash status — don't stomp with offline messaging every reconnect.
+        if !alreadyOffline {
+            appendFeed(reason)
+        }
         syncPresencePillFromState()
         scheduleReconnect()
     }
@@ -195,13 +199,38 @@ final class SyncClient: ObservableObject {
     private func publishLocalCrashState() {
         let previousPhase = lastPhase
         let state = localCrash.makeGameState()
-        gameState = state
-        multiplierHistory = localCrash.multiplierHistory
-        displayMultiplier = localCrash.phase == .running || localCrash.phase == .ended
+        // Avoid republishing identical phase snapshots every tick — only push gameState on
+        // structural changes; multiplier is handled by the display timer.
+        let structuralChange =
+            previousPhase != state.phase
+            || gameState.roundId != state.roundId
+            || gameState.openBets != state.openBets
+            || gameState.bettingEndsAt != state.bettingEndsAt
+            || (state.phase == .ended && gameState.crashPoint != state.crashPoint)
+        if structuralChange {
+            gameState = state
+        }
+        // During running, skip rewriting gameState every engine tick — displayMultiplier
+        // drives the chart; republishing gameState was causing SwiftUI layout thrash.
+
+        if localCrash.multiplierHistory.count != multiplierHistory.count
+            || localCrash.multiplierHistory.last != multiplierHistory.last {
+            multiplierHistory = localCrash.multiplierHistory
+        }
+
+        let nextMult: Double = localCrash.phase == .running || localCrash.phase == .ended
             ? localCrash.multiplier
             : 1
-        taxPotAmount = state.taxPot?.displayAmount ?? taxPotAmount
-        updateLocalCrashSubline(state)
+        if abs(displayMultiplier - nextMult) > 0.0005 {
+            displayMultiplier = nextMult
+        }
+
+        if structuralChange {
+            updateLocalCrashSubline(state)
+        } else if state.phase == .betting {
+            // Countdown seconds only — throttled by equality check inside updater.
+            updateLocalCrashSubline(state)
+        }
 
         if state.phase == .betting && previousPhase != .betting {
             nearMissMessage = nil
@@ -223,38 +252,47 @@ final class SyncClient: ObservableObject {
     }
 
     private func updateLocalCrashSubline(_ s: CrashGameState) {
+        let next: String
         switch s.phase {
         case .betting:
             let sec = max(0, Int((Double(s.bettingEndsAt) - Date().timeIntervalSince1970 * 1000) / 1000))
-            sublineText = "Entry window \(sec)s — crash runs on your device"
+            next = "Entry window \(sec)s"
         case .running:
             if activeCrashBet != nil {
-                sublineText = "Tap Cash Out — or wait for your target"
+                next = "Tap Cash Out — or wait for your target"
             } else {
-                sublineText = "Watching this round — place a bet next window"
+                next = "Watching this round — place a bet next window"
             }
         case .ended:
             if s.lastResult?.isEmptyRound == true, let crash = s.crashPoint {
-                sublineText = "No bet this round — would have crashed at \(String(format: "%.2f", crash))×"
+                next = "No bet this round — would have crashed at \(String(format: "%.2f", crash))×"
             } else if let crash = s.crashPoint {
-                sublineText = "Crashed at \(String(format: "%.2f", crash))×"
+                next = "Crashed at \(String(format: "%.2f", crash))×"
             } else {
-                sublineText = "Round ended"
+                next = "Round ended"
             }
         case .idle:
-            sublineText = "Starting next round…"
+            next = "Starting next round…"
+        }
+        if sublineText != next {
+            sublineText = next
         }
     }
 
     private func handleLocalCrashSettlement(_ settlement: LocalCrashEngine.RoundSettlement) {
         CrashOfflineLedger.enqueue(settlement)
-        pendingCrashSyncCount = CrashOfflineLedger.pendingCount()
+        let pending = CrashOfflineLedger.pendingCount()
+        if pendingCrashSyncCount != pending {
+            pendingCrashSyncCount = pending
+        }
         persistWalletLocally()
         if settlement.result == "win" {
             lastActionMessage = "Cashed out @ \(String(format: "%.2f", settlement.settleMult ?? 1))× — +\(max(0, settlement.netDelta).formatted()) pts"
         } else if settlement.result == "lose" {
             lastActionMessage = "Crashed at \(String(format: "%.2f", settlement.crashPoint))× — lost \(settlement.stake.formatted()) pts"
         }
+        // Only attempt server sync when actually online — avoids spam/retry churn offline.
+        guard connectionStatus == "Online" else { return }
         Task { await flushCrashLedger(silent: true) }
     }
 
@@ -288,11 +326,60 @@ final class SyncClient: ObservableObject {
     private func scheduleReconnect() {
         reconnectTask?.cancel()
         reconnectTask = Task {
-            try? await Task.sleep(nanoseconds: 3_000_000_000)
+            // Slow background retry — don't thrash UI every few seconds while crash runs locally.
+            try? await Task.sleep(nanoseconds: 15_000_000_000)
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard connectionStatus != "Online" else { return }
-                connect()
+                softReconnect()
+            }
+        }
+    }
+
+    /// Public entry for background retry without hitching local crash UI.
+    func attemptBackgroundReconnect() {
+        guard connectionStatus != "Online" else { return }
+        softReconnect()
+    }
+
+    /// Reconnect without tearing down the local crash loop / display timer (avoids hitching).
+    private func softReconnect() {
+        reconnectTask?.cancel()
+        reconnectTask = nil
+        Task {
+            _ = await AuthStore.refreshSessionFromServer()
+            guard PlayerSession.isLoggedIn else {
+                scheduleReconnect()
+                return
+            }
+            do {
+                let nextApi = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
+                api = nextApi
+                // Probe without flipping UI into Connecting…
+                _ = try await nextApi.fetchState()
+                connectionStatus = "Online"
+                isOfflinePlayMode = false
+                await flushAllPendingOnReconnect(silent: true)
+                await refreshWallet()
+                if webSocketTask == nil {
+                    let session = URLSession(configuration: .default)
+                    webSocketTask = session.webSocketTask(with: nextApi.webSocketURL)
+                    webSocketTask?.resume()
+                    receiveLoop()
+                    startPing()
+                }
+                startLiveStatusPolling()
+                startPresencePolling()
+                startWalletPolling()
+                startArcadeSyncPolling()
+            } catch {
+                if connectionStatus != "Offline" {
+                    connectionStatus = "Offline"
+                }
+                if !isOfflinePlayMode {
+                    isOfflinePlayMode = true
+                }
+                scheduleReconnect()
             }
         }
     }
@@ -500,11 +587,24 @@ final class SyncClient: ObservableObject {
     func applyWalletFromServer(_ next: PlayerWallet) {
         walletDataRevision &+= 1
         var merged = next
-        // Local crash is balance authority until pending rounds finish syncing.
-        if CrashOfflineLedger.pendingCount() > 0 {
-            merged.balance = wallet.balance
-            merged.allTime = max(next.allTime, wallet.allTime)
+        let localBalance = wallet.balance
+        let localAllTime = wallet.allTime
+
+        // Phone crash wallet is authority while rounds are queued, mid-bet, or when
+        // the server is still stuck on a starter grant after local play progressed.
+        if shouldKeepLocalBalanceOverServer(local: localBalance, server: next.balance) {
+            merged.balance = localBalance
+            merged.allTime = max(next.allTime, localAllTime)
+            // Server still on starter (or stale) — push absolute phone balance when online.
+            if connectionStatus == "Online",
+               Self.knownStarterBalances.contains(next.balance),
+               localBalance != next.balance {
+                scheduleAbsoluteWalletPush()
+            }
+        } else {
+            merged.allTime = max(next.allTime, localAllTime)
         }
+
         wallet = merged
         liveBalance = merged.balance
         profile.balance = merged.balance
@@ -525,6 +625,27 @@ final class SyncClient: ObservableObject {
         syncCosmeticsCatalogFromWallet(merged)
         reconcilePendingInventorySpends()
         persistWalletLocally()
+    }
+
+    /// Known starter grants (TikTok-linked ~5k, app guest ~100k).
+    private static let knownStarterBalances: Set<Int> = [5_000, 100_000]
+
+    private func shouldKeepLocalBalanceOverServer(local: Int, server: Int) -> Bool {
+        if CrashOfflineLedger.pendingCount() > 0 { return true }
+        // Stake already deducted on-device for the live round — don't snap back mid-bet.
+        if usesLocalCrash, localCrash.activeBet != nil { return true }
+        if local == server { return false }
+
+        let serverStarter = Self.knownStarterBalances.contains(server)
+        let localStarter = Self.knownStarterBalances.contains(local)
+
+        // Classic bug: server still at starter, phone has progressed.
+        if serverStarter && local > server { return true }
+        if serverStarter && !localStarter { return true }
+        // Guest 100k vs linked 5k mid-identity — keep the higher local cache.
+        if serverStarter && localStarter && local > server { return true }
+
+        return false
     }
 
     /// Keep steal-charge UI aligned with spends already taken in the app while offline.
@@ -1193,9 +1314,10 @@ final class SyncClient: ObservableObject {
         await flushOfflineQueue()
         let arcade = await flushArcadeOfflineQueue(silent: silent)
         if crash > 0 || inv > 0 || arcade > 0 || hadPending {
-            // Only pull server wallet when crash ledger is empty (local crash is balance authority).
+            // Only pull server wallet when crash ledger is empty. applyWalletFromServer
+            // still rejects starter resets; avoid force-refresh fighting local authority.
             if CrashOfflineLedger.pendingCount() == 0 {
-                await refreshWallet(force: true)
+                await refreshWallet(force: false)
             }
         }
         isOfflinePlayMode = false
@@ -1210,6 +1332,11 @@ final class SyncClient: ObservableObject {
         pendingCrashSyncCount = items.count
         guard !items.isEmpty else { return 0 }
 
+        // Persist before network so a kill mid-sync cannot lose the local authority balance.
+        persistWalletLocally()
+        let clientBalance = max(0, liveBalance)
+        let clientAllTime = max(wallet.allTime, clientBalance)
+
         let payload: [[String: Any]] = items.map { item in
             var row: [String: Any] = [
                 "id": item.id,
@@ -1220,13 +1347,21 @@ final class SyncClient: ObservableObject {
                 "payout": item.payout,
                 "tax": item.tax,
                 "netDelta": item.netDelta,
+                // Hint for servers that read per-round absolute balance.
+                "clientBalance": clientBalance,
+                "appBalance": clientBalance,
+                "balanceAfter": clientBalance,
             ]
             if let m = item.settleMult { row["settleMult"] = m }
             return row
         }
 
         do {
-            let result = try await api.syncSoloCrashRounds(rounds: payload)
+            let result = try await api.syncSoloCrashRounds(
+                rounds: payload,
+                clientBalance: clientBalance,
+                allTime: clientAllTime
+            )
             let remainingDTOs = result.remaining ?? []
             let remaining: [CrashPendingRound] = remainingDTOs.compactMap { dto in
                 guard let id = dto.id, let result = dto.result else { return nil }
@@ -1246,8 +1381,20 @@ final class SyncClient: ObservableObject {
             // Server applies all or drops bad rows; keep only explicit remaining.
             CrashOfflineLedger.replaceAll(remaining)
             pendingCrashSyncCount = remaining.count
-            if let wallet = result.wallet, remaining.isEmpty {
-                applyWalletFromServer(wallet)
+            if let serverWallet = result.wallet, remaining.isEmpty {
+                // Prefer returned wallet only when it matches the absolute balance we sent
+                // (or is higher — e.g. IAP / stream rewards). Never accept a starter snap-back.
+                let serverBal = serverWallet.balance
+                let consistent = abs(serverBal - clientBalance) <= 1 || serverBal > clientBalance
+                if consistent && !shouldKeepLocalBalanceOverServer(local: clientBalance, server: serverBal) {
+                    applyWalletFromServer(serverWallet)
+                } else {
+                    // Keep phone balance; still merge non-balance fields (inventory, cosmetics).
+                    var keepLocal = serverWallet
+                    keepLocal.balance = clientBalance
+                    keepLocal.allTime = max(serverWallet.allTime, clientAllTime)
+                    applyWalletFromServer(keepLocal)
+                }
             }
             let applied = result.applied ?? max(0, items.count - remaining.count)
             if applied > 0, !silent {
@@ -1259,6 +1406,46 @@ final class SyncClient: ObservableObject {
                 lastActionMessage = "Still syncing crash results…"
             }
             return 0
+        }
+    }
+
+    /// Debounced push of absolute phone balance when server is stuck on starter.
+    private func scheduleAbsoluteWalletPush() {
+        absoluteWalletPushTask?.cancel()
+        absoluteWalletPushTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            guard !Task.isCancelled else { return }
+            await pushClientWalletAuthority()
+        }
+    }
+
+    /// Sync with empty rounds + clientBalance so PC can adopt the phone wallet without deltas.
+    private func pushClientWalletAuthority() async {
+        guard let api, PlayerSession.isLoggedIn, connectionStatus == "Online" else { return }
+        // Prefer flushing real pending rounds first.
+        if CrashOfflineLedger.pendingCount() > 0 {
+            _ = await flushCrashLedger(silent: true)
+            return
+        }
+        persistWalletLocally()
+        let clientBalance = max(0, liveBalance)
+        let clientAllTime = max(wallet.allTime, clientBalance)
+        do {
+            let result = try await api.syncSoloCrashRounds(
+                rounds: [],
+                clientBalance: clientBalance,
+                allTime: clientAllTime
+            )
+            if let serverWallet = result.wallet {
+                let serverBal = serverWallet.balance
+                if abs(serverBal - clientBalance) <= 1 || serverBal > clientBalance {
+                    if !shouldKeepLocalBalanceOverServer(local: clientBalance, server: serverBal) {
+                        applyWalletFromServer(serverWallet)
+                    }
+                }
+            }
+        } catch {
+            /* keep local — retry on next refresh / reconnect */
         }
     }
 
@@ -1439,8 +1626,9 @@ final class SyncClient: ObservableObject {
                     self.handle(message)
                     self.receiveLoop()
                 case .failure:
+                    // Keep local crash UI stable — retry in the background without a status flash.
                     if self.connectionStatus == "Online" {
-                        self.connectionStatus = "Reconnecting…"
+                        self.webSocketTask = nil
                         self.scheduleReconnect()
                     }
                 }
@@ -1991,26 +2179,33 @@ final class SyncClient: ObservableObject {
     }
 
     private func tickDisplayMultiplier() {
-        // Local engine owns the live multiplier (includes early-pace / adaptive speed).
+        // Local engine owns the live multiplier. Only publish when the value changes —
+        // assigning @Published every frame caused UI jitter (banner/subline/layout thrash).
         if usesLocalCrash {
+            let next: Double
             switch localCrash.phase {
             case .running, .ended:
-                displayMultiplier = max(localCrash.multiplier, 1)
+                next = max(localCrash.multiplier, 1)
             default:
-                displayMultiplier = 1
+                next = 1
             }
-            multiplierHistory = localCrash.multiplierHistory
-            updateLocalCrashSubline(localCrash.makeGameState())
+            if abs(displayMultiplier - next) > 0.0005 {
+                displayMultiplier = next
+            }
             return
         }
         let s = gameState
+        let next: Double
         switch s.phase {
         case .running:
-            displayMultiplier = projectedRunningMult(for: s)
+            next = projectedRunningMult(for: s)
         case .ended:
-            displayMultiplier = max(s.crashPoint ?? s.multiplier, 1)
+            next = max(s.crashPoint ?? s.multiplier, 1)
         default:
-            displayMultiplier = 1
+            next = 1
+        }
+        if abs(displayMultiplier - next) > 0.0005 {
+            displayMultiplier = next
         }
     }
 

@@ -615,6 +615,7 @@ function registerMobileAuthRoutes(app, ctx = {}) {
     clearDeviceSessions(deviceId);
     const token = newSessionToken();
     clearDeviceSessions(deviceId);
+    const now = nowMs();
     state.sessions[token] = {
       token,
       deviceId,

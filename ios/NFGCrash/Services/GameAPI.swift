@@ -2,13 +2,14 @@ import Foundation
 
 /// Shared session with short timeouts so unreachable PCs fail in seconds, not minutes.
 enum GameHTTP {
-    static let requestTimeout: TimeInterval = 8
+    static let requestTimeout: TimeInterval = 15
 
     static let session: URLSession = {
         let config = URLSessionConfiguration.default
         config.timeoutIntervalForRequest = requestTimeout
-        config.timeoutIntervalForResource = requestTimeout + 2
-        config.waitsForConnectivity = false
+        config.timeoutIntervalForResource = requestTimeout + 5
+        // Wait briefly for radio/VPN rather than failing instantly on flaky networks.
+        config.waitsForConnectivity = true
         return URLSession(configuration: config)
     }()
 

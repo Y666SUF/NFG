@@ -302,16 +302,27 @@ final class SyncClient: ObservableObject {
 
         do {
             // Crash rounds run locally — don't overwrite with live multiplayer state.
-            _ = try? await api.fetchState()
+            // Mark online if either state or mobile status responds (tunnel may flake on one path).
+            var reachable = false
+            if (try? await api.fetchMobileStatusDetail()) != nil {
+                reachable = true
+            } else if (try? await api.fetchState()) != nil {
+                reachable = true
+            }
+            guard reachable else {
+                throw GameAPIError.timedOut
+            }
             connectionStatus = "Online"
             isOfflinePlayMode = false
             startLocalCrashIfNeeded()
             syncPresencePillFromState()
 
             await refreshProfile()
+            // Phone wallet is authority — push absolute balance before adopting server fields.
+            await flushAllPendingOnReconnect(silent: true)
+            await pushClientWalletAuthority()
             await refreshWallet()
             await loadAppChatHistory()
-            await flushAllPendingOnReconnect(silent: true)
             await refreshLeaderboard()
             startLiveStatusPolling()
             startPresencePolling()
@@ -356,10 +367,17 @@ final class SyncClient: ObservableObject {
                 let nextApi = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
                 api = nextApi
                 // Probe without flipping UI into Connecting…
-                _ = try await nextApi.fetchState()
+                // Prefer a lightweight mobile status hit; fall back to /api/state.
+                do {
+                    _ = try await nextApi.fetchMobileStatusDetail()
+                } catch {
+                    _ = try await nextApi.fetchState()
+                }
                 connectionStatus = "Online"
                 isOfflinePlayMode = false
                 await flushAllPendingOnReconnect(silent: true)
+                // Phone wallet is authority — push absolute balance before pulling server.
+                await pushClientWalletAuthority()
                 await refreshWallet()
                 if webSocketTask == nil {
                     let session = URLSession(configuration: .default)
@@ -432,18 +450,26 @@ final class SyncClient: ObservableObject {
             _ = await AuthStore.refreshSessionFromServer()
             return
         }
-        do {
-            let bootstrapApi = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
-            let resp = try await bootstrapApi.bootstrapAppGuest(deviceId: AuthStore.deviceId)
-            guard let token = resp.token, let userId = resp.userId else { return }
-            AuthStore.applyServerSession(
-                token: token,
-                userId: userId,
-                displayName: resp.displayName ?? AuthStore.appGuestDisplayName,
-                linkedVia: resp.linkedVia
-            )
-        } catch {
-            // Server may be down — user can retry connect.
+        // Retry once — live PC had a transient app-guest 500 that blocked first-time connect.
+        for attempt in 1...2 {
+            do {
+                let bootstrapApi = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
+                let resp = try await bootstrapApi.bootstrapAppGuest(deviceId: AuthStore.deviceId)
+                guard let token = resp.token, let userId = resp.userId else { return }
+                AuthStore.applyServerSession(
+                    token: token,
+                    userId: userId,
+                    displayName: resp.displayName ?? AuthStore.appGuestDisplayName,
+                    linkedVia: resp.linkedVia
+                )
+                return
+            } catch {
+                if attempt == 1 {
+                    try? await Task.sleep(nanoseconds: 700_000_000)
+                    continue
+                }
+                // Keep any cached session so offline crash can still run.
+            }
         }
     }
 
@@ -595,10 +621,8 @@ final class SyncClient: ObservableObject {
         if shouldKeepLocalBalanceOverServer(local: localBalance, server: next.balance) {
             merged.balance = localBalance
             merged.allTime = max(next.allTime, localAllTime)
-            // Server still on starter (or stale) — push absolute phone balance when online.
-            if connectionStatus == "Online",
-               Self.knownStarterBalances.contains(next.balance),
-               localBalance != next.balance {
+            // Push phone balance to server whenever it disagrees (not only starter).
+            if connectionStatus == "Online", localBalance != next.balance {
                 scheduleAbsoluteWalletPush()
             }
         } else {
@@ -636,15 +660,18 @@ final class SyncClient: ObservableObject {
         if usesLocalCrash, localCrash.activeBet != nil { return true }
         if local == server { return false }
 
+        // On-device crash: phone wallet is authority. Server must track the phone.
+        // Only adopt server when local cache is empty (reinstall / new device).
+        if usesLocalCrash {
+            if local <= 0 && server > 0 { return false }
+            return true
+        }
+
         let serverStarter = Self.knownStarterBalances.contains(server)
         let localStarter = Self.knownStarterBalances.contains(local)
-
-        // Classic bug: server still at starter, phone has progressed.
         if serverStarter && local > server { return true }
         if serverStarter && !localStarter { return true }
-        // Guest 100k vs linked 5k mid-identity — keep the higher local cache.
         if serverStarter && localStarter && local > server { return true }
-
         return false
     }
 

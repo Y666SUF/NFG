@@ -69,6 +69,8 @@ final class SyncClient: ObservableObject {
     @Published var cosmeticsPurchaseMessage: String?
     @Published var isLoadingCosmeticsShop = false
     @Published var isBootstrappingSession = false
+    /// Bumped when AuthStore gains/loses a session so ContentView re-evaluates `isLoggedIn`.
+    @Published private(set) var authRevision: UInt = 0
     @Published var nearMissMessage: String?
 
     var topBalances: [LeaderboardRow] {
@@ -359,7 +361,21 @@ final class SyncClient: ObservableObject {
         reconnectTask = nil
         Task {
             _ = await AuthStore.refreshSessionFromServer()
+            if !PlayerSession.isLoggedIn || AuthStore.hasOfflinePlaceholderToken {
+                await ensureAppGuestSession()
+            }
+            if !PlayerSession.isLoggedIn {
+                AuthStore.ensureLocalOfflineGuestSession()
+            }
             guard PlayerSession.isLoggedIn else {
+                scheduleReconnect()
+                return
+            }
+            // Still on placeholder — keep crash running, retry auth later.
+            if AuthStore.hasOfflinePlaceholderToken {
+                if connectionStatus != "Offline" { connectionStatus = "Offline" }
+                if !isOfflinePlayMode { isOfflinePlayMode = true }
+                startLocalCrashIfNeeded()
                 scheduleReconnect()
                 return
             }
@@ -397,6 +413,7 @@ final class SyncClient: ObservableObject {
                 if !isOfflinePlayMode {
                     isOfflinePlayMode = true
                 }
+                startLocalCrashIfNeeded()
                 scheduleReconnect()
             }
         }
@@ -412,9 +429,14 @@ final class SyncClient: ObservableObject {
             if !PlayerSession.isLoggedIn {
                 await ensureAppGuestSession()
             }
+            // Live app-guest was 500 on PC — still open Crash with a local guest identity.
+            if !PlayerSession.isLoggedIn {
+                AuthStore.ensureLocalOfflineGuestSession()
+            }
+            authRevision &+= 1
             isBootstrappingSession = false
 
-            // Cached session → stay playable even if the server is down.
+            // Cached / offline session → stay playable even if the server is down.
             if PlayerSession.isLoggedIn {
                 restoreCachedWalletIfNeeded()
                 startLocalCrashIfNeeded()
@@ -422,6 +444,13 @@ final class SyncClient: ObservableObject {
 
             guard PlayerSession.isLoggedIn else {
                 connectionStatus = "Server unreachable"
+                return
+            }
+
+            // Placeholder token cannot talk to the API — play offline and keep retrying.
+            if AuthStore.hasOfflinePlaceholderToken {
+                enterOfflinePlayMode(reason: "Playing offline — will sync when the game server is fixed.")
+                scheduleReconnect()
                 return
             }
 
@@ -446,7 +475,7 @@ final class SyncClient: ObservableObject {
     }
 
     func ensureAppGuestSession() async {
-        if AuthStore.isTikTokLinked, AuthStore.sessionToken != nil {
+        if AuthStore.isTikTokLinked, AuthStore.sessionToken != nil, !AuthStore.hasOfflinePlaceholderToken {
             _ = await AuthStore.refreshSessionFromServer()
             return
         }
@@ -454,7 +483,10 @@ final class SyncClient: ObservableObject {
         for attempt in 1...2 {
             do {
                 let bootstrapApi = try GameAPI(baseURLString: PlayerSession.serverBaseURL)
-                let resp = try await bootstrapApi.bootstrapAppGuest(deviceId: AuthStore.deviceId)
+                let resp = try await bootstrapApi.bootstrapAppGuest(
+                    deviceId: AuthStore.deviceId,
+                    claimUserId: AuthStore.tiktokAnchorUserId
+                )
                 guard let token = resp.token, let userId = resp.userId else { return }
                 AuthStore.applyServerSession(
                     token: token,
@@ -468,7 +500,6 @@ final class SyncClient: ObservableObject {
                     try? await Task.sleep(nanoseconds: 700_000_000)
                     continue
                 }
-                // Keep any cached session so offline crash can still run.
             }
         }
     }

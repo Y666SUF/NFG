@@ -12,6 +12,8 @@ struct ContentView: View {
         NavigationStack {
             ZStack(alignment: .top) {
                 Group {
+                    // `authRevision` forces refresh when a local offline guest session is created.
+                    let _ = sync.authRevision
                     if PlayerSession.isLoggedIn {
                         GameView(showLeaderboard: $showLeaderboard)
                             .safeAreaInset(edge: .top, spacing: 0) {
@@ -43,10 +45,23 @@ struct ContentView: View {
                             Text("Can't reach the game server")
                                 .font(.headline)
                                 .foregroundStyle(NFGTheme.text)
-                            Button("Try again") { sync.connect() }
-                                .buttonStyle(.borderedProminent)
+                            Text("Starting offline play…")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(NFGTheme.muted)
+                            Button("Try again") {
+                                AuthStore.ensureLocalOfflineGuestSession()
+                                sync.connect()
+                            }
+                            .buttonStyle(.borderedProminent)
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .onAppear {
+                            // Never leave users stuck on this screen — open local crash immediately.
+                            AuthStore.ensureLocalOfflineGuestSession()
+                            if PlayerSession.isLoggedIn {
+                                sync.connect()
+                            }
+                        }
                     }
                 }
 

@@ -1,0 +1,68 @@
+# NFG Crash — URGENT PC FIX (users cannot open the app)
+
+Paste into **Windows Cursor Agent**. Live repo: `C:\Users\Yusef\test`
+
+## Why users see “Can't reach the game server”
+
+Live endpoint is still broken **right now**:
+
+```text
+POST https://y666suf.com/api/mobile/auth/app-guest → HTTP 500
+ReferenceError: now is not defined
+  at C:\Users\Yusef\test\server\mobile-auth.js:624:17
+```
+
+iOS needs this endpoint to create/refresh a session. Without it, `PlayerSession.isLoggedIn` stays false and the app never shows Crash.
+
+Mac already fixed + pushed this to GitHub. **PC has not pulled / restarted.**
+
+## Do this now (2 minutes)
+
+```powershell
+cd C:\Users\Yusef\test
+.\scripts\sync-pull.ps1
+```
+
+Open `server\mobile-auth.js`. Find `app.post("/api/mobile/auth/app-guest"` and the block that creates `state.sessions[token]`. It **must** include:
+
+```js
+const now = nowMs();
+state.sessions[token] = {
+  token,
+  deviceId,
+  userId,
+  displayName: APP_GUEST_DISPLAY_NAME,
+  linkedVia: "app_guest",
+  issuedAt: now,
+  linkedAt: 0,
+  lastSeenAt: now,
+  expiresAt: now + SESSION_TTL_MS,
+};
+```
+
+If `const now = nowMs();` is missing above that object, add it.
+
+Also confirm `server/mobile-crash-solo.js` has `pickAbsoluteBalance` / `clientBalance`.
+
+**Restart the live Node process** (same way you normally restart NFG — do not leave the old process running).
+
+## Verify (must pass before leaving)
+
+```powershell
+curl -s -X POST https://y666suf.com/api/mobile/auth/app-guest -H "Content-Type: application/json" -d "{\"deviceId\":\"pc-fix-$([guid]::NewGuid().ToString())\"}"
+```
+
+Expect **JSON 200** with `"ok":true` and a `token`.  
+If you still see `ReferenceError: now is not defined`, the old process is still serving — kill it and restart again.
+
+```powershell
+curl -s -o NUL -w "%{http_code}" -X POST https://y666suf.com/api/mobile/crash/solo/sync -H "Content-Type: application/json" -d "{}"
+```
+
+Expect **401** (not 404).
+
+Mark `docs/cross-device/pending-on-pc.md` as `cross_device_status: done` and:
+
+```powershell
+.\scripts\sync-push.ps1 "PC: fix app-guest now ReferenceError — users can connect again"
+```

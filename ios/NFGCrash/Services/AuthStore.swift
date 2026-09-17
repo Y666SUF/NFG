@@ -1,8 +1,11 @@
 import Foundation
 import Security
+import CryptoKit
 
 enum AuthStore {
     static let appGuestDisplayName = "App User"
+    /// Local-only token while the live app-guest endpoint is down — replaced on next successful bootstrap.
+    private static let offlineTokenPrefix = "offline_local_"
 
     private static let keychainService = "com.yusufali.nfgcrash.auth"
     private static let tokenKey = "nfg_session_token"
@@ -69,6 +72,47 @@ enum AuthStore {
 
     static var isLinked: Bool {
         !(sessionToken ?? "").isEmpty && !verifiedUserId.isEmpty
+    }
+
+    /// True when the session token is a local placeholder (not accepted by the server).
+    static var hasOfflinePlaceholderToken: Bool {
+        (sessionToken ?? "").hasPrefix(offlineTokenPrefix)
+    }
+
+    /// Stable guest id matching `server/mobile-auth.js` `appUserIdFromDevice`.
+    static func appUserIdFromDevice(_ deviceId: String) -> String {
+        let digest = SHA256.hash(data: Data(deviceId.utf8))
+        let hex = digest.map { String(format: "%02x", $0) }.joined()
+        return "appuser_" + String(hex.prefix(16))
+    }
+
+    /// Opens Crash even when `POST /api/mobile/auth/app-guest` is 500 / unreachable.
+    /// Uses the same `appuser_<sha256>` id the server would create so sync merges later.
+    @MainActor
+    static func ensureLocalOfflineGuestSession() {
+        restoreAnchoredTikTokIdentityIfNeeded()
+        if isLinked, !hasOfflinePlaceholderToken { return }
+
+        if let anchor = tiktokAnchorUserId?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !anchor.isEmpty,
+           !anchor.lowercased().hasPrefix("appuser_") {
+            let token = offlineTokenPrefix + UUID().uuidString
+            writeKeychain(tokenKey, token)
+            writeKeychain(userKey, anchor)
+            writeKeychain(linkedViaKey, "tiktok")
+            UserDefaults.standard.set(anchor, forKey: userKey)
+            UserDefaults.standard.set("tiktok", forKey: linkedViaKey)
+            PlayerSession.tiktokUsername = anchor
+            if verifiedDisplayName.isEmpty {
+                PlayerSession.displayName = anchor
+            }
+            return
+        }
+
+        let userId = appUserIdFromDevice(deviceId)
+        guard !userId.isEmpty else { return }
+        let token = offlineTokenPrefix + UUID().uuidString
+        saveGuestSession(token: token, userId: userId, displayName: appGuestDisplayName)
     }
 
     static var isAppGuest: Bool {

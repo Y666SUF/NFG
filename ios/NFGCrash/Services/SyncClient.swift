@@ -29,10 +29,10 @@ final class SyncClient: ObservableObject {
     @Published var pendingCrashSyncCount: Int = CrashOfflineLedger.pendingCount()
     /// True when the app is usable with a cached session/wallet while the live server is down.
     @Published private(set) var isOfflinePlayMode = false
-    /// Crash always runs on-device; server is only for wallet sync / social features.
-    @Published private(set) var usesLocalCrash = true
+    /// When true, Crash rounds run on-device (offline). When false, phone mirrors the live PC game.
+    @Published private(set) var usesLocalCrash = false
     @Published var multiplierHistory: [Double] = [1]
-    /// Live multiplier for chart/UI (driven by LocalCrashEngine).
+    /// Live multiplier for chart/UI.
     @Published var displayMultiplier: Double = 1
     @Published var sublineText = "Connecting…"
     @Published var taxPotAmount: Int = 0
@@ -113,12 +113,18 @@ final class SyncClient: ObservableObject {
         pendingCrashSyncCount = CrashOfflineLedger.pendingCount()
         pendingOfflineCount = OfflineQueue.count
         configureLocalCrash()
-        if PlayerSession.isLoggedIn {
-            startLocalCrashIfNeeded()
-        }
+        // Don't start local crash until we know the live server is unreachable.
+        // Online → mirror PC crash so bets show on the stream overlay.
     }
 
     var isServerReachable: Bool { connectionStatus == "Online" }
+
+    /// Prefer the live PC crash loop whenever we're authenticated online.
+    private var preferLiveCrash: Bool {
+        connectionStatus == "Online"
+            && api != nil
+            && !AuthStore.hasOfflinePlaceholderToken
+    }
 
     /// Balance shown in UI — includes pending offline arcade credits still waiting to sync.
     var displayBalanceIncludingPending: Int {
@@ -192,13 +198,40 @@ final class SyncClient: ObservableObject {
 
     private func startLocalCrashIfNeeded() {
         guard PlayerSession.isLoggedIn else { return }
+        // Never run a separate phone-only round while we're on the live server —
+        // that hid bets from the PC overlay and desynced balances.
+        if preferLiveCrash {
+            Task { await switchToLiveCrash() }
+            return
+        }
+        switchToLocalCrash()
+    }
+
+    private func switchToLocalCrash() {
+        guard PlayerSession.isLoggedIn else { return }
         usesLocalCrash = true
         localCrash.start()
         publishLocalCrashState()
         startDisplayMultiplierTimer()
     }
 
+    /// Stop on-device rounds and follow the live PC crash game (same round as OBS/TikTok).
+    private func switchToLiveCrash() async {
+        guard preferLiveCrash, let api else { return }
+        if usesLocalCrash {
+            localCrash.stop()
+        }
+        usesLocalCrash = false
+        if let state = try? await api.fetchState() {
+            let enriched = enrichState(state)
+            gameState = enriched
+            applyStateSideEffects(enriched)
+        }
+        startDisplayMultiplierTimer()
+    }
+
     private func publishLocalCrashState() {
+        guard usesLocalCrash else { return }
         let previousPhase = lastPhase
         let state = localCrash.makeGameState()
         // Avoid republishing identical phase snapshots every tick — only push gameState on
@@ -316,14 +349,14 @@ final class SyncClient: ObservableObject {
             }
             connectionStatus = "Online"
             isOfflinePlayMode = false
-            startLocalCrashIfNeeded()
+            await switchToLiveCrash()
             syncPresencePillFromState()
 
             await refreshProfile()
-            // Phone wallet is authority — push absolute balance before adopting server fields.
+            // Live crash uses PC wallet — refresh server balance, then flush any offline solo leftovers.
+            await refreshWallet()
             await flushAllPendingOnReconnect(silent: true)
             await pushClientWalletAuthority()
-            await refreshWallet()
             await loadAppChatHistory()
             await refreshLeaderboard()
             startLiveStatusPolling()
@@ -391,10 +424,10 @@ final class SyncClient: ObservableObject {
                 }
                 connectionStatus = "Online"
                 isOfflinePlayMode = false
+                await switchToLiveCrash()
                 await flushAllPendingOnReconnect(silent: true)
-                // Phone wallet is authority — push absolute balance before pulling server.
-                await pushClientWalletAuthority()
                 await refreshWallet()
+                await pushClientWalletAuthority()
                 if webSocketTask == nil {
                     let session = URLSession(configuration: .default)
                     webSocketTask = session.webSocketTask(with: nextApi.webSocketURL)
@@ -413,7 +446,7 @@ final class SyncClient: ObservableObject {
                 if !isOfflinePlayMode {
                     isOfflinePlayMode = true
                 }
-                startLocalCrashIfNeeded()
+                switchToLocalCrash()
                 scheduleReconnect()
             }
         }
@@ -691,18 +724,12 @@ final class SyncClient: ObservableObject {
         if usesLocalCrash, localCrash.activeBet != nil { return true }
         if local == server { return false }
 
-        // On-device crash: phone wallet is authority. Server must track the phone.
-        // Only adopt server when local cache is empty (reinstall / new device).
+        // On-device crash: phone wallet is authority. Live PC crash: server wallet is authority.
         if usesLocalCrash {
             if local <= 0 && server > 0 { return false }
             return true
         }
-
-        let serverStarter = Self.knownStarterBalances.contains(server)
-        let localStarter = Self.knownStarterBalances.contains(local)
-        if serverStarter && local > server { return true }
-        if serverStarter && !localStarter { return true }
-        if serverStarter && localStarter && local > server { return true }
+        // Live multiplayer — PC deducted/credited the bet; trust server unless ledger pending.
         return false
     }
 
@@ -1156,7 +1183,20 @@ final class SyncClient: ObservableObject {
             lastActionMessage = "Enter a valid amount (e.g. 100, 30k, 3m)"
             return
         }
-        startLocalCrashIfNeeded()
+
+        // Online → place on the live PC crash game so the bet shows on OBS / TikTok overlay.
+        if preferLiveCrash {
+            if usesLocalCrash {
+                await switchToLiveCrash()
+            }
+            rememberPlacedBet(amount: amount, cashout: cashout)
+            pendingBetAmountText = trimmed
+            LastBetStore.save(amountText: trimmed, cashout: cashout)
+            await sendCommand("!\(trimmed) \(cashout)")
+            return
+        }
+
+        switchToLocalCrash()
         let user = resolvedBetUserId()
         let name = resolvedBetDisplayName()
         if let err = localCrash.placeBet(
@@ -1181,6 +1221,22 @@ final class SyncClient: ObservableObject {
             lastActionMessage = "Sign in required."
             return
         }
+        if preferLiveCrash && !usesLocalCrash {
+            guard gameState.phase == .running else {
+                lastActionMessage = "You can only cash out while the round is running."
+                return
+            }
+            guard activeCrashBet != nil else {
+                lastActionMessage = "No active bet this round."
+                return
+            }
+            guard displayMultiplier >= 1.05 else {
+                lastActionMessage = "Too early — wait until at least 1.05×"
+                return
+            }
+            await sendCommand("!cashout")
+            return
+        }
         if let err = localCrash.manualCashout() {
             lastActionMessage = err
             return
@@ -1189,13 +1245,20 @@ final class SyncClient: ObservableObject {
     }
 
     var activeCrashBet: OpenBet? {
-        guard localCrash.phase == .running, let bet = localCrash.activeBet else { return nil }
-        return OpenBet(
-            user: bet.userId,
-            displayName: bet.displayName,
-            amount: bet.amount,
-            cashout: bet.cashout
-        )
+        if usesLocalCrash {
+            guard localCrash.phase == .running, let bet = localCrash.activeBet else { return nil }
+            return OpenBet(
+                user: bet.userId,
+                displayName: bet.displayName,
+                amount: bet.amount,
+                cashout: bet.cashout
+            )
+        }
+        guard gameState.phase == .running else { return nil }
+        let user = normalizeBetUser(resolvedBetUserId())
+        guard !user.isEmpty else { return nil }
+        let bets = gameState.openBets.isEmpty ? cachedOpenBets : gameState.openBets
+        return bets.first { normalizeBetUser($0.user) == user }
     }
 
     var canManualCashout: Bool {
@@ -1708,18 +1771,33 @@ final class SyncClient: ObservableObject {
 
         switch type {
         case "state":
-            // Crash rounds are on-device — ignore live multiplayer crash state.
-            // Still treat a state packet as proof the server is reachable for sync.
+            if let payload = json["payload"],
+               let payloadData = try? JSONSerialization.data(withJSONObject: payload),
+               let state = try? JSONDecoder().decode(CrashGameState.self, from: payloadData) {
+                // Live PC crash is the source of truth while online.
+                if usesLocalCrash, connectionStatus == "Online", !AuthStore.hasOfflinePlaceholderToken {
+                    localCrash.stop()
+                    usesLocalCrash = false
+                }
+                if !usesLocalCrash {
+                    let enriched = enrichState(state)
+                    gameState = enriched
+                    applyStateSideEffects(enriched)
+                } else if let dict = payload as? [String: Any],
+                          let tax = dict["taxPot"] as? [String: Any] {
+                    let pot = (tax["potAmount"] as? Int) ?? (tax["amount"] as? Int) ?? taxPotAmount
+                    taxPotAmount = pot
+                }
+            } else if let payload = json["payload"] as? [String: Any],
+                      let tax = payload["taxPot"] as? [String: Any] {
+                let pot = (tax["potAmount"] as? Int) ?? (tax["amount"] as? Int) ?? taxPotAmount
+                taxPotAmount = pot
+            }
             if connectionStatus != "Online" {
                 connectionStatus = "Online"
                 isOfflinePlayMode = false
                 syncPresencePillFromState()
                 Task { await flushAllPendingOnReconnect(silent: true) }
-            }
-            if let payload = json["payload"] as? [String: Any],
-               let tax = payload["taxPot"] as? [String: Any] {
-                let pot = (tax["potAmount"] as? Int) ?? (tax["amount"] as? Int) ?? taxPotAmount
-                taxPotAmount = pot
             }
         case "chat_result":
             if let payload = json["payload"] as? [String: Any] {
